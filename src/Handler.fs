@@ -16,7 +16,7 @@ type HttpHandler<'a, 'b> = HttpHandler<'a, 'a, 'b>
 
 type HttpHandler<'a> = HttpHandler<HttpResponseMessage, 'a>
 
-type HttpHandler = HttpHandler<HttpResponseMessage, HttpResponseMessage>
+type HttpHandler = HttpHandler<HttpResponseMessage>
 
 [<AutoOpen>]
 module Handler =

@@ -1,9 +1,16 @@
 # Oryx
 
-Oryx is a .NET cross platform functional web request handler library for F#. Oryx is heavily inspired by [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework and applies the same kind of ideas to the client making the web requests.
+Oryx is a .NET cross platform functional web request handler library for writing web client libraries in F#.
+
+> An SDK for writing SDKs.
+
+This library enables you to write (or generate) Web and REST clients and SDKs for various APIs. Thus Oryx is an SDK for writing SDKs.
+
+Oryx is heavily inspired by [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework, and applies the same kind of ideas to the client making the web requests.
 
 ## Fundamentals
 
+The main building block in Oryx is the `Context` and the `HttpHandler`. The Context stores all the state needed for performing the request and any data received from the response:
 
 ```fs
 type Context<'a> = {
@@ -11,15 +18,18 @@ type Context<'a> = {
     Result: Result<'a, ResponseError>
 }
 ```
-The main building block in Oryx is a so called `HttpHandler`:
+
+The `HttpHandler` takes a `Context` (and a `NextHandler`) and returns a new `Context`.
 
 ```fs
 type NextHandler<'a, 'b> = Context<'a> -> Async<Context<'b>>
 
 type HttpHandler<'a, 'b, 'c> = NextHandler<'b, 'c> -> Context<'a> -> Async<Context<'c>>
+
+// For convenience
 type HttpHandler<'a, 'b> = HttpHandler<'a, 'a, 'b>
 type HttpHandler<'a> = HttpHandler<HttpResponseMessage, 'a>
-type HttpHandler = HttpHandler<HttpResponseMessage, HttpResponseMessage>
+type HttpHandler = HttpHandler<HttpResponseMessage>
 ```
 
 An `HttpHandler` is a simple function which takes two curried arguments, and `NextHandler` and a `Context`, and returns a `Context` (wrapped in a `Result` and `Async` workflow) when finished.
@@ -53,8 +63,31 @@ let compose (first : HttpHandler<'a, 'b, 'd>) (second : HttpHandler<'b, 'c, 'd>)
         next'' ctx
 ```
 
+This enables you to compose your web requests, e.g:
+
+```fs
+    GET
+    >=> setVersion V10
+    >=> addQuery query
+    >=> setResource Url
+    >=> fetch
+    >=> decoder
+```
+
 ## JSON and Protobuf
 
-Oryx will serialize and deserialize JSON using `Thoth.Json.Net` or `Google.Protobuf`.
+Oryx will serialize and deserialize JSON using `Thoth.Json.Net` or Protobuf using `Google.Protobuf`.
 
 Both encode and decode uses streaming so no large strings or arrays will be allocated in the process.
+
+## Computational Expression Builder
+
+Working with `Context` objects can be a bit painful since the actual result will be available inside an `Async` effect that has a `Result` that can be either `Ok` with the response or `Error`. To make it simpler to handle multiple requests using handlers you can use the `oryx` builder that will hide the complexity of both the `Context` and the `Result`.
+
+```fs
+    oryx {
+        let! data = fetchData ()
+
+        return data
+    }
+```
