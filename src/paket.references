@@ -1,0 +1,5 @@
+Microsoft.Extensions.Http
+FSharp.Core
+Taskbuilder.fs
+Thoth.Json.Net
+Google.Protobuf
