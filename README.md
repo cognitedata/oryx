@@ -34,13 +34,13 @@ type HttpHandler = HttpHandler<HttpResponseMessage>
 
 An `HttpHandler` is a simple function which takes two curried arguments, and `NextHandler` and a `Context`, and returns a `Context` (wrapped in a `Result` and `Async` workflow) when finished.
 
-On a high level an `HttpHandler` function takes and returns a context object, which means every `HttpHandler` function has full control of the outgoing HttpRequest and the resulting response.
+On a high level an `HttpHandler` function takes and returns a context object, which means every `HttpHandler` function has full control of the outgoing `HttpRequest` and the resulting response.
 
-Each HttpHandler usually adds more info to the `HttpRequest` before passing it further down the pipeline by invoking the next `NextHandler` or short circuit the execution by returning a result of Result<'a, ResponseError>.
+Each HttpHandler usually adds more info to the `HttpRequest` before passing it further down the pipeline by invoking the next `NextHandler` or short circuit the execution by returning a result of `Result<'a, ResponseError>`.
 
 If an HttpHandler detects an error, then it can return Result.Error instead to fail the processing.
 
-The easiest way to get your head around a Oryx `HttpHandler` is to think of it as a functional Web request processing pipeline. Each handler has the full `Context` at its disposal and can decide whether it wants to return `Ok Context`, `Error` or pass it on to the "next" `NextHandler`.
+The easiest way to get your head around a Oryx `HttpHandler` is to think of it as a functional Web request processing pipeline. Each handler has the full `Context` at its disposal and can decide whether it wants to return `Error` or pass on a new `Context` on to the "next" handler, `NextHandler`.
 
 ## Operators
 
