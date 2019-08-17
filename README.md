@@ -1,8 +1,8 @@
 # Oryx
 
-Oryx is a .NET cross platform functional HTTP request handler library for writing web client libraries in F#.
+Oryx is a high performance .NET cross platform functional HTTP request handler library for writing web client libraries in F#.
 
-> An SDK for writing SDKs.
+> An SDK for writing web client SDKs.
 
 This library enables you to write (or generate) Web and REST clients and SDKs for various APIs. Thus Oryx is an SDK for writing SDKs.
 
@@ -38,7 +38,7 @@ On a high level the `HttpHandler` function takes and returns a context object, w
 
 Each HttpHandler usually adds more info to the `HttpRequest` before passing it further down the pipeline by invoking the next `NextHandler` or short circuit the execution by returning a result of `Result<'a, ResponseError>`.
 
-If an HttpHandler detects an error, then it can return `Result.Error` instead to fail the processing.
+If an HttpHandler detects an error, then it can return `Result.Error` to fail the processing.
 
 The easiest way to get your head around a Oryx `HttpHandler` is to think of it as a functional Web request processing pipeline. Each handler has the full `Context` at its disposal and can decide whether it wants to return `Error` or pass on a new `Context` on to the "next" handler, `NextHandler`.
 
@@ -50,7 +50,7 @@ The fact that everything is an `HttpHandler` makes it easy to compose handlers t
 let (>=>) a b = compose a b
 ```
 
-THe `compose` function is the magic that sews it all togheter and explains how you can curry the `HttpHandler` to generate a new `NextHandler` that you give to next `HttpHandler`.
+THe `compose` function is the magic that sews it all togheter and explains how you can curry the `HttpHandler` to generate a new `NextHandler` that you give to next `HttpHandler`. If the first handler fails, the next handler will be skipped.
 
 ```fs
 let compose (first : HttpHandler<'a, 'b, 'd>) (second : HttpHandler<'b, 'c, 'd>) : HttpHandler<'a,'c,'d> =
@@ -76,7 +76,7 @@ let listAssets (options: Option seq) (fetch: HttpHandler<HttpResponseMessage,Str
     >=> decoder
 ```
 
-Thus the function `listAssets` is now also an `HttpHandler` and may be composed with other handlers to create complex chains for doing a series of multiple requests to a web service.
+Thus the function `listAssets` is now also an `HttpHandler` and may be composed with other handlers to create complex chains for doing series of multiple requests to a web service.
 
 There is also a `retry` that retries HTTP handlers using max number of retries and exponential backoff.
 
@@ -108,3 +108,9 @@ Working with `Context` objects can be a bit painful since the actual result will
         return a + b
     }
 ```
+
+## TODO
+
+The library currently depends on Thoth.Json.Net. This should at some point be split into a separate library to allow for other JSON encoders.
+
+The library also assumes the type of the error response. This should perhaps be made more generic.

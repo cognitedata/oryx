@@ -1,10 +1,8 @@
 source https://www.nuget.org/api/v2
 storage: none
 
-nuget FSharp.Core 4.6.2
-nuget Microsoft.Extensions.Configuration 2.2.0
+nuget FSharp.Core ~> 4.7
 nuget Microsoft.Extensions.Http
-nuget Microsoft.NET.Test.Sdk ~> 16
 nuget Taskbuilder.fs ~> 2.1
-nuget Thoth.Json.Net ~> 3.2.0
+nuget Thoth.Json.Net ~> 3.2
 nuget Google.Protobuf ~> 3.9

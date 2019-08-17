@@ -1,10 +1,10 @@
 namespace Oryx
 
 open System
+open System.IO
 open System.Net
 open System.Net.Http
 open System.Net.Http.Headers
-open System.IO
 open System.Text
 open System.Threading.Tasks
 open System.Web
