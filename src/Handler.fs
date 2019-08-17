@@ -131,19 +131,8 @@ module Handler =
         // Retry if retriable code or retryable exception
         retryCode || retryEx
 
-    /// **Description**
-    ///
     /// Retries the given HTTP handler up to `maxRetries` retries with
     /// exponential backoff and up to 2 minute with randomness.
-    ///
-    /// **Parameters**
-    ///   * `maxRetries` - max number of retries.
-    ///   * `initialDelay` -
-    ///   * `ctx` - parameter of type `Context<'a>`
-    ///
-    /// **Output Type**
-    ///   * `Async<Context<'a>>`
-    ///
     let rec retry (initialDelay: int<ms>) (maxRetries : int) (handler: HttpHandler<'a,'b,'c>) (next: NextHandler<'b,'c>) (ctx: Context<'a>) : Async<Context<'c>> = async {
         let exponentialDelay = min (secondsInMilliseconds * DefaultMaxBackoffDelay / 2) (initialDelay * 2)
         let randomDelayScale = min (secondsInMilliseconds * DefaultMaxBackoffDelay / 2) (initialDelay * 2)
@@ -161,19 +150,7 @@ module Handler =
                 return ctx'
     }
 
-    /// **Description**
-    ///
-    /// 10000 concurrently. 500-100 in each.
-    ///
-    /// **Parameters**
-    ///   * `handlers` - parameter of type `HttpHandler list`
-    ///   * `ctx` - parameter of type `Context<'a>`
-    ///
-    /// **Output Type**
-    ///   * `Async<Context<'a>>`
-    ///
-    /// **Exceptions**
-    ///
+    /// Run list of HTTP handlers concurrently.
     let concurrent (handlers : HttpHandler<'a, 'b, 'b> seq) (next: NextHandler<'b list, 'c>) (ctx: Context<'a>) : Async<Context<'c>> = async {
         let! res =
             Seq.map (fun handler -> handler Async.single ctx) handlers

@@ -1,5 +1,4 @@
 source https://www.nuget.org/api/v2
-source https://cognite.jfrog.io/cognite/api/nuget/nuget
 storage: none
 
 nuget FSharp.Core 4.6.2
@@ -8,4 +7,4 @@ nuget Microsoft.Extensions.Http
 nuget Microsoft.NET.Test.Sdk ~> 16
 nuget Taskbuilder.fs ~> 2.1
 nuget Thoth.Json.Net ~> 3.2.0
-nuget Google.Protobuf
+nuget Google.Protobuf ~> 3.9

@@ -1,16 +1,16 @@
 # Oryx
 
-Oryx is a .NET cross platform functional web request handler library for writing web client libraries in F#.
+Oryx is a .NET cross platform functional HTTP request handler library for writing web client libraries in F#.
 
 > An SDK for writing SDKs.
 
 This library enables you to write (or generate) Web and REST clients and SDKs for various APIs. Thus Oryx is an SDK for writing SDKs.
 
-Oryx is heavily inspired by [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework, and applies the same kind of ideas to the client making the web requests.
+Oryx is heavily inspired by the [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework, and applies the same kind of ideas to the client making the web requests as for the server processing them.
 
 ## Fundamentals
 
-The main building block in Oryx is the `Context` and the `HttpHandler`. The Context stores all the state needed for performing the request and any data received from the response:
+The main building blocks in Oryx is the `Context` and the `HttpHandler`. The Context stores all the state needed for performing the request and any data received from the response:
 
 ```fs
 type Context<'a> = {
@@ -19,7 +19,7 @@ type Context<'a> = {
 }
 ```
 
-The `HttpHandler` takes a `Context` (and a `NextHandler`) and returns a new `Context`.
+The `Context` is transformed by HTTP handlers. The `HttpHandler` takes a `Context` (and a `NextHandler`) and returns a new `Context`.
 
 ```fs
 type NextHandler<'a, 'b> = Context<'a> -> Async<Context<'b>>
@@ -32,27 +32,25 @@ type HttpHandler<'a> = HttpHandler<HttpResponseMessage, 'a>
 type HttpHandler = HttpHandler<HttpResponseMessage>
 ```
 
-An `HttpHandler` is a simple function which takes two curried arguments, and `NextHandler` and a `Context`, and returns a `Context` (wrapped in a `Result` and `Async` workflow) when finished.
+An `HttpHandler` is a plain function that takes two curried arguments, and `NextHandler` and a `Context`, and returns a `Context` (wrapped in a `Result` and `Async`) when finished.
 
-On a high level an `HttpHandler` function takes and returns a context object, which means every `HttpHandler` function has full control of the outgoing `HttpRequest` and the resulting response.
+On a high level the `HttpHandler` function takes and returns a context object, which means every `HttpHandler` function has full control of the outgoing `HttpRequest` and also the resulting response.
 
 Each HttpHandler usually adds more info to the `HttpRequest` before passing it further down the pipeline by invoking the next `NextHandler` or short circuit the execution by returning a result of `Result<'a, ResponseError>`.
 
-If an HttpHandler detects an error, then it can return Result.Error instead to fail the processing.
+If an HttpHandler detects an error, then it can return `Result.Error` instead to fail the processing.
 
 The easiest way to get your head around a Oryx `HttpHandler` is to think of it as a functional Web request processing pipeline. Each handler has the full `Context` at its disposal and can decide whether it wants to return `Error` or pass on a new `Context` on to the "next" handler, `NextHandler`.
 
 ## Operators
 
-The fact that everything is an `HttpHandler` makes it easy to compose handlers together.
-
-Two `HttpHandler` functions may be composed together using Keisli compsition and the fish operator `>=>`.
+The fact that everything is an `HttpHandler` makes it easy to compose handlers together. You can think of them as lego bricks that you can put together. Two `HttpHandler` functions may be composed together using Keisli compsition, i.e using the fish operator `>=>`.
 
 ```fs
 let (>=>) a b = compose a b
 ```
 
-THe `compose` function is the magic that sews it all togheter and explains how you can curry the `HttpHandler` to generate a new `NextHandler`.
+THe `compose` function is the magic that sews it all togheter and explains how you can curry the `HttpHandler` to generate a new `NextHandler` that you give to next `HttpHandler`.
 
 ```fs
 let compose (first : HttpHandler<'a, 'b, 'd>) (second : HttpHandler<'b, 'c, 'd>) : HttpHandler<'a,'c,'d> =
@@ -63,15 +61,33 @@ let compose (first : HttpHandler<'a, 'b, 'd>) (second : HttpHandler<'b, 'c, 'd>)
         next'' ctx
 ```
 
-This enables you to compose your web requests, e.g:
+This enables you to compose your web requests and decode the response, e.g:
 
 ```fs
+let listAssets (options: Option seq) (fetch: HttpHandler<HttpResponseMessage,Stream, 'a>) =
+    let decoder = Encode.decodeResponse Assets.Decoder id
+    let query = options |> Seq.map Option.Render |> List.ofSeq
+
     GET
     >=> setVersion V10
     >=> addQuery query
     >=> setResource Url
     >=> fetch
     >=> decoder
+```
+
+Thus the function `listAssets` is now also an `HttpHandler` and may be composed with other handlers to create complex chains for doing a series of multiple requests to a web service.
+
+There is also a `retry` that retries HTTP handlers using max number of retries and exponential backoff.
+
+```fs
+val retry : (initialDelay: int<ms>) -> (maxRetries: int) -> (handler: HttpHandler<'a,'b,'c>) -> (next: NextHandler<'b,'c>) -> (ctx: Context<'a>) -> Async<Context<'c>>
+```
+
+And a `concurrent` operator that runs a list of HTTP handlers in parallel.
+
+```fs
+val concurrent : (handlers: HttpHandler<'a, 'b, 'b> seq) -> (next: NextHandler<'b list, 'c>) -> (ctx: Context<'a>) -> Async<Context<'c>>
 ```
 
 ## JSON and Protobuf
@@ -86,8 +102,9 @@ Working with `Context` objects can be a bit painful since the actual result will
 
 ```fs
     oryx {
-        let! data = fetchData ()
+        let! a = fetchData "service1"
+        let! b = fetchData "service2"
 
-        return data
+        return a + b
     }
 ```
