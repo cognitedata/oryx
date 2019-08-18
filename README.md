@@ -19,12 +19,14 @@ type Context<'a> = {
 }
 ```
 
-The `Context` is transformed by HTTP handlers. The `HttpHandler` takes a `Context` (and a `NextHandler`) and returns a new `Context`.
+The `Context` is transformed by HTTP handlers. The `HttpHandler` takes a `Context` (and a `NextFunc`) and returns a new `Context`.
 
 ```fs
-type NextHandler<'a, 'b> = Context<'a> -> Async<Context<'b>>
+type HttpFunc<'a, 'b> = Context<'a> -> Async<Context<'b>>
 
-type HttpHandler<'a, 'b, 'c> = NextHandler<'b, 'c> -> Context<'a> -> Async<Context<'c>>
+type NextFunc<'a, 'b> = HttpFunc<'a, 'b>
+
+type HttpHandler<'a, 'b, 'c> = NextFunc<'b, 'c> -> Context<'a> -> Async<Context<'c>>
 
 // For convenience
 type HttpHandler<'a, 'b> = HttpHandler<'a, 'a, 'b>
@@ -32,15 +34,15 @@ type HttpHandler<'a> = HttpHandler<HttpResponseMessage, 'a>
 type HttpHandler = HttpHandler<HttpResponseMessage>
 ```
 
-An `HttpHandler` is a plain function that takes two curried arguments, and `NextHandler` and a `Context`, and returns a `Context` (wrapped in a `Result` and `Async`) when finished.
+An `HttpHandler` is a plain function that takes two curried arguments, and `NextFunc` and a `Context`, and returns a `Context` (wrapped in a `Result` and `Async`) when finished.
 
 On a high level the `HttpHandler` function takes and returns a context object, which means every `HttpHandler` function has full control of the outgoing `HttpRequest` and also the resulting response.
 
-Each HttpHandler usually adds more info to the `HttpRequest` before passing it further down the pipeline by invoking the next `NextHandler` or short circuit the execution by returning a result of `Result<'a, ResponseError>`.
+Each HttpHandler usually adds more info to the `HttpRequest` before passing it further down the pipeline by invoking the next `NextFunc` or short circuit the execution by returning a result of `Result<'a, ResponseError>`.
 
 If an HttpHandler detects an error, then it can return `Result.Error` to fail the processing.
 
-The easiest way to get your head around a Oryx `HttpHandler` is to think of it as a functional Web request processing pipeline. Each handler has the full `Context` at its disposal and can decide whether it wants to return `Error` or pass on a new `Context` on to the "next" handler, `NextHandler`.
+The easiest way to get your head around a Oryx `HttpHandler` is to think of it as a functional Web request processing pipeline. Each handler has the full `Context` at its disposal and can decide whether it wants to return `Error` or pass on a new `Context` on to the "next" handler, `NextFunc`.
 
 ## Operators
 
@@ -50,11 +52,11 @@ The fact that everything is an `HttpHandler` makes it easy to compose handlers t
 let (>=>) a b = compose a b
 ```
 
-THe `compose` function is the magic that sews it all togheter and explains how you can curry the `HttpHandler` to generate a new `NextHandler` that you give to next `HttpHandler`. If the first handler fails, the next handler will be skipped.
+THe `compose` function is the magic that sews it all togheter and explains how you can curry the `HttpHandler` to generate a new `NextFunc` that you give to next `HttpHandler`. If the first handler fails, the next handler will be skipped.
 
 ```fs
 let compose (first : HttpHandler<'a, 'b, 'd>) (second : HttpHandler<'b, 'c, 'd>) : HttpHandler<'a,'c,'d> =
-    fun (next: NextHandler<_, _>) (ctx : Context<'a>) ->
+    fun (next: NextFunc<_, _>) (ctx : Context<'a>) ->
         let next' = second next
         let next'' = first next'
 
@@ -81,13 +83,13 @@ Thus the function `listAssets` is now also an `HttpHandler` and may be composed 
 There is also a `retry` that retries HTTP handlers using max number of retries and exponential backoff.
 
 ```fs
-val retry : (initialDelay: int<ms>) -> (maxRetries: int) -> (handler: HttpHandler<'a,'b,'c>) -> (next: NextHandler<'b,'c>) -> (ctx: Context<'a>) -> Async<Context<'c>>
+val retry : (initialDelay: int<ms>) -> (maxRetries: int) -> (handler: HttpHandler<'a,'b,'c>) -> (next: NextFunc<'b,'c>) -> (ctx: Context<'a>) -> Async<Context<'c>>
 ```
 
 And a `concurrent` operator that runs a list of HTTP handlers in parallel.
 
 ```fs
-val concurrent : (handlers: HttpHandler<'a, 'b, 'b> seq) -> (next: NextHandler<'b list, 'c>) -> (ctx: Context<'a>) -> Async<Context<'c>>
+val concurrent : (handlers: HttpHandler<'a, 'b, 'b> seq) -> (next: NextFunc<'b list, 'c>) -> (ctx: Context<'a>) -> Async<Context<'c>>
 ```
 
 ## JSON and Protobuf

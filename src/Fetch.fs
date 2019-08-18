@@ -25,13 +25,13 @@ module Fetch =
     ///   * `query` - List of tuples (name, value)
     ///   * `context` - The context to add the query to.
     ///
-    let addQuery (query: (string * string) list) (next: NextHandler<_,_>) (context: HttpContext) =
+    let addQuery (query: (string * string) list) (next: NextFunc<_,_>) (context: HttpContext) =
         next { context with Request = { context.Request with Query = query } }
 
-    let setContent (content: Content) (next: NextHandler<_,_>) (context: HttpContext) =
+    let setContent (content: Content) (next: NextFunc<_,_>) (context: HttpContext) =
         next { context with Request = { context.Request with Content = Some content } }
 
-    let setResponseType (respType: ResponseType) (next: NextHandler<_,_>) (context: HttpContext) =
+    let setResponseType (respType: ResponseType) (next: NextFunc<_,_>) (context: HttpContext) =
         next { context with Request = { context.Request with ResponseType = respType }}
 
     /// **Description**
@@ -46,7 +46,7 @@ module Fetch =
     /// **Output Type**
     ///   * `Context`
     ///
-    let setMethod<'a> (method: HttpMethod) (next: NextHandler<HttpResponseMessage,'a>) (context: HttpContext) =
+    let setMethod<'a> (method: HttpMethod) (next: NextFunc<HttpResponseMessage,'a>) (context: HttpContext) =
         next { context with Request = { context.Request with Method = method; Content = None } }
 
     let GET<'a> = setMethod<'a> HttpMethod.Get
@@ -67,12 +67,11 @@ module Fetch =
         inherit HttpContent ()
         let _content = content
         do
-            base.Headers.ContentType <- MediaTypeHeaderValue("application/json")
+            base.Headers.ContentType <- MediaTypeHeaderValue "application/json"
         override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
             task {
                 use sw = new StreamWriter(stream, UTF8Encoding(false), 1024, true)
                 use jtw = new JsonTextWriter(sw, Formatting = Formatting.None)
-                jtw.Formatting <- Formatting.None
                 do! content.WriteToAsync(jtw)
                 do! jtw.FlushAsync()
                 return ()
@@ -85,11 +84,10 @@ module Fetch =
         inherit HttpContent ()
         let _content = content
         do
-            base.Headers.ContentType <- MediaTypeHeaderValue("application/protobuf")
+            base.Headers.ContentType <- MediaTypeHeaderValue "application/protobuf"
         override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
-            task {
-                content.WriteTo(stream)
-            } :> _
+            content.WriteTo(stream) |> Task.FromResult :> _
+
         override this.TryComputeLength(length: byref<int64>) : bool =
             length <- -1L
             false
@@ -110,8 +108,8 @@ module Fetch =
 
         let contentHeader =
             match ctx.Request.ResponseType with
-            | JsonValue -> ("Accept", "application/json")
-            | Protobuf -> ("Accept", "application/protobuf")
+            | JsonValue -> "Accept", "application/json"
+            | Protobuf -> "Accept", "application/protobuf"
 
         for header, value in contentHeader :: ctx.Request.Headers do
             if not (client.DefaultRequestHeaders.Contains header) then
@@ -153,7 +151,7 @@ module Fetch =
                 } |> Error
         }
 
-    let fetch<'a> (next: NextHandler<IO.Stream, 'a>) (ctx: HttpContext) : Async<Context<'a>> =
+    let fetch<'a> (next: NextFunc<IO.Stream, 'a>) (ctx: HttpContext) : Async<Context<'a>> =
         async {
             let client =
                 match ctx.Request.HttpClient with
@@ -168,7 +166,7 @@ module Fetch =
         }
 
     /// Handler for disposing a stream when it's not needed anymore.
-    let dispose<'a> (next: NextHandler<unit,'a>) (context: Context<Stream>) =
+    let dispose<'a> (next: NextFunc<unit,'a>) (context: Context<Stream>) =
         async {
             let nextResult = context.Result |> Result.map (fun stream -> stream.Dispose ())
             return! next { Request = context.Request; Result = nextResult }

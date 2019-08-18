@@ -2,7 +2,7 @@ source https://www.nuget.org/api/v2
 storage: none
 
 nuget FSharp.Core ~> 4.7
-nuget Microsoft.Extensions.Http
+nuget Microsoft.Extensions.Http ~> 2.1
 nuget Taskbuilder.fs ~> 2.1
 nuget Thoth.Json.Net ~> 3.2
 nuget Google.Protobuf ~> 3.9

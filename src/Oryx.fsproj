@@ -16,6 +16,7 @@
     <Compile Include="Context.fs" />
     <Compile Include="Handler.fs" />
     <Compile Include="Fetch.fs" />
+    <Compile Include="Retry.fs" />
     <Compile Include="Builder.fs" />
     <Compile Include="Encode.fs" />
   </ItemGroup>

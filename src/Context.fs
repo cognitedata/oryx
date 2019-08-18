@@ -23,7 +23,7 @@ type Content =
 
 type ResponseType = JsonValue | Protobuf
 
-type ExtraInfo = Map<string, string>
+type PropertyBag = Map<string, string>
 type UrlBuilder = HttpRequest -> string
 
 and HttpRequest = {
@@ -42,7 +42,7 @@ and HttpRequest = {
     /// A function that builds the request URL based on the collected extra info.
     UrlBuilder: UrlBuilder
     /// Extra info used to build the URL
-    Extra: ExtraInfo
+    Extra: PropertyBag
 }
 
 type Context<'a> = {
@@ -67,7 +67,7 @@ module Context =
             Query = List.empty
             ResponseType = JsonValue
             Headers = [
-                ("User-Agent", ua)
+                "User-Agent", ua
             ]
             UrlBuilder = fun _ -> String.Empty
             Extra = Map.empty

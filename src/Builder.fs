@@ -14,12 +14,12 @@ type RequestBuilder () =
     member this.Delay (fn) = fn ()
 
     member this.Bind(source: HttpHandler<'a, 'b, 'd>, fn: 'b -> HttpHandler<'a, 'c, 'd>) :  HttpHandler<'a, 'c, 'd> =
-        fun (next : NextHandler<'c, 'd>) (ctx : Context<'a>) ->
-            let next' (cb : Context<'b>)  = async {
+        fun (next : NextFunc<'c, 'd>) (ctx : Context<'a>) ->
+            let next' (cb : Context<'b>) = async {
                 match cb.Result with
                 | Ok b ->
-                    let inner = fn b
-                    return! inner next ctx
+                    // Run function
+                    return! (fn b) next ctx
                 | Error error ->
                     return! next { Request = cb.Request; Result = Error error }
             }

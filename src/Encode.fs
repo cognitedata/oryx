@@ -15,13 +15,13 @@ module Encode =
     let inline int53 (value : int64) : JsonValue = JValue(value) :> JsonValue
 
     /// Encode int64 seq to Json number array.
-    let inline int53Seq (items: int64 seq) = Seq.map int53 items |> Encode.seq
+    let inline int53seq (items: int64 seq) = Seq.map int53 items |> Encode.seq
 
     /// Encode int64 list to Json number array.
-    let inline int53List (items: int64 list) = List.map int53 items |> Encode.list
+    let inline int53list (items: int64 list) = List.map int53 items |> Encode.list
 
     /// Encode int64 list to string for use in URL query strings
-    let inline int53ListStringify (values: int64 list) = int53List >> stringify
+    let inline int53listStringify (values: int64 list) = int53list >> stringify
 
     /// Encode URI.
     let inline uri (value: Uri) : JsonValue =
@@ -44,7 +44,7 @@ module Encode =
     /// <param name="resultMapper">Mapper for transforming the result.</param>
     /// <param name="next">The next async handler to use.</param>
     /// <returns>Decoded context.</returns>
-    let decodeResponse<'a, 'b, 'c> (decoder : Decoder<'a>) (resultMapper : 'a -> 'b) (next: NextHandler<'b,'c>) (context: Context<Stream>) =
+    let decodeResponse<'a, 'b, 'c> (decoder : Decoder<'a>) (resultMapper : 'a -> 'b) (next: NextFunc<'b,'c>) (context: Context<Stream>) =
         async {
             let result = context.Result
 
@@ -56,15 +56,14 @@ module Encode =
                     | Ok value -> return value |> resultMapper |> Ok
                     | Error message ->
                         return {
-                            ResponseError.empty with
-                                Message = message
+                            ResponseError.empty with Message = message
                         } |> Error
                 | Error err -> return Error err
             }
 
             return! next { Request = context.Request; Result = nextResult }
         }
-    let decodeProtobuf<'b, 'c> (parser : Stream -> 'b) (next: NextHandler<'b, 'c>) (context : Context<Stream>) =
+    let decodeProtobuf<'b, 'c> (parser : Stream -> 'b) (next: NextFunc<'b, 'c>) (context : Context<Stream>) =
         async {
             let result = context.Result |> Result.map parser
             return! next { Request = context.Request; Result = result }
