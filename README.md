@@ -1,12 +1,14 @@
 # Oryx
 
+![Nuget](https://img.shields.io/nuget/v/oryx)
+
 Oryx is a high performance .NET cross platform functional HTTP request handler library for writing web client libraries in F#.
 
 > An SDK for writing web client SDKs.
 
 This library enables you to write (or generate) Web and REST clients and SDKs for various APIs. Thus Oryx is an SDK for writing SDKs.
 
-You can think of Orix as tye client side Giraffe. Oryx is heavily inspired by the [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework, and applies the same kind of ideas to the client making the web requests, as for the server processing them. Thus you could vision the processing pipeline starting at the client and going all the way to the server and back again.
+You can think of Orix as tye client side Giraffe. Oryx is heavily inspired by the [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework, and applies the same kind of ideas to the client making the web requests, as for the server processing them. Thus you could envision the processing pipeline starting at the client and going all the way to the server and back again.
 
 ## Fundamentals
 
@@ -23,7 +25,6 @@ The `Context` is transformed by HTTP handlers. The `HttpHandler` takes a `Contex
 
 ```fs
 type HttpFunc<'a, 'b> = Context<'a> -> Async<Context<'b>>
-
 type NextFunc<'a, 'b> = HttpFunc<'a, 'b>
 
 type HttpHandler<'a, 'b, 'c> = NextFunc<'b, 'c> -> Context<'a> -> Async<Context<'c>>
@@ -57,10 +58,12 @@ THe `compose` function is the magic that sews it all togheter and explains how y
 ```fs
 let compose (first : HttpHandler<'a, 'b, 'd>) (second : HttpHandler<'b, 'c, 'd>) : HttpHandler<'a,'c,'d> =
     fun (next: NextFunc<_, _>) (ctx : Context<'a>) ->
-        let next' = second next
-        let next'' = first next'
+        let func =
+            next
+            |> second
+            |> first
 
-        next'' ctx
+        func ctx
 ```
 
 This enables you to compose your web requests and decode the response, e.g:
@@ -113,6 +116,6 @@ Working with `Context` objects can be a bit painful since the actual result will
 
 ## TODO
 
-The library currently depends on Thoth.Json.Net. This should at some point be split into a separate library to allow for other JSON encoders.
+- The library currently depends on [`Thoth.Json.Net`](https://mangelmaxime.github.io/Thoth/). This should at some point be split into a separate library.
 
-The library also assumes the type of the error response. This should perhaps be made more generic.
+- The library also assumes the type of the error response. This should perhaps be made more generic.
