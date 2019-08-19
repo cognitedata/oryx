@@ -6,7 +6,7 @@ Oryx is a high performance .NET cross platform functional HTTP request handler l
 
 This library enables you to write (or generate) Web and REST clients and SDKs for various APIs. Thus Oryx is an SDK for writing SDKs.
 
-Oryx is heavily inspired by the [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework, and applies the same kind of ideas to the client making the web requests as for the server processing them.
+You can think of Orix as tye client side Giraffe. Oryx is heavily inspired by the [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework, and applies the same kind of ideas to the client making the web requests, as for the server processing them. Thus you could vision the processing pipeline starting at the client and going all the way to the server and back again.
 
 ## Fundamentals
 
@@ -94,7 +94,7 @@ val concurrent : (handlers: HttpHandler<'a, 'b, 'b> seq) -> (next: NextFunc<'b l
 
 ## JSON and Protobuf
 
-Oryx will serialize and deserialize JSON using `Thoth.Json.Net` or Protobuf using `Google.Protobuf`.
+Oryx will serialize (and deserialize) JSON using `Thoth.Json.Net` or Protobuf using `Google.Protobuf`.
 
 Both encode and decode uses streaming so no large strings or arrays will be allocated in the process.
 
