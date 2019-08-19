@@ -1,3 +1,5 @@
+// Copyright 2019 Cognite AS
+
 namespace Oryx
 
 open System

@@ -1,3 +1,5 @@
+// Copyright 2019 Cognite AS
+
 namespace Oryx
 
 open System
@@ -78,4 +80,3 @@ type ApiResponseError = {
                 Error = get.Required.Field "error" ResponseError.Decoder
             }
         )
-

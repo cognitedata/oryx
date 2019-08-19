@@ -1,6 +1,7 @@
 # Oryx
 
 [![Nuget](https://img.shields.io/nuget/v/oryx)](https://www.nuget.org/packages/Oryx/)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-0f69b4.svg)](code-of-conduct.md)
 
 Oryx is a high performance .NET cross platform functional HTTP request handler library for writing web client libraries in F#.
 
@@ -127,6 +128,10 @@ val runHandler : (handler: HttpHandler<'a,'b,'b>) -> (ctx : Context<'a>) -> Asyn
 - The library currently depends on [`Thoth.Json.Net`](https://mangelmaxime.github.io/Thoth/). This should at some point be split into a separate library.
 
 - The library also assumes the type of the error response. This should perhaps be made more generic.
+
+## Code of Conduct
+
+This project follows https://www.contributor-covenant.org, see our [Code of Conduct](https://github.com/cognitedata/oryx/blob/master/CODE_OF_CONDUCT.md)
 
 ## License
 

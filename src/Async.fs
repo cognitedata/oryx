@@ -1,3 +1,5 @@
+// Copyright 2019 Cognite AS
+
 namespace Oryx
 
 /// Async extensions
