@@ -1,6 +1,6 @@
 # Oryx
 
-![Nuget](https://img.shields.io/nuget/v/oryx)
+[![Nuget](https://img.shields.io/nuget/v/oryx)](https://www.nuget.org/packages/Oryx/)
 
 Oryx is a high performance .NET cross platform functional HTTP request handler library for writing web client libraries in F#.
 
@@ -8,7 +8,7 @@ Oryx is a high performance .NET cross platform functional HTTP request handler l
 
 This library enables you to write (or generate) Web and REST clients and SDKs for various APIs. Thus Oryx is an SDK for writing SDKs.
 
-You can think of Orix as tye client side Giraffe. Oryx is heavily inspired by the [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework, and applies the same kind of ideas to the client making the web requests, as for the server processing them. Thus you could envision the processing pipeline starting at the client and going all the way to the server and back again.
+You can think of Orix as the client equivalent of Giraffe. Oryx is heavily inspired by the [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework, and applies the same ideas to the client making the web requests. Thus you could envision the processing pipeline starting at the client and going all the way to the server and back again.
 
 ## Fundamentals
 
@@ -114,8 +114,20 @@ Working with `Context` objects can be a bit painful since the actual result will
     }
 ```
 
+To run a handler u can use the `runHandler` function.
+
+```fs
+
+val runHandler : (handler: HttpHandler<'a,'b,'b>) -> (ctx : Context<'a>) -> Async<Result<'b, ResponseError>>
+
+```
+
 ## TODO
 
 - The library currently depends on [`Thoth.Json.Net`](https://mangelmaxime.github.io/Thoth/). This should at some point be split into a separate library.
 
 - The library also assumes the type of the error response. This should perhaps be made more generic.
+
+## License
+
+Apache v2, see [LICENSE](https://github.com/cognitedata/oryx/blob/master/LICENSE).
