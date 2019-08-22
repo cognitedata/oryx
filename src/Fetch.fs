@@ -16,6 +16,8 @@ open Google.Protobuf
 open Newtonsoft.Json
 open Thoth.Json.Net
 
+open Oryx
+
 [<AutoOpen>]
 module Fetch =
     /// **Description**

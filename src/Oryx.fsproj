@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>.NET SDK for writing web clients</Description>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net47</TargetFramework>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>Oryx</PackageId>
     <Author>Cognite AS</Author>
@@ -19,6 +19,9 @@
     <Compile Include="Retry.fs" />
     <Compile Include="Builder.fs" />
     <Compile Include="Encode.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Web" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\LICENSE" Pack="true" Visible="false" PackagePath=""/>

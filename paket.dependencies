@@ -1,6 +1,7 @@
 source https://www.nuget.org/api/v2
 storage: none
 
+framework: net47
 nuget FSharp.Core ~> 4.7
 nuget Microsoft.Extensions.Http ~> 2.1
 nuget Taskbuilder.fs ~> 2.1
