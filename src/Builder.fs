@@ -11,9 +11,14 @@ type RequestBuilder () =
 
     member this.Return (req: HttpRequest) : HttpHandler<HttpResponseMessage, HttpResponseMessage, _> = fun next ctx -> next { Request = req; Result = Context.defaultResult }
 
-    member this.ReturnFrom (req : HttpHandler<'a, 'b, 'c>)  : HttpHandler<'a, 'b, 'c>  = req
+    member this.ReturnFrom (req : HttpHandler<'a, 'b, 'c>)  : HttpHandler<'a, 'b, 'c> = req
 
     member this.Delay (fn) = fn ()
+
+    member x.For(source:'a seq, func: 'a -> HttpHandler<'a, 'b, 'b>) : HttpHandler<'a, 'b list, 'c>  =
+        source
+        |> Seq.map (fun a -> (func a) )
+        |> sequential
 
     member this.Bind(source: HttpHandler<'a, 'b, 'd>, fn: 'b -> HttpHandler<'a, 'c, 'd>) :  HttpHandler<'a, 'c, 'd> =
         fun (next : NextFunc<'c, 'd>) (ctx : Context<'a>) ->
