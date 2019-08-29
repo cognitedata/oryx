@@ -7,11 +7,7 @@ module Chunk =
         let batches = chunks |> Seq.chunkBySize maxConcurrency
 
         batches
-        |> Seq.map(fun batch ->
-            batch
-            |> Seq.map (handler)
-            |> concurrent
-        )
+        |> Seq.map(Seq.map handler >> concurrent)
         |> sequential
         // Collect results
-        >=> (map (List.collect id))
+        >=> Handler.map (List.collect id)
