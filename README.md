@@ -131,7 +131,7 @@ val runHandler : (handler: HttpHandler<'a,'b,'b>) -> (ctx : Context<'a>) -> Asyn
 
 ## Code of Conduct
 
-This project follows https://www.contributor-covenant.org, see our [Code of Conduct](https://github.com/cognitedata/oryx/blob/master/CODE_OF_CONDUCT.md)
+This project follows https://www.contributor-covenant.org, see our [Code of Conduct](https://github.com/cognitedata/oryx/blob/master/CODE_OF_CONDUCT.md).
 
 ## License
 

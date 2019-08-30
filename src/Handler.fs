@@ -25,23 +25,11 @@ module Handler =
             let! a = handler Async.single ctx
             return a.Result
         }
-
-    let bind fn ctx =
+    let map (mapper) (next : NextFunc<'a list,'b>) (ctx : Context<'a list list>) : Async<Context<'b>> =
         match ctx.Result with
-        | Ok res ->
-            fn res
-        | Error err ->
-            { Request = ctx.Request; Result = Error err }
-
-    let bindAsync (fn: Context<'a> -> Async<Context<'b>>) (a: Async<Context<'a>>) : Async<Context<'b>> =
-        async {
-            let! p = a
-            match p.Result with
-            | Ok _ ->
-                return! fn p
-            | Error err ->
-                return { Request = p.Request; Result = Error err }
-        }
+        | Ok value ->
+            next { Request = ctx.Request; Result = Ok (mapper value) }
+        | Error ex -> Async.single  { Request = ctx.Request; Result = Error ex }
 
     let compose (first : HttpHandler<'a, 'b, 'd>) (second : HttpHandler<'b, 'c, 'd>) : HttpHandler<'a,'c,'d> =
         fun (next: NextFunc<_, _>) (ctx : Context<'a>) ->
@@ -52,16 +40,13 @@ module Handler =
 
             func ctx
 
-    let (>>=) a b =
-        bindAsync b a
-
     let (>=>) a b =
         compose a b
 
     // https://fsharpforfunandprofit.com/posts/elevated-world-4/
     let traverseContext fn (list : Context<'a> list) =
         // define the monadic functions
-        let (>>=) ctx fn = bind fn ctx
+        let (>>=) ctx fn = Context.bind fn ctx
 
         let retn a =
             { Request = Context.defaultRequest; Result = Ok a }
@@ -85,8 +70,20 @@ module Handler =
     /// Run list of HTTP handlers concurrently.
     let concurrent (handlers : HttpHandler<'a, 'b, 'b> seq) (next: NextFunc<'b list, 'c>) (ctx: Context<'a>) : Async<Context<'c>> = async {
         let! res =
-            Seq.map (fun handler -> handler Async.single ctx) handlers
+            handlers
+            |> Seq.map (fun handler -> handler Async.single ctx)
             |> Async.Parallel
+            |> Async.map List.ofArray
+
+        return! next (res |> sequenceContext)
+    }
+
+    /// Run list of HTTP handlers sequentially.
+    let sequential (handlers : HttpHandler<'a, 'b, 'b> seq) (next: NextFunc<'b list, 'c>) (ctx: Context<'a>) : Async<Context<'c>> = async {
+        let! res =
+            handlers
+            |> Seq.map (fun handler -> handler Async.single ctx)
+            |> Async.Sequential
             |> Async.map List.ofArray
 
         return! next (res |> sequenceContext)
