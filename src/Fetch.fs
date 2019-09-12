@@ -18,36 +18,20 @@ open Thoth.Json.Net
 
 [<AutoOpen>]
 module Fetch =
-    /// **Description**
-    ///
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
-    ///
-    /// **Parameters**
-    ///   * `query` - List of tuples (name, value)
-    ///   * `context` - The context to add the query to.
-    ///
     let addQuery (query: (string * string) list) (next: NextFunc<_,_>) (context: HttpContext) =
         next { context with Request = { context.Request with Query = query } }
 
+    /// Add content to context. These content will be added to the HTTP body of
+    /// requests that uses this context.
     let setContent (content: Content) (next: NextFunc<_,_>) (context: HttpContext) =
         next { context with Request = { context.Request with Content = Some content } }
 
     let setResponseType (respType: ResponseType) (next: NextFunc<_,_>) (context: HttpContext) =
         next { context with Request = { context.Request with ResponseType = respType }}
 
-    /// **Description**
-    ///
     /// Set the method to be used for requests using this context.
-    ///
-    /// **Parameters**
-    ///   * `method` - Method is a parameter of type `Method` and can be
-    ///     `Put`, `Get`, `Post` or `Delete`.
-    ///   * `context` - parameter of type `Context`
-    ///
-    /// **Output Type**
-    ///   * `Context`
-    ///
     let setMethod<'a> (method: HttpMethod) (next: NextFunc<HttpResponseMessage,'a>) (context: HttpContext) =
         next { context with Request = { context.Request with Method = method; Content = None } }
 
@@ -70,13 +54,13 @@ module Fetch =
         let _content = content
         do
             base.Headers.ContentType <- MediaTypeHeaderValue "application/json"
+
         override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
             task {
                 use sw = new StreamWriter(stream, UTF8Encoding(false), 1024, true)
                 use jtw = new JsonTextWriter(sw, Formatting = Formatting.None)
                 do! content.WriteToAsync(jtw)
                 do! jtw.FlushAsync()
-                return ()
             } :> _
         override this.TryComputeLength(length: byref<int64>) : bool =
             length <- -1L
@@ -87,6 +71,7 @@ module Fetch =
         let _content = content
         do
             base.Headers.ContentType <- MediaTypeHeaderValue "application/protobuf"
+
         override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
             content.WriteTo(stream) |> Task.FromResult :> _
 
@@ -162,14 +147,10 @@ module Fetch =
             use message = buildRequest client ctx
 
             let! result = sendRequest message client |> Async.AwaitTask
-            if ctx.Request.Content.IsSome then
-                message.Content.Dispose ()
-            return! next { Request = ctx.Request; Result = result }
-        }
-
-    /// Handler for disposing a stream when it's not needed anymore.
-    let dispose<'a> (next: NextFunc<unit,'a>) (context: Context<Stream>) =
-        async {
-            let nextResult = context.Result |> Result.map (fun stream -> stream.Dispose ())
-            return! next { Request = context.Request; Result = nextResult }
+            match result with
+            | Ok stream ->
+                use stream' = stream
+                return! next { Request = ctx.Request; Result = Ok stream' }
+            | Error error ->
+                return { Request = ctx.Request; Result = Error error }
         }
