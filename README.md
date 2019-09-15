@@ -5,7 +5,7 @@
 
 Oryx is a high performance .NET cross platform functional HTTP request handler library for writing web client libraries in F#.
 
-> An SDK for writing web client SDKs.
+> An SDK for writing HTTP web clients or SDKs.
 
 This library enables you to write (or generate) Web and REST clients and SDKs for various APIs. Thus Oryx is an SDK for writing SDKs.
 
@@ -25,10 +25,10 @@ type Context<'a> = {
 The `Context` is transformed by HTTP handlers. The `HttpHandler` takes a `Context` (and a `NextFunc`) and returns a new `Context`.
 
 ```fs
-type HttpFunc<'a, 'b> = Context<'a> -> Async<Context<'b>>
+type HttpFunc<'a, 'b> = Context<'a> -> Task<Context<'b>>
 type NextFunc<'a, 'b> = HttpFunc<'a, 'b>
 
-type HttpHandler<'a, 'b, 'c> = NextFunc<'b, 'c> -> Context<'a> -> Async<Context<'c>>
+type HttpHandler<'a, 'b, 'c> = NextFunc<'b, 'c> -> Context<'a> -> Task<Context<'c>>
 
 // For convenience
 type HttpHandler<'a, 'b> = HttpHandler<'a, 'a, 'b>
@@ -36,7 +36,7 @@ type HttpHandler<'a> = HttpHandler<HttpResponseMessage, 'a>
 type HttpHandler = HttpHandler<HttpResponseMessage>
 ```
 
-An `HttpHandler` is a plain function that takes two curried arguments, and `NextFunc` and a `Context`, and returns a `Context` (wrapped in a `Result` and `Async`) when finished.
+An `HttpHandler` is a plain function that takes two curried arguments, and `NextFunc` and a `Context`, and returns a `Context` (wrapped in a `Result` and `Task`) when finished.
 
 On a high level the `HttpHandler` function takes and returns a context object, which means every `HttpHandler` function has full control of the outgoing `HttpRequest` and also the resulting response.
 
@@ -54,7 +54,7 @@ The fact that everything is an `HttpHandler` makes it easy to compose handlers t
 let (>=>) a b = compose a b
 ```
 
-THe `compose` function is the magic that sews it all togheter and explains how you can curry the `HttpHandler` to generate a new `NextFunc` that you give to next `HttpHandler`. If the first handler fails, the next handler will be skipped.
+The `compose` function is the magic that sews it all togheter and explains how you can curry the `HttpHandler` to generate a new `NextFunc` that you give to next `HttpHandler`. If the first handler fails, the next handler will be skipped.
 
 ```fs
 let compose (first : HttpHandler<'a, 'b, 'd>) (second : HttpHandler<'b, 'c, 'd>) : HttpHandler<'a,'c,'d> =
@@ -87,13 +87,13 @@ Thus the function `listAssets` is now also an `HttpHandler` and may be composed 
 There is also a `retry` that retries HTTP handlers using max number of retries and exponential backoff.
 
 ```fs
-val retry : (initialDelay: int<ms>) -> (maxRetries: int) -> (handler: HttpHandler<'a,'b,'c>) -> (next: NextFunc<'b,'c>) -> (ctx: Context<'a>) -> Async<Context<'c>>
+val retry : (initialDelay: int<ms>) -> (maxRetries: int) -> (handler: HttpHandler<'a,'b,'c>) -> (next: NextFunc<'b,'c>) -> (ctx: Context<'a>) -> Task<Context<'c>>
 ```
 
 And a `concurrent` operator that runs a list of HTTP handlers in parallel.
 
 ```fs
-val concurrent : (handlers: HttpHandler<'a, 'b, 'b> seq) -> (next: NextFunc<'b list, 'c>) -> (ctx: Context<'a>) -> Async<Context<'c>>
+val concurrent : (handlers: HttpHandler<'a, 'b, 'b> seq) -> (next: NextFunc<'b list, 'c>) -> (ctx: Context<'a>) -> Task<Context<'c>>
 ```
 
 ## JSON and Protobuf
@@ -104,7 +104,7 @@ Both encode and decode uses streaming so no large strings or arrays will be allo
 
 ## Computational Expression Builder
 
-Working with `Context` objects can be a bit painful since the actual result will be available inside an `Async` effect that has a `Result` that can be either `Ok` with the response or `Error`. To make it simpler to handle multiple requests using handlers you can use the `oryx` builder that will hide the complexity of both the `Context` and the `Result`.
+Working with `Context` objects can be a bit painful since the actual result will be available inside a `Task` effect that has a `Result` that can be either `Ok` with the response or `Error`. To make it simpler to handle multiple requests using handlers you can use the `oryx` builder that will hide the complexity of both the `Context` and the `Result`.
 
 ```fs
     oryx {
@@ -119,7 +119,7 @@ To run a handler u can use the `runHandler` function.
 
 ```fs
 
-val runHandler : (handler: HttpHandler<'a,'b,'b>) -> (ctx : Context<'a>) -> Async<Result<'b, ResponseError>>
+val runHandler : (handler: HttpHandler<'a,'b,'b>) -> (ctx : Context<'a>) -> Task<Result<'b, ResponseError>>
 
 ```
 

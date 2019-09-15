@@ -3,8 +3,10 @@
 namespace Oryx
 
 open System
+open System.Threading.Tasks
 
 open Microsoft.FSharp.Data.UnitSystems.SI
+open FSharp.Control.Tasks.V2.ContextInsensitive
 
 
 module Retry =
@@ -40,7 +42,7 @@ module Retry =
 
     /// Retries the given HTTP handler up to `maxRetries` retries with
     /// exponential backoff and up to 2 minute with randomness.
-    let rec retry (shouldRetry: ResponseError -> bool) (initialDelay: int<ms>) (maxRetries : int) (handler: HttpHandler<'a,'b,'c>) (next: NextFunc<'b,'c>) (ctx: Context<'a>) : Async<Context<'c>> = async {
+    let rec retry (shouldRetry: ResponseError -> bool) (initialDelay: int<ms>) (maxRetries : int) (handler: HttpHandler<'a,'b,'c>) (next: NextFunc<'b,'c>) (ctx: Context<'a>) : Task<Context<'c>> = task {
         let exponentialDelay = min (secondsInMilliseconds * DefaultMaxBackoffDelay / 2) (initialDelay * 2)
         let randomDelayScale = min (secondsInMilliseconds * DefaultMaxBackoffDelay / 2) (initialDelay * 2)
         let nextDelay = rand.Next(int randomDelayScale) * 1<ms> + exponentialDelay

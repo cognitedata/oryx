@@ -3,6 +3,7 @@
 namespace Oryx
 
 open System.Net.Http
+open FSharp.Control.Tasks.V2.ContextInsensitive
 
 
 type RequestBuilder () =
@@ -22,7 +23,7 @@ type RequestBuilder () =
 
     member this.Bind(source: HttpHandler<'a, 'b, 'd>, fn: 'b -> HttpHandler<'a, 'c, 'd>) :  HttpHandler<'a, 'c, 'd> =
         fun (next : NextFunc<'c, 'd>) (ctx : Context<'a>) ->
-            let next' (cb : Context<'b>) = async {
+            let next' (cb : Context<'b>) = task {
                 match cb.Result with
                 | Ok b ->
                     // Run function

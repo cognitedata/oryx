@@ -8,6 +8,7 @@ open System.Net
 open System.Net.Http
 open System.Net.Http.Headers
 open System.Text
+open System.Threading
 open System.Threading.Tasks
 open System.Web
 
@@ -38,15 +39,6 @@ module Fetch =
     let GET<'a> = setMethod<'a> HttpMethod.Get
     let POST<'a> = setMethod<'a> HttpMethod.Post
     let DELETE<'a> = setMethod<'a> HttpMethod.Delete
-
-    let decodeStreamAsync (decoder : Decoder<'a>) (stream : IO.Stream) =
-        task {
-            use tr = new StreamReader(stream) // StreamReader will dispose the stream
-            use jtr = new JsonTextReader(tr)
-            let! json = Newtonsoft.Json.Linq.JValue.ReadFromAsync jtr
-
-            return Decode.fromValue "$" decoder json
-        }
 
     /// HttpContent implementation to push a JsonValue directly to the output stream.
     type JsonPushStreamContent (content : JsonValue) =
@@ -110,47 +102,25 @@ module Fetch =
             request.Content <- content
         request
 
-    let sendRequest (request: HttpRequestMessage) (client: HttpClient) : Task<Result<Stream, ResponseError>> =
+    let fetch<'a> (next: NextFunc<HttpResponseMessage, 'a>) (ctx: HttpContext) : Task<Context<'a>> =
+        let client =
+            match ctx.Request.HttpClient with
+            | Some client -> client
+            | None -> failwith "Must set httpClient"
+
+        use source = new CancellationTokenSource()
+        let cancellationToken =
+            match ctx.Request.CancellationToken with
+            | Some token -> token
+            | None -> source.Token
+
         task {
             try
-                let! response = client.SendAsync request
-                let! stream = response.Content.ReadAsStreamAsync ()
-                if response.IsSuccessStatusCode then
-                    return Ok stream
-                else
-                    let! result = decodeStreamAsync ApiResponseError.Decoder stream
-                    match result with
-                    | Ok apiResponseError ->
-                        return apiResponseError.Error |> Error
-                    | Error message ->
-                        return {
-                            ResponseError.empty with
-                                Code = int response.StatusCode
-                                Message = message
-                        } |> Error
+                use message = buildRequest client ctx
+                let! response = client.SendAsync(message, cancellationToken)
+                return! next { Request = ctx.Request; Result = Ok response }
             with
             | ex ->
-                return {
-                    ResponseError.empty with
-                        Code = 400
-                        Message = ex.Message
-                        InnerException = Some ex
-                } |> Error
-        }
-
-    let fetch<'a> (next: NextFunc<IO.Stream, 'a>) (ctx: HttpContext) : Async<Context<'a>> =
-        async {
-            let client =
-                match ctx.Request.HttpClient with
-                | Some client -> client
-                | None -> failwith "Must set httpClient"
-            use message = buildRequest client ctx
-
-            let! result = sendRequest message client |> Async.AwaitTask
-            match result with
-            | Ok stream ->
-                use stream' = stream
-                return! next { Request = ctx.Request; Result = Ok stream' }
-            | Error error ->
-                return { Request = ctx.Request; Result = Error error }
+                let error = ResponseError.empty
+                return { Request = ctx.Request; Result = Error { error with InnerException = Some ex } }
         }
