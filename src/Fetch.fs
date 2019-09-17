@@ -117,7 +117,7 @@ module Fetch =
         task {
             try
                 use message = buildRequest client ctx
-                let! response = client.SendAsync(message, cancellationToken)
+                use! response = client.SendAsync(message, cancellationToken)
                 return! next { Request = ctx.Request; Result = Ok response }
             with
             | ex ->
