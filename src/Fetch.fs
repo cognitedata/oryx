@@ -8,6 +8,7 @@ open System.Net
 open System.Net.Http
 open System.Net.Http.Headers
 open System.Text
+open System.Threading
 open System.Threading.Tasks
 open System.Web
 
@@ -18,36 +19,20 @@ open Thoth.Json.Net
 
 [<AutoOpen>]
 module Fetch =
-    /// **Description**
-    ///
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
-    ///
-    /// **Parameters**
-    ///   * `query` - List of tuples (name, value)
-    ///   * `context` - The context to add the query to.
-    ///
     let addQuery (query: (string * string) list) (next: NextFunc<_,_>) (context: HttpContext) =
         next { context with Request = { context.Request with Query = query } }
 
+    /// Add content to context. These content will be added to the HTTP body of
+    /// requests that uses this context.
     let setContent (content: Content) (next: NextFunc<_,_>) (context: HttpContext) =
         next { context with Request = { context.Request with Content = Some content } }
 
     let setResponseType (respType: ResponseType) (next: NextFunc<_,_>) (context: HttpContext) =
         next { context with Request = { context.Request with ResponseType = respType }}
 
-    /// **Description**
-    ///
     /// Set the method to be used for requests using this context.
-    ///
-    /// **Parameters**
-    ///   * `method` - Method is a parameter of type `Method` and can be
-    ///     `Put`, `Get`, `Post` or `Delete`.
-    ///   * `context` - parameter of type `Context`
-    ///
-    /// **Output Type**
-    ///   * `Context`
-    ///
     let setMethod<'a> (method: HttpMethod) (next: NextFunc<HttpResponseMessage,'a>) (context: HttpContext) =
         next { context with Request = { context.Request with Method = method; Content = None } }
 
@@ -55,28 +40,19 @@ module Fetch =
     let POST<'a> = setMethod<'a> HttpMethod.Post
     let DELETE<'a> = setMethod<'a> HttpMethod.Delete
 
-    let decodeStreamAsync (decoder : Decoder<'a>) (stream : IO.Stream) =
-        task {
-            use tr = new StreamReader(stream) // StreamReader will dispose the stream
-            use jtr = new JsonTextReader(tr)
-            let! json = Newtonsoft.Json.Linq.JValue.ReadFromAsync jtr
-
-            return Decode.fromValue "$" decoder json
-        }
-
     /// HttpContent implementation to push a JsonValue directly to the output stream.
     type JsonPushStreamContent (content : JsonValue) =
         inherit HttpContent ()
         let _content = content
         do
             base.Headers.ContentType <- MediaTypeHeaderValue "application/json"
+
         override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
             task {
                 use sw = new StreamWriter(stream, UTF8Encoding(false), 1024, true)
                 use jtw = new JsonTextWriter(sw, Formatting = Formatting.None)
                 do! content.WriteToAsync(jtw)
                 do! jtw.FlushAsync()
-                return ()
             } :> _
         override this.TryComputeLength(length: byref<int64>) : bool =
             length <- -1L
@@ -87,6 +63,7 @@ module Fetch =
         let _content = content
         do
             base.Headers.ContentType <- MediaTypeHeaderValue "application/protobuf"
+
         override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
             content.WriteTo(stream) |> Task.FromResult :> _
 
@@ -125,51 +102,25 @@ module Fetch =
             request.Content <- content
         request
 
-    let sendRequest (request: HttpRequestMessage) (client: HttpClient) : Task<Result<Stream, ResponseError>> =
+    let fetch<'a> (next: NextFunc<HttpResponseMessage, 'a>) (ctx: HttpContext) : Task<Context<'a>> =
+        let client =
+            match ctx.Request.HttpClient with
+            | Some client -> client
+            | None -> failwith "Must set httpClient"
+
+        use source = new CancellationTokenSource()
+        let cancellationToken =
+            match ctx.Request.CancellationToken with
+            | Some token -> token
+            | None -> source.Token
+
         task {
             try
-                let! response = client.SendAsync request
-                let! stream = response.Content.ReadAsStreamAsync ()
-                if response.IsSuccessStatusCode then
-                    return Ok stream
-                else
-                    let! result = decodeStreamAsync ApiResponseError.Decoder stream
-                    match result with
-                    | Ok apiResponseError ->
-                        return apiResponseError.Error |> Error
-                    | Error message ->
-                        return {
-                            ResponseError.empty with
-                                Code = int response.StatusCode
-                                Message = message
-                        } |> Error
+                use message = buildRequest client ctx
+                use! response = client.SendAsync(message, cancellationToken)
+                return! next { Request = ctx.Request; Result = Ok response }
             with
             | ex ->
-                return {
-                    ResponseError.empty with
-                        Code = 400
-                        Message = ex.Message
-                        InnerException = Some ex
-                } |> Error
-        }
-
-    let fetch<'a> (next: NextFunc<IO.Stream, 'a>) (ctx: HttpContext) : Async<Context<'a>> =
-        async {
-            let client =
-                match ctx.Request.HttpClient with
-                | Some client -> client
-                | None -> failwith "Must set httpClient"
-            use message = buildRequest client ctx
-
-            let! result = sendRequest message client |> Async.AwaitTask
-            if ctx.Request.Content.IsSome then
-                message.Content.Dispose ()
-            return! next { Request = ctx.Request; Result = result }
-        }
-
-    /// Handler for disposing a stream when it's not needed anymore.
-    let dispose<'a> (next: NextFunc<unit,'a>) (context: Context<Stream>) =
-        async {
-            let nextResult = context.Result |> Result.map (fun stream -> stream.Dispose ())
-            return! next { Request = context.Request; Result = nextResult }
+                let error = ResponseError.empty
+                return { Request = ctx.Request; Result = Error { error with InnerException = Some ex } }
         }

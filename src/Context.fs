@@ -8,6 +8,7 @@ open System.Net.Http
 open System.Reflection
 
 open Thoth.Json.Net
+open System.Threading
 
 type RequestMethod =
     | POST
@@ -45,6 +46,8 @@ and HttpRequest = {
     UrlBuilder: UrlBuilder
     /// Extra info used to build the URL
     Extra: PropertyBag
+    /// Optional CancellationToken for cancelling the request.
+    CancellationToken: CancellationToken option
 }
 
 type Context<'a> = {
@@ -73,6 +76,7 @@ module Context =
             ]
             UrlBuilder = fun _ -> String.Empty
             Extra = Map.empty
+            CancellationToken = None
         }
 
     let internal defaultResult =
@@ -114,3 +118,6 @@ module Context =
 
     let setUrlBuilder (builder: HttpRequest -> string) (context: HttpContext) =
         { context with Request = { context.Request with UrlBuilder = builder } }
+
+    let setCancellationToken (token: CancellationToken) (context: HttpContext) =
+        { context with Request = { context.Request with CancellationToken = Some token } }

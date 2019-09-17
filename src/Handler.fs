@@ -3,12 +3,15 @@
 namespace Oryx
 
 open System.Net.Http
+open System.Threading
+open System.Threading.Tasks
+open FSharp.Control.Tasks.V2.ContextInsensitive
 
-type HttpFunc<'a, 'b> = Context<'a> -> Async<Context<'b>>
+type HttpFunc<'a, 'b> = Context<'a> -> Task<Context<'b>>
 
 type NextFunc<'a, 'b> = HttpFunc<'a, 'b>
 
-type HttpHandler<'a, 'b, 'c> = NextFunc<'b, 'c> -> Context<'a> -> Async<Context<'c>>
+type HttpHandler<'a, 'b, 'c> = NextFunc<'b, 'c> -> Context<'a> -> Task<Context<'c>>
 
 type HttpHandler<'a, 'b> = HttpHandler<'a, 'a, 'b>
 
@@ -20,16 +23,16 @@ type HttpHandler = HttpHandler<HttpResponseMessage>
 module Handler =
 
     /// Run the handler with the given context.
-    let runHandler (handler: HttpHandler<'a,'b,'b>) (ctx : Context<'a>) : Async<Result<'b, ResponseError>> =
-        async {
-            let! a = handler Async.single ctx
+    let runHandler (handler: HttpHandler<'a,'b,'b>) (ctx : Context<'a>) : Task<Result<'b, ResponseError>> =
+        task {
+            let! a = handler Task.FromResult ctx
             return a.Result
         }
-    let map (mapper) (next : NextFunc<'a list,'b>) (ctx : Context<'a list list>) : Async<Context<'b>> =
+    let map (mapper) (next : NextFunc<'a list,'b>) (ctx : Context<'a list list>) : Task<Context<'b>> =
         match ctx.Result with
         | Ok value ->
             next { Request = ctx.Request; Result = Ok (mapper value) }
-        | Error ex -> Async.single  { Request = ctx.Request; Result = Error ex }
+        | Error ex -> Task.FromResult  { Request = ctx.Request; Result = Error ex }
 
     let compose (first : HttpHandler<'a, 'b, 'd>) (second : HttpHandler<'b, 'c, 'd>) : HttpHandler<'a,'c,'d> =
         fun (next: NextFunc<_, _>) (ctx : Context<'a>) ->
@@ -68,23 +71,22 @@ module Handler =
     let sequenceContext (ctx : Context<'a> list) : Context<'a list> = traverseContext id ctx
 
     /// Run list of HTTP handlers concurrently.
-    let concurrent (handlers : HttpHandler<'a, 'b, 'b> seq) (next: NextFunc<'b list, 'c>) (ctx: Context<'a>) : Async<Context<'c>> = async {
+    let concurrent (handlers : HttpHandler<'a, 'b, 'b> seq) (next: NextFunc<'b list, 'c>) (ctx: Context<'a>) : Task<Context<'c>> = task {
         let! res =
             handlers
-            |> Seq.map (fun handler -> handler Async.single ctx)
-            |> Async.Parallel
-            |> Async.map List.ofArray
+            |> Seq.map (fun handler -> handler Task.FromResult ctx)
+            |> Task.WhenAll
 
-        return! next (res |> sequenceContext)
+        return! next (res |> List.ofArray |> sequenceContext)
     }
 
     /// Run list of HTTP handlers sequentially.
-    let sequential (handlers : HttpHandler<'a, 'b, 'b> seq) (next: NextFunc<'b list, 'c>) (ctx: Context<'a>) : Async<Context<'c>> = async {
-        let! res =
-            handlers
-            |> Seq.map (fun handler -> handler Async.single ctx)
-            |> Async.Sequential
-            |> Async.map List.ofArray
+    let sequential (handlers : HttpHandler<'a, 'b, 'b> seq) (next: NextFunc<'b list, 'c>) (ctx: Context<'a>) : Task<Context<'c>> = task {
+        let res = ResizeArray<Context<'b>>()
 
-        return! next (res |> sequenceContext)
+        for handler in handlers do
+            let! result = handler Task.FromResult ctx
+            res.Add result
+
+        return! next (res |> List.ofSeq |> sequenceContext)
     }
