@@ -90,3 +90,16 @@ module Handler =
 
         return! next (res |> List.ofSeq |> sequenceContext)
     }
+
+    let extractHeader (header: string) (next: NextFunc<_,_>) (context: HttpContext) = task {
+        match context.Result with
+        | Ok response ->
+            let (success, values) = response.Headers.TryGetValues header
+            let values = if (isNull values) then [] else values |> List.ofSeq
+            match (success, values ) with
+            | (true, value :: _) ->
+                return! next { Request = context.Request; Result = Ok value }
+            | _ ->
+                return! next { Request = context.Request; Result = Error { ResponseError.empty with Message = sprintf "Missing header: %s" header }}
+        | Error error -> return! next { Request = context.Request; Result = Error error }
+    }

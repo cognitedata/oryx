@@ -1,10 +1,23 @@
-source https://www.nuget.org/api/v2
-storage: none
+group Main
+    source https://www.nuget.org/api/v2
+    storage: none
 
-framework: netstandard2.0
+    framework: netstandard2.0
 
-nuget FSharp.Core ~> 4.7
-nuget Microsoft.Extensions.Http ~> 2.1
-nuget Taskbuilder.fs ~> 2.1
-nuget Thoth.Json.Net ~> 3.2
-nuget Google.Protobuf ~> 3.9
+    nuget FSharp.Core ~> 4.7
+    nuget Microsoft.Extensions.Http ~> 2.1
+    nuget Taskbuilder.fs ~> 2.1
+    nuget Thoth.Json.Net ~> 3.2
+    nuget Google.Protobuf ~> 3.9
+
+group Test
+    source https://www.nuget.org/api/v2
+    storage: none
+
+    nuget FSharp.Core 4.7.0
+    nuget coverlet.msbuild 2.5.1
+    nuget Unquote ~> 4
+    nuget xunit ~> 2
+    nuget xunit.runner.visualstudio ~> 2
+    nuget Serilog.Sinks.XUnit
+    nuget Microsoft.NET.Test.Sdk ~> 16

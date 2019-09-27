@@ -1,3 +1,5 @@
+group Main
+
 Microsoft.Extensions.Http
 FSharp.Core
 Taskbuilder.fs
