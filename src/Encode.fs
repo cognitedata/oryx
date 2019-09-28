@@ -47,7 +47,7 @@ module Decode =
     let decodeStreamAsync (decoder : Decoder<'a>) (stream : IO.Stream) =
         task {
             use tr = new StreamReader(stream) // StreamReader will dispose the stream
-            use jtr = new JsonTextReader(tr)
+            use jtr = new JsonTextReader(tr, DateParseHandling = DateParseHandling.None)
             let! json = Newtonsoft.Json.Linq.JValue.ReadFromAsync jtr
 
             return Decode.fromValue "$" decoder json
@@ -105,8 +105,12 @@ module Decode =
             match context.Result with
             | Ok response ->
                 use! stream = response.Content.ReadAsStreamAsync ()
-                let result = parser stream // FIXME: error handling
-                return! next { Request = context.Request; Result = Ok result }
+                let result =
+                    try
+                        parser stream |> Ok
+                    with
+                    | ex -> Error { ResponseError.empty with InnerException=Some ex; Message="Unable to decode protobuf message." }
+                return! next { Request = context.Request; Result = result }
             | Error error ->
                 return! next { Request = context.Request; Result = Error error }
         }
