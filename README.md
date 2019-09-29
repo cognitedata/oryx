@@ -1,5 +1,6 @@
 # Oryx
 
+[![Build](https://img.shields.io/travis/cognitedata/oryx)](https://travis-ci.org/cognitedata/oryx)
 [![Nuget](https://img.shields.io/nuget/v/oryx)](https://www.nuget.org/packages/Oryx/)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-0f69b4.svg)](code-of-conduct.md)
 
@@ -9,7 +10,7 @@ Oryx is a high performance .NET cross platform functional HTTP request handler l
 
 This library enables you to write (or generate) Web and REST clients and SDKs for various APIs. Thus Oryx is an SDK for writing SDKs.
 
-You can think of Orix as the client equivalent of Giraffe. Oryx is heavily inspired by the [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework, and applies the same ideas to the client making the web requests. Thus you could envision the processing pipeline starting at the client and going all the way to the server and back again.
+You can think of Oryx as the client equivalent of Giraffe. Oryx is heavily inspired by the [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework, and applies the same ideas to the client making the web requests. Thus you could envision the processing pipeline starting at the client and going all the way to the server and back again.
 
 ## Fundamentals
 
