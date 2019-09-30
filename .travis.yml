@@ -1,0 +1,16 @@
+dist: xenial
+addons:
+  snaps:
+  - name: dotnet-sdk
+    classic: true
+    channel: latest/stable
+sudo: required
+language: csharp
+
+install:
+ - mono .paket/paket.exe install
+ - sudo snap alias dotnet-sdk.dotnet dotnet
+
+script:
+ - dotnet build
+# - dotnet test test/Tests.fsproj
