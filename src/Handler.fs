@@ -3,7 +3,6 @@
 namespace Oryx
 
 open System.Net.Http
-open System.Threading
 open System.Threading.Tasks
 open FSharp.Control.Tasks.V2.ContextInsensitive
 
@@ -28,10 +27,9 @@ module Handler =
             let! a = handler Task.FromResult ctx
             return a.Result
         }
-    let map (mapper) (next : NextFunc<'a list,'b>) (ctx : Context<'a list list>) : Task<Context<'b>> =
+    let map (mapper: 'a -> 'b) (next : NextFunc<'b,'c>) (ctx : Context<'a>) : Task<Context<'c>> =
         match ctx.Result with
-        | Ok value ->
-            next { Request = ctx.Request; Result = Ok (mapper value) }
+        | Ok value -> next { Request = ctx.Request; Result = Ok (mapper value) }
         | Error ex -> Task.FromResult  { Request = ctx.Request; Result = Error ex }
 
     let compose (first : HttpHandler<'a, 'b, 'd>) (second : HttpHandler<'b, 'c, 'd>) : HttpHandler<'a,'c,'d> =
