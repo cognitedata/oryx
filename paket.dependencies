@@ -21,3 +21,4 @@ group Test
     nuget xunit.runner.visualstudio ~> 2
     nuget Serilog.Sinks.XUnit
     nuget Microsoft.NET.Test.Sdk ~> 16
+    nuget FsCheck.Xunit
