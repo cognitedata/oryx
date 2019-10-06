@@ -7,3 +7,4 @@ Serilog.Sinks.XUnit
 Unquote
 xunit
 xunit.runner.visualstudio
+FsCheck.Xunit
