@@ -1,3 +1,3 @@
 #!/bin/sh
-dotnet pack -c release -p:PackageVersion=$1
-dotnet nuget push src/bin/Release/*.nupkg -s $2 -k $3
+dotnet pack -c release -p:PackageVersion=$TRAVIS_TAG
+dotnet nuget push src/bin/Release/*.nupkg -s $NUGET_SOURCE -k $NUGET_API_KEY
