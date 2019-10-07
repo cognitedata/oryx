@@ -3,7 +3,6 @@
 namespace Oryx
 
 open System
-
 open Thoth.Json.Net
 
 type ErrorValue =

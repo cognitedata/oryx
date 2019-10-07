@@ -10,6 +10,8 @@ language: csharp
 install:
  - mono .paket/paket.exe install
  - sudo snap alias dotnet-sdk.dotnet dotnet
+ - curl -s https://codecov.io/bash > codecov
+ - chmod +x codecov
 
 script:
  - dotnet build

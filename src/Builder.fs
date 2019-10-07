@@ -29,7 +29,7 @@ type RequestBuilder () =
                     // Run function
                     return! (fn b) next ctx
                 | Error error ->
-                    return! next { Request = cb.Request; Result = Error error }
+                    return { Request = cb.Request; Result = Error error }
             }
             // Run source
             source next' ctx
