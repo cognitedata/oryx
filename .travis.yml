@@ -20,7 +20,7 @@ script:
 deploy:
   provider: script
   skip_cleanup: true
-  script: bash deploy.sh
+  script: bash deploy.sh $TRAVIS_TAG $NUGET_SOURCE $NUGET_API_KEY
   on:
     branch: master
     tags: true
