@@ -68,7 +68,7 @@ module Decode =
                     | Error error ->
                         return! next { Request = context.Request; Result = Error { ResponseError.empty with Message = error; Code = int response.StatusCode } }
             | Error error ->
-                return! next { Request = context.Request; Result = Error error }
+                return { Request = context.Request; Result = Error error }
         }
 
     let decodeContent<'a, 'b, 'c> (decoder : Decoder<'a>) (resultMapper : 'a -> 'b) (next: NextFunc<'b,'c>) (context: Context<HttpResponseMessage>) =
@@ -82,11 +82,11 @@ module Decode =
                     | Ok result ->
                         return! next { Request = context.Request; Result = Ok (resultMapper result) }
                     | Error error ->
-                        return! next { Request = context.Request; Result = Error { ResponseError.empty with Message = error }}
+                        return { Request = context.Request; Result = Error { ResponseError.empty with Message = error }}
                 else
-                    return! next { Request = context.Request; Result = Error { ResponseError.empty with Message = "Error not decoded." }}
+                    return { Request = context.Request; Result = Error { ResponseError.empty with Message = "Error not decoded." }}
             | Error error ->
-                return! next { Request = context.Request; Result = Error error }
+                return { Request = context.Request; Result = Error error }
         }
 
     /// <summary>
@@ -112,5 +112,5 @@ module Decode =
                     | ex -> Error { ResponseError.empty with InnerException=Some ex; Message="Unable to decode protobuf message." }
                 return! next { Request = context.Request; Result = result }
             | Error error ->
-                return! next { Request = context.Request; Result = Error error }
+                return { Request = context.Request; Result = Error error }
         }

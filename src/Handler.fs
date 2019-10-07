@@ -30,7 +30,7 @@ module Handler =
     let map (mapper: 'a -> 'b) (next : NextFunc<'b,'c>) (ctx : Context<'a>) : Task<Context<'c>> =
         match ctx.Result with
         | Ok value -> next { Request = ctx.Request; Result = Ok (mapper value) }
-        | Error ex -> Task.FromResult  { Request = ctx.Request; Result = Error ex }
+        | Error ex -> Task.FromResult { Request = ctx.Request; Result = Error ex }
 
     let compose (first : HttpHandler<'a, 'b, 'd>) (second : HttpHandler<'b, 'c, 'd>) : HttpHandler<'a,'c,'d> =
         fun (next: NextFunc<_, _>) (ctx : Context<'a>) ->
@@ -98,6 +98,6 @@ module Handler =
             | (true, value :: _) ->
                 return! next { Request = context.Request; Result = Ok value }
             | _ ->
-                return! next { Request = context.Request; Result = Error { ResponseError.empty with Message = sprintf "Missing header: %s" header }}
-        | Error error -> return! next { Request = context.Request; Result = Error error }
+                return { Request = context.Request; Result = Error { ResponseError.empty with Message = sprintf "Missing header: %s" header }}
+        | Error error -> return  { Request = context.Request; Result = Error error }
     }
