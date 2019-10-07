@@ -6,9 +6,11 @@ open System
 open System.Net
 open System.Net.Http
 open System.Reflection
-
-open Thoth.Json.Net
 open System.Threading
+open System.Threading.Tasks
+
+open FSharp.Control.Tasks.V2.ContextInsensitive
+open Thoth.Json.Net
 
 type RequestMethod =
     | POST
@@ -94,8 +96,8 @@ module Context =
         | Error err ->
             { Request = ctx.Request; Result = Error err }
 
-    let bindAsync (fn: Context<'a> -> Async<Context<'b>>) (a: Async<Context<'a>>) : Async<Context<'b>> =
-        async {
+    let bindAsync (fn: Context<'a> -> Task<Context<'b>>) (a: Task<Context<'a>>) : Task<Context<'b>> =
+        task {
             let! p = a
             match p.Result with
             | Ok _ ->
@@ -110,7 +112,7 @@ module Context =
 
     /// Helper for setting Bearer token as Authorization header.
     let setToken (token: string) (context: HttpContext) =
-        let header = ("Authorization", sprintf "Bearer: %s" token)
+        let header = ("Authorization", sprintf "Bearer %s" token)
         { context with Request = { context.Request with Headers = header :: context.Request.Headers  } }
 
     let setHttpClient (client: HttpClient) (context: HttpContext) =

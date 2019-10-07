@@ -24,3 +24,10 @@ type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationTok
             return! sendAsync.Invoke(request, cancellationToken)
         }
 
+[<RequireQualifiedAccess>]
+module Result =
+    let isOk = function
+        | Ok _ -> true
+        | Error _ -> false
+
+    let isError res = not (isOk res)

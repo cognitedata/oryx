@@ -35,7 +35,7 @@ let ``Adding a bearer token to a context creates a context with that token`` tok
     let ctx = Context.defaultContext |> Context.setToken token
     ctx.Request.Headers
     |> List.exists (fun (header, value) ->
-        header = "Authorization" && value = (sprintf "Bearer: %s" token))
+        header = "Authorization" && value = (sprintf "Bearer %s" token))
 
 [<Property>]
 let ``Adding http client creates a context with that http client`` () =

@@ -10,7 +10,12 @@ language: csharp
 install:
  - mono .paket/paket.exe install
  - sudo snap alias dotnet-sdk.dotnet dotnet
+ - curl -s https://codecov.io/bash > codecov
+ - chmod +x codecov
 
 script:
  - dotnet build
-# - dotnet test test/Tests.fsproj
+ - ./test.sh
+
+after_success:
+ - ./codecov -f "coverage.lcov" -t $CODECOV_TOKEN
