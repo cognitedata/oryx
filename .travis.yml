@@ -17,5 +17,15 @@ script:
  - dotnet build
  - ./test.sh
 
+deploy:
+  provider: script
+  skip_cleanup: true
+  script:
+   - dotnet pack -c release -p:PackageVersion=$TRAVIS_TAG
+   - dotnet nuget push src/bin/Release/*.nupkg -s $NUGET_SOURCE -k $NUGET_API_KEY
+  on:
+    branch: master
+    tags: true
+
 after_success:
  - ./codecov -f "coverage.lcov" -t $CODECOV_TOKEN
