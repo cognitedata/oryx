@@ -99,5 +99,5 @@ module Handler =
                 return! next { Request = context.Request; Result = Ok value }
             | _ ->
                 return { Request = context.Request; Result = Error { ResponseError.empty with Message = sprintf "Missing header: %s" header }}
-        | Error error -> return  { Request = context.Request; Result = Error error }
+        | Error error -> return { Request = context.Request; Result = Error error }
     }

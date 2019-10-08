@@ -31,3 +31,13 @@ module Result =
         | Error _ -> false
 
     let isError res = not (isOk res)
+
+let unit (value: 'a) (next: NextFunc<'a, 'b>) (context: HttpContext) : Task<Context<'b>> =
+    next { Request=context.Request; Result = Ok value }
+
+let add (a: int) (b: int) (next: NextFunc<int, 'b>) (context: HttpContext) : Task<Context<'b>> =
+    unit (a + b) next context
+
+let error msg (next: NextFunc<'a, 'b>) (context: Context<'a>) : Task<Context<'b>> =
+    Task.FromResult { Request=context.Request; Result = { ResponseError.empty with Message=msg } |> Error }
+
