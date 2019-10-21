@@ -13,6 +13,7 @@
   <ItemGroup>
     <Compile Include="Error.fs" />
     <Compile Include="Context.fs" />
+    <Compile Include="Result.fs" />
     <Compile Include="Handler.fs" />
     <Compile Include="Fetch.fs" />
     <Compile Include="Retry.fs" />

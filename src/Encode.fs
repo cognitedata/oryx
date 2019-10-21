@@ -55,38 +55,32 @@ module Decode =
 
     let decodeError<'a> (next: NextFunc<HttpResponseMessage, 'a>) (context: Context<HttpResponseMessage>) =
         task {
-            match context.Result with
-            | Ok response ->
-                if response.IsSuccessStatusCode then
-                    return! next { Request = context.Request; Result = Ok response }
-                else
-                    use! stream = response.Content.ReadAsStreamAsync ()
-                    let! result = decodeStreamAsync ApiResponseError.Decoder stream
-                    match result with
-                    | Ok result ->
-                        return! next { Request = context.Request; Result = Error result.Error }
-                    | Error error ->
-                        return! next { Request = context.Request; Result = Error { ResponseError.empty with Message = error; Code = int response.StatusCode } }
-            | Error error ->
-                return { Request = context.Request; Result = Error error }
+            let result = context.Response
+            if result.IsSuccessStatusCode then
+                return! next context
+            else
+                use! stream = result.Content.ReadAsStreamAsync ()
+                let! res = decodeStreamAsync ApiResponseError.Decoder stream
+                match res with
+                | Ok error ->
+                    return Error error.Error
+                | Error error ->
+                    return Error { ResponseError.empty with Message = error; Code = int result.StatusCode }
         }
 
     let decodeContent<'a, 'b, 'c> (decoder : Decoder<'a>) (resultMapper : 'a -> 'b) (next: NextFunc<'b,'c>) (context: Context<HttpResponseMessage>) =
         task {
-            match context.Result with
-            | Ok response ->
-                use! stream = response.Content.ReadAsStreamAsync ()
-                if response.IsSuccessStatusCode then
-                    let! ret = decodeStreamAsync decoder stream
-                    match ret with
-                    | Ok result ->
-                        return! next { Request = context.Request; Result = Ok (resultMapper result) }
-                    | Error error ->
-                        return { Request = context.Request; Result = Error { ResponseError.empty with Message = error }}
-                else
-                    return { Request = context.Request; Result = Error { ResponseError.empty with Message = "Error not decoded." }}
-            | Error error ->
-                return { Request = context.Request; Result = Error error }
+            let response = context.Response
+            use! stream = response.Content.ReadAsStreamAsync ()
+            if response.IsSuccessStatusCode then
+                let! ret = decodeStreamAsync decoder stream
+                match ret with
+                | Ok result ->
+                    return! next { Request = context.Request; Response = resultMapper result }
+                | Error error ->
+                    return Error { ResponseError.empty with Message = error }
+            else
+                return Error { ResponseError.empty with Message = "Error not decoded." }
         }
 
     /// <summary>
@@ -102,15 +96,16 @@ module Decode =
 
     let decodeProtobuf<'b, 'c> (parser : Stream -> 'b) (next: NextFunc<'b, 'c>) (context : Context<HttpResponseMessage>) =
         task {
-            match context.Result with
-            | Ok response ->
-                use! stream = response.Content.ReadAsStreamAsync ()
-                let result =
-                    try
-                        parser stream |> Ok
-                    with
-                    | ex -> Error { ResponseError.empty with InnerException=Some ex; Message="Unable to decode protobuf message." }
-                return! next { Request = context.Request; Result = result }
-            | Error error ->
-                return { Request = context.Request; Result = Error error }
+            let response = context.Response
+            use! stream = response.Content.ReadAsStreamAsync ()
+            let result =
+                try
+                    parser stream |> Ok
+                with
+                | ex -> Error { ResponseError.empty with InnerException=Some ex; Message="Unable to decode protobuf message." }
+            match result with
+            | Ok b ->
+                return! next { Request = context.Request; Response = b }
+            | Error err ->
+                return Error err
         }

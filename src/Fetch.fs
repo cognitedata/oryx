@@ -102,7 +102,7 @@ module Fetch =
             request.Content <- content
         request
 
-    let fetch<'a> (next: NextFunc<HttpResponseMessage, 'a>) (ctx: HttpContext) : Task<Context<'a>> =
+    let fetch<'a> (next: NextFunc<HttpResponseMessage, 'a>) (ctx: HttpContext) :  HttpFuncResult<'a> =
         let client =
             match ctx.Request.HttpClient with
             | Some client -> client
@@ -118,9 +118,9 @@ module Fetch =
             try
                 use message = buildRequest client ctx
                 use! response = client.SendAsync(message, cancellationToken)
-                return! next { Request = ctx.Request; Result = Ok response }
+                return! next { Request = ctx.Request; Response = response }
             with
             | ex ->
                 let error = ResponseError.empty
-                return { Request = ctx.Request; Result = Error { error with InnerException = Some ex } }
+                return Error { error with InnerException = Some ex }
         }

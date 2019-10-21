@@ -54,7 +54,7 @@ and HttpRequest = {
 
 type Context<'a> = {
     Request: HttpRequest
-    Result: Result<'a, ResponseError>
+    Response: 'a
 }
 
 type HttpContext = Context<HttpResponseMessage>
@@ -82,20 +82,17 @@ module Context =
         }
 
     let internal defaultResult =
-        Ok (new HttpResponseMessage (HttpStatusCode.NotFound))
+        new HttpResponseMessage (HttpStatusCode.NotFound)
 
     let defaultContext : Context<HttpResponseMessage> = {
         Request = defaultRequest
-        Result = defaultResult
+        Response = defaultResult
     }
 
-    let bind fn ctx =
-        match ctx.Result with
-        | Ok res ->
-            fn res
-        | Error err ->
-            { Request = ctx.Request; Result = Error err }
+    let bind (fn: 'a -> Context<'b>) (ctx: Context<'a>) : Context<'b> =
+        fn ctx.Response
 
+    (*
     let bindAsync (fn: Context<'a> -> Task<Context<'b>>) (a: Task<Context<'a>>) : Task<Context<'b>> =
         task {
             let! p = a
@@ -105,7 +102,7 @@ module Context =
             | Error err ->
                 return { Request = p.Request; Result = Error err }
         }
-
+    *)
     /// Add HTTP header to context.
     let addHeader (header: string*string) (context: HttpContext) =
         { context with Request = { context.Request with Headers = header :: context.Request.Headers  } }
