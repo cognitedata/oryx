@@ -98,6 +98,28 @@ let ``Sequential handlers is Ok``() = task {
 }
 
 [<Fact>]
+let ``Sequential handlers with an Error is Error``() = task {
+    // Arrange
+    let ctx = Context.defaultContext
+    let req = sequential [
+            unit 1
+            unit 2
+            error "fail"
+            unit 4
+            unit 5
+    ]
+
+    // Act
+    let! result = req finishEarly ctx
+
+    // Assert
+    test <@ Result.isError result @>
+    match result with
+    | Ok _ -> failwith "expected failure"
+    | Error err -> test <@ err.Message = "fail" @>
+}
+
+[<Fact>]
 let ``Concurrent handlers is Ok``() = task {
     // Arrange
     let ctx = Context.defaultContext
@@ -117,6 +139,28 @@ let ``Concurrent handlers is Ok``() = task {
     match result with
     | Ok ctx -> test <@ ctx.Response = [1; 2; 3; 4; 5] @>
     | Error err -> failwith "error"
+}
+
+[<Fact>]
+let ``Concurrent handlers with an Error is Error``() = task {
+    // Arrange
+    let ctx = Context.defaultContext
+    let req = concurrent [
+            unit 1
+            unit 2
+            error "fail"
+            unit 4
+            unit 5
+    ]
+
+    // Act
+    let! result = req finishEarly ctx
+
+    // Assert
+    test <@ Result.isError result @>
+    match result with
+    | Ok _ -> failwith "expected failure"
+    | Error err -> test <@ err.Message = "fail" @>
 }
 
 [<Property>]

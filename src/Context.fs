@@ -92,17 +92,6 @@ module Context =
     let bind (fn: 'a -> Context<'b>) (ctx: Context<'a>) : Context<'b> =
         fn ctx.Response
 
-    (*
-    let bindAsync (fn: Context<'a> -> Task<Context<'b>>) (a: Task<Context<'a>>) : Task<Context<'b>> =
-        task {
-            let! p = a
-            match p.Result with
-            | Ok _ ->
-                return! fn p
-            | Error err ->
-                return { Request = p.Request; Result = Error err }
-        }
-    *)
     /// Add HTTP header to context.
     let addHeader (header: string*string) (context: HttpContext) =
         { context with Request = { context.Request with Headers = header :: context.Request.Headers  } }

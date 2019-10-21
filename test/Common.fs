@@ -24,6 +24,6 @@ let unit (value: 'a) (next: NextFunc<'a, 'b>) (context: HttpContext) : Task<Resu
 let add (a: int) (b: int) (next: NextFunc<int, 'b>) (context: HttpContext) : Task<Result<Context<'b>, ResponseError>>  =
     unit (a + b) next context
 
-let error msg (next: NextFunc<'a, 'b>) (context: Context<'a>) : Task<Result<Context<'b>, ResponseError>> =
+let error msg (next: NextFunc<'b, 'c>) (_: Context<'a>) : Task<Result<Context<'c>, ResponseError>> =
     Error { ResponseError.empty with Message=msg } |> Task.FromResult
 
