@@ -46,6 +46,27 @@ module Handler =
     let (>=>) a b =
         compose a b
 
+    /// Add query parameters to context. These parameters will be added
+    /// to the query string of requests that uses this context.
+    let addQuery (query: (string * string) list) (next: NextFunc<_,_>) (context: HttpContext) =
+        next { context with Request = { context.Request with Query = query } }
+
+    /// Add content to context. These content will be added to the HTTP body of
+    /// requests that uses this context.
+    let setContent (content: Content) (next: NextFunc<_,_>) (context: HttpContext) =
+        next { context with Request = { context.Request with Content = Some content } }
+
+    let setResponseType (respType: ResponseType) (next: NextFunc<_,_>) (context: HttpContext) =
+        next { context with Request = { context.Request with ResponseType = respType }}
+
+    /// Set the method to be used for requests using this context.
+    let setMethod<'a> (method: HttpMethod) (next: NextFunc<HttpResponseMessage,'a>) (context: HttpContext) =
+        next { context with Request = { context.Request with Method = method; Content = None } }
+
+    let GET<'a> = setMethod<'a> HttpMethod.Get
+    let POST<'a> = setMethod<'a> HttpMethod.Post
+    let DELETE<'a> = setMethod<'a> HttpMethod.Delete
+
     /// Run list of HTTP handlers concurrently.
     let concurrent (handlers : HttpHandler<'a, 'b, 'b> seq) (next: NextFunc<'b list, 'c>) (ctx: Context<'a>) : HttpFuncResult<'c> = task {
         let! res =

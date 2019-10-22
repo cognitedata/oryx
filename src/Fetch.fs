@@ -19,26 +19,6 @@ open Thoth.Json.Net
 
 [<AutoOpen>]
 module Fetch =
-    /// Add query parameters to context. These parameters will be added
-    /// to the query string of requests that uses this context.
-    let addQuery (query: (string * string) list) (next: NextFunc<_,_>) (context: HttpContext) =
-        next { context with Request = { context.Request with Query = query } }
-
-    /// Add content to context. These content will be added to the HTTP body of
-    /// requests that uses this context.
-    let setContent (content: Content) (next: NextFunc<_,_>) (context: HttpContext) =
-        next { context with Request = { context.Request with Content = Some content } }
-
-    let setResponseType (respType: ResponseType) (next: NextFunc<_,_>) (context: HttpContext) =
-        next { context with Request = { context.Request with ResponseType = respType }}
-
-    /// Set the method to be used for requests using this context.
-    let setMethod<'a> (method: HttpMethod) (next: NextFunc<HttpResponseMessage,'a>) (context: HttpContext) =
-        next { context with Request = { context.Request with Method = method; Content = None } }
-
-    let GET<'a> = setMethod<'a> HttpMethod.Get
-    let POST<'a> = setMethod<'a> HttpMethod.Post
-    let DELETE<'a> = setMethod<'a> HttpMethod.Delete
 
     /// HttpContent implementation to push a JsonValue directly to the output stream.
     type JsonPushStreamContent (content : JsonValue) =

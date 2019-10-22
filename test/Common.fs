@@ -6,6 +6,7 @@ open System.Threading
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2
+open Thoth.Json.Net
 
 open Oryx
 
@@ -27,3 +28,10 @@ let add (a: int) (b: int) (next: NextFunc<int, 'b>) (context: HttpContext) : Tas
 let error msg (next: NextFunc<'b, 'c>) (_: Context<'a>) : Task<Result<Context<'c>, ResponseError>> =
     Error { ResponseError.empty with Message=msg } |> Task.FromResult
 
+let get () =
+    let decoder : Decoder<_> = Decode.object (fun get -> {| Value = get.Required.Field "value" Decode.int |})
+    let decodeResponse = Decode.decodeResponse decoder id
+
+    GET
+    >=> fetch
+    >=> decodeResponse

@@ -7,9 +7,7 @@ open System.Net
 open System.Net.Http
 open System.Reflection
 open System.Threading
-open System.Threading.Tasks
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
 open Thoth.Json.Net
 
 type RequestMethod =
@@ -73,9 +71,7 @@ module Context =
             Content = None
             Query = List.empty
             ResponseType = JsonValue
-            Headers = [
-                "User-Agent", ua
-            ]
+            Headers = [ "User-Agent", ua ]
             UrlBuilder = fun _ -> String.Empty
             Extra = Map.empty
             CancellationToken = None
