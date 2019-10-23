@@ -23,13 +23,15 @@ type Context<'a> = {
 }
 ```
 
-The `Context` may be transformed by series of HTTP handlers. The `HttpHandler` takes a `Context` (and a `NextFunc`) and returns a new `Context`.
+The `Context` may be transformed by series of HTTP handlers. The `HttpHandler` takes a `Context` (and a `NextFunc`) and returns a new `Context` wrapped in a `Result` and `Task`.
 
 ```fs
-type HttpFunc<'a, 'b> = Context<'a> -> Task<Result<Context<'b>, ResponseError>>
+type HttpFuncResult<'b> =  Task<Result<Context<'b>, ResponseError>>
+
+type HttpFunc<'a, 'b> = Context<'a> -> HttpFuncResult<'b>
 type NextFunc<'a, 'b> = HttpFunc<'a, 'b>
 
-type HttpHandler<'a, 'b, 'c> = NextFunc<'b, 'c> -> Context<'a> -> Task<Result<Context<'c>, ResponseError>>
+type HttpHandler<'a, 'b, 'c> = NextFunc<'b, 'c> -> Context<'a> -> HttpFuncResult<'c>
 
 // For convenience
 type HttpHandler<'a, 'b> = HttpHandler<'a, 'a, 'b>
@@ -39,9 +41,7 @@ type HttpHandler = HttpHandler<HttpResponseMessage>
 
 An `HttpHandler` is a plain function that takes two curried arguments, a `NextFunc` and a `Context`, and returns a new `Context` (wrapped in a `Result` and `Task`) when finished. On a high level the `HttpHandler` function takes and returns a context object, which means every `HttpHandler` function has full control of the outgoing `HttpRequest` and also the resulting response.
 
-Each HttpHandler usually adds more info to the `HttpRequest` before passing it further down the pipeline by invoking the next `NextFunc` or short circuit the execution by returning a result of `Result<Context<'a>, ResponseError>`.
-
-If an HttpHandler detects an error, then it can return `Result.Error` to fail the processing.
+Each HttpHandler usually adds more info to the `HttpRequest` before passing it further down the pipeline by invoking the next `NextFunc` or short circuit the execution by returning a result of `Result<Context<'a>, ResponseError>`. E.g if an HttpHandler detects an error, then it can return `Result.Error` to fail the processing.
 
 The easiest way to get your head around a Oryx `HttpHandler` is to think of it as a functional Web request processing pipeline. Each handler has the full `Context` at its disposal and can decide whether it wants to fail the request by returning an `Error`, or continue the request by passing on a new `Context` to the "next" handler, `NextFunc`.
 
