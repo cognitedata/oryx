@@ -3,34 +3,35 @@
 [![Build](https://img.shields.io/travis/cognitedata/oryx)](https://travis-ci.org/cognitedata/oryx)
 [![codecov](https://codecov.io/gh/cognitedata/oryx/branch/master/graph/badge.svg)](https://codecov.io/gh/cognitedata/oryx)
 [![Nuget](https://img.shields.io/nuget/v/oryx)](https://www.nuget.org/packages/Oryx/)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-0f69b4.svg)](code-of-conduct.md)
 
-Oryx is a high performance .NET cross platform functional HTTP request handler library for writing web client libraries in F#.
+Oryx is a high performance .NET cross platform functional HTTP request handler library for writing HTTP web clients in F#.
 
 > An SDK for writing HTTP web clients or SDKs.
 
-This library enables you to write (or generate) Web and REST clients and SDKs for various APIs. Thus Oryx is an SDK for writing SDKs.
+This library enables you to write Web and REST clients and SDKs for various APIs and is currently used by the [.NET SDK for Cognite Data Fusion (CDF)](https://github.com/cognitedata/cognite-sdk-dotnet).
 
-You can think of Oryx as the client equivalent of Giraffe. Oryx is heavily inspired by the [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework, and applies the same ideas to the client making the web requests. Thus you could envision the processing pipeline starting at the client and going all the way to the server and back again.
+Oryx is heavily inspired by the [Giraffe](https://github.com/giraffe-fsharp/Giraffe) web framework, and applies the same ideas to the client making the web requests. You can think of Oryx as the client equivalent of Giraffe, and you could envision the HTTP request processing pipeline starting at the client and going all the way to the server and back again.
 
 ## Fundamentals
 
-The main building blocks in Oryx is the `Context` and the `HttpHandler`. The Context stores all the state needed for performing the request and any data received from the response:
+The main building blocks in Oryx is the `Context` and the `HttpHandler`. The Context stores all the state needed for making the request and any response or error received from the server:
 
 ```fs
 type Context<'a> = {
     Request: HttpRequest
-    Result: Result<'a, ResponseError>
+    Response: 'a
 }
 ```
 
-The `Context` is transformed by HTTP handlers. The `HttpHandler` takes a `Context` (and a `NextFunc`) and returns a new `Context`.
+The `Context` may be transformed by series of HTTP handlers. The `HttpHandler` takes a `Context` (and a `NextFunc`) and returns a new `Context` wrapped in a `Result` and `Task`.
 
 ```fs
-type HttpFunc<'a, 'b> = Context<'a> -> Task<Context<'b>>
+type HttpFuncResult<'b> =  Task<Result<Context<'b>, ResponseError>>
+
+type HttpFunc<'a, 'b> = Context<'a> -> HttpFuncResult<'b>
 type NextFunc<'a, 'b> = HttpFunc<'a, 'b>
 
-type HttpHandler<'a, 'b, 'c> = NextFunc<'b, 'c> -> Context<'a> -> Task<Context<'c>>
+type HttpHandler<'a, 'b, 'c> = NextFunc<'b, 'c> -> Context<'a> -> HttpFuncResult<'c>
 
 // For convenience
 type HttpHandler<'a, 'b> = HttpHandler<'a, 'a, 'b>
@@ -38,19 +39,21 @@ type HttpHandler<'a> = HttpHandler<HttpResponseMessage, 'a>
 type HttpHandler = HttpHandler<HttpResponseMessage>
 ```
 
-An `HttpHandler` is a plain function that takes two curried arguments, and `NextFunc` and a `Context`, and returns a `Context` (wrapped in a `Result` and `Task`) when finished.
+An `HttpHandler` is a plain function that takes two curried arguments, a `NextFunc` and a `Context`, and returns a new `Context` (wrapped in a `Result` and `Task`) when finished. On a high level the `HttpHandler` function takes and returns a context object, which means every `HttpHandler` function has full control of the outgoing `HttpRequest` and also the resulting response.
 
-On a high level the `HttpHandler` function takes and returns a context object, which means every `HttpHandler` function has full control of the outgoing `HttpRequest` and also the resulting response.
+Each HttpHandler usually adds more info to the `HttpRequest` before passing it further down the pipeline by invoking the next `NextFunc` or short circuit the execution by returning a result of `Result<Context<'a>, ResponseError>`. E.g if an HttpHandler detects an error, then it can return `Result.Error` to fail the processing.
 
-Each HttpHandler usually adds more info to the `HttpRequest` before passing it further down the pipeline by invoking the next `NextFunc` or short circuit the execution by returning a result of `Result<'a, ResponseError>`.
+The easiest way to get your head around a Oryx `HttpHandler` is to think of it as a functional Web request processing pipeline. Each handler has the full `Context` at its disposal and can decide whether it wants to fail the request by returning an `Error`, or continue the request by passing on a new `Context` to the "next" handler, `NextFunc`.
 
-If an HttpHandler detects an error, then it can return `Result.Error` to fail the processing.
+The more complex way to think about a `HttpHandler` is that there are in fact 3 different ways it may process the request:
 
-The easiest way to get your head around a Oryx `HttpHandler` is to think of it as a functional Web request processing pipeline. Each handler has the full `Context` at its disposal and can decide whether it wants to return `Error` or pass on a new `Context` on to the "next" handler, `NextFunc`.
+1. Call the next handler with an `Ok` result value, and return what the next handler is returning.
+2. Return an `Error`result to fail the request.
+3. Return `Ok` to short circuit the processing. This is not something you would normally do.
 
 ## Operators
 
-The fact that everything is an `HttpHandler` makes it easy to compose handlers together. You can think of them as lego bricks that you can put together. Two `HttpHandler` functions may be composed together using Keisli compsition, i.e using the fish operator `>=>`.
+The fact that everything is an `HttpHandler` makes it easy to compose handlers together. You can think of them as lego bricks that you can fit together. Two `HttpHandler` functions may be composed together using Keisli compsition, i.e using the fish operator `>=>`.
 
 ```fs
 let (>=>) a b = compose a b
@@ -69,19 +72,23 @@ let compose (first : HttpHandler<'a, 'b, 'd>) (second : HttpHandler<'b, 'c, 'd>)
         func ctx
 ```
 
-This enables you to compose your web requests and decode the response, e.g:
+This enables you to compose your web requests and decode the response, e.g as we do when listing Assets in the  the [Cognite Data Fusion SDK](https://github.com/cognitedata/cognite-sdk-dotnet/blob/master/src/assets/ListAssets.fs#L55):
 
 ```fs
-let listAssets (options: Option seq) (fetch: HttpHandler<HttpResponseMessage,Stream, 'a>) =
-    let decoder = Encode.decodeResponse Assets.Decoder id
-    let query = options |> Seq.map Option.Render |> List.ofSeq
+    let listAssets (options: AssetQuery seq) (filters: AssetFilter seq) (fetch: HttpHandler<HttpResponseMessage, 'a>) =
+        let decodeResponse = Decode.decodeContent AssetItemsReadDto.Decoder id
+        let request : Request = {
+            Filters = filters
+            Options = options
+        }
 
-    GET
-    >=> setVersion V10
-    >=> addQuery query
-    >=> setResource Url
-    >=> fetch
-    >=> decoder
+        POST
+        >=> setVersion V10
+        >=> setContent (Content.JsonValue request.Encoder)
+        >=> setResource Url
+        >=> fetch
+        >=> Decode.decodeError
+        >=> decodeResponse
 ```
 
 Thus the function `listAssets` is now also an `HttpHandler` and may be composed with other handlers to create complex chains for doing series of multiple requests to a web service.

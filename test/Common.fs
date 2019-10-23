@@ -1,17 +1,12 @@
 module Tests.Common
 
-open System.IO
-
-open Xunit
-open Swensen.Unquote
-
 open System
-open System.Net
 open System.Net.Http
 open System.Threading
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2
+open Thoth.Json.Net
 
 open Oryx
 
@@ -24,20 +19,19 @@ type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationTok
             return! sendAsync.Invoke(request, cancellationToken)
         }
 
-[<RequireQualifiedAccess>]
-module Result =
-    let isOk = function
-        | Ok _ -> true
-        | Error _ -> false
+let unit (value: 'a) (next: NextFunc<'a, 'b>) (context: HttpContext) : Task<Result<Context<'b>, ResponseError>> =
+    next { Request=context.Request; Response = value }
 
-    let isError res = not (isOk res)
-
-let unit (value: 'a) (next: NextFunc<'a, 'b>) (context: HttpContext) : Task<Context<'b>> =
-    next { Request=context.Request; Result = Ok value }
-
-let add (a: int) (b: int) (next: NextFunc<int, 'b>) (context: HttpContext) : Task<Context<'b>> =
+let add (a: int) (b: int) (next: NextFunc<int, 'b>) (context: HttpContext) : Task<Result<Context<'b>, ResponseError>>  =
     unit (a + b) next context
 
-let error msg (next: NextFunc<'a, 'b>) (context: Context<'a>) : Task<Context<'b>> =
-    Task.FromResult { Request=context.Request; Result = { ResponseError.empty with Message=msg } |> Error }
+let error msg (next: NextFunc<'b, 'c>) (_: Context<'a>) : Task<Result<Context<'c>, ResponseError>> =
+    Error { ResponseError.empty with Message=msg } |> Task.FromResult
 
+let get () =
+    let decoder : Decoder<_> = Decode.object (fun get -> {| Value = get.Required.Field "value" Decode.int |})
+    let decodeResponse = Decode.decodeResponse decoder id
+
+    GET
+    >=> fetch
+    >=> decodeResponse

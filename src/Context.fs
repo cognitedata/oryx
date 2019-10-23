@@ -7,9 +7,7 @@ open System.Net
 open System.Net.Http
 open System.Reflection
 open System.Threading
-open System.Threading.Tasks
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
 open Thoth.Json.Net
 
 type RequestMethod =
@@ -54,7 +52,7 @@ and HttpRequest = {
 
 type Context<'a> = {
     Request: HttpRequest
-    Result: Result<'a, ResponseError>
+    Response: 'a
 }
 
 type HttpContext = Context<HttpResponseMessage>
@@ -73,38 +71,22 @@ module Context =
             Content = None
             Query = List.empty
             ResponseType = JsonValue
-            Headers = [
-                "User-Agent", ua
-            ]
+            Headers = [ "User-Agent", ua ]
             UrlBuilder = fun _ -> String.Empty
             Extra = Map.empty
             CancellationToken = None
         }
 
     let internal defaultResult =
-        Ok (new HttpResponseMessage (HttpStatusCode.NotFound))
+        new HttpResponseMessage (HttpStatusCode.NotFound)
 
     let defaultContext : Context<HttpResponseMessage> = {
         Request = defaultRequest
-        Result = defaultResult
+        Response = defaultResult
     }
 
-    let bind fn ctx =
-        match ctx.Result with
-        | Ok res ->
-            fn res
-        | Error err ->
-            { Request = ctx.Request; Result = Error err }
-
-    let bindAsync (fn: Context<'a> -> Task<Context<'b>>) (a: Task<Context<'a>>) : Task<Context<'b>> =
-        task {
-            let! p = a
-            match p.Result with
-            | Ok _ ->
-                return! fn p
-            | Error err ->
-                return { Request = p.Request; Result = Error err }
-        }
+    let bind (fn: 'a -> Context<'b>) (ctx: Context<'a>) : Context<'b> =
+        fn ctx.Response
 
     /// Add HTTP header to context.
     let addHeader (header: string*string) (context: HttpContext) =

@@ -42,19 +42,19 @@ module Retry =
 
     /// Retries the given HTTP handler up to `maxRetries` retries with
     /// exponential backoff and up to 2 minute with randomness.
-    let rec retry (shouldRetry: ResponseError -> bool) (initialDelay: int<ms>) (maxRetries : int) (handler: HttpHandler<'a,'b,'c>) (next: NextFunc<'b,'c>) (ctx: Context<'a>) : Task<Context<'c>> = task {
+    let rec retry (shouldRetry: ResponseError -> bool) (initialDelay: int<ms>) (maxRetries : int) (handler: HttpHandler<'a,'b,'c>) (next: NextFunc<'b,'c>) (ctx: Context<'a>) : Task<Result<Context<'c>, ResponseError>> = task {
         let exponentialDelay = min (secondsInMilliseconds * DefaultMaxBackoffDelay / 2) (initialDelay * 2)
         let randomDelayScale = min (secondsInMilliseconds * DefaultMaxBackoffDelay / 2) (initialDelay * 2)
         let nextDelay = rand.Next(int randomDelayScale) * 1<ms> + exponentialDelay
 
-        let! ctx' = handler next ctx
+        let! result = handler next ctx
 
-        match ctx'.Result with
-        | Ok _ -> return ctx'
+        match result with
+        | Ok _ -> return result
         | Error err ->
             if shouldRetry err && maxRetries > 0 then
                 do! int initialDelay |> Async.Sleep
                 return! retry shouldRetry nextDelay (maxRetries - 1) handler next ctx
             else
-                return ctx'
+                return result
     }

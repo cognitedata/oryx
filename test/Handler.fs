@@ -19,13 +19,12 @@ let ``Simple unit handler is Ok``() = task {
     let ctx = Context.defaultContext
 
     // Act
-    let! ctx' = unit 42 Task.FromResult ctx
-    let result = ctx'.Result
+    let! result = unit 42 finishEarly ctx
 
     // Assert
     test <@ Result.isOk result @>
     match result with
-    | Ok value -> test <@ value = 42 @>
+    | Ok ctx -> test <@ ctx.Response = 42 @>
     | Error err -> failwith err.Message
 }
 
@@ -35,8 +34,7 @@ let ``Simple error handler is Error``() = task {
     let ctx = Context.defaultContext
 
     // Act
-    let! ctx' = error "failed" Task.FromResult ctx
-    let result = ctx'.Result
+    let! result = error "failed" finishEarly ctx
 
     // Assert
     test <@ Result.isError result @>
@@ -52,8 +50,7 @@ let ``Simple error then ok is Error``() = task {
     let req = error "failed" >=> unit 42
 
     // Act
-    let! ctx' = req Task.FromResult ctx
-    let result = ctx'.Result
+    let! result = req finishEarly ctx
 
     // Assert
     test <@ Result.isError result @>
@@ -69,8 +66,7 @@ let ``Simple ok then error is Error``() = task {
     let req = unit 42 >=> error "failed"
 
     // Act
-    let! ctx' = req Task.FromResult ctx
-    let result = ctx'.Result
+    let! result = req finishEarly ctx
 
     // Assert
     test <@ Result.isError result @>
@@ -92,14 +88,35 @@ let ``Sequential handlers is Ok``() = task {
     ]
 
     // Act
-    let! ctx' = req Task.FromResult ctx
-    let result = ctx'.Result
+    let! result = req finishEarly ctx
 
     // Assert
     test <@ Result.isOk result @>
     match result with
-    | Ok value -> test <@ value = [1; 2; 3; 4; 5] @>
+    | Ok ctx -> test <@ ctx.Response = [1; 2; 3; 4; 5] @>
     | Error err -> failwith "error"
+}
+
+[<Fact>]
+let ``Sequential handlers with an Error is Error``() = task {
+    // Arrange
+    let ctx = Context.defaultContext
+    let req = sequential [
+            unit 1
+            unit 2
+            error "fail"
+            unit 4
+            unit 5
+    ]
+
+    // Act
+    let! result = req finishEarly ctx
+
+    // Assert
+    test <@ Result.isError result @>
+    match result with
+    | Ok _ -> failwith "expected failure"
+    | Error err -> test <@ err.Message = "fail" @>
 }
 
 [<Fact>]
@@ -115,14 +132,35 @@ let ``Concurrent handlers is Ok``() = task {
     ]
 
     // Act
-    let! ctx' = req Task.FromResult ctx
-    let result = ctx'.Result
+    let! result = req finishEarly ctx
 
     // Assert
     test <@ Result.isOk result @>
     match result with
-    | Ok value -> test <@ value = [1; 2; 3; 4; 5] @>
+    | Ok ctx -> test <@ ctx.Response = [1; 2; 3; 4; 5] @>
     | Error err -> failwith "error"
+}
+
+[<Fact>]
+let ``Concurrent handlers with an Error is Error``() = task {
+    // Arrange
+    let ctx = Context.defaultContext
+    let req = concurrent [
+            unit 1
+            unit 2
+            error "fail"
+            unit 4
+            unit 5
+    ]
+
+    // Act
+    let! result = req finishEarly ctx
+
+    // Assert
+    test <@ Result.isError result @>
+    match result with
+    | Ok _ -> failwith "expected failure"
+    | Error err -> test <@ err.Message = "fail" @>
 }
 
 [<Property>]
@@ -133,12 +171,11 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
         let req = Chunk.chunk chunkSize maxConcurrency unit [1; 2; 3; 4; 5]
 
         // Act
-        let! ctx' = req Task.FromResult ctx
-        let result = ctx'.Result
+        let! result = req finishEarly ctx
 
         // Assert
         test <@ Result.isOk result @>
         match result with
-        | Ok value -> test <@ Seq.toList value = [ 1; 2; 3; 4; 5 ] @>
+        | Ok ctx -> test <@ Seq.toList ctx.Response = [ 1; 2; 3; 4; 5 ] @>
         | Error err -> failwith "error"
     } |> fun x -> x.Result

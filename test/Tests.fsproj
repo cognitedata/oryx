@@ -17,6 +17,7 @@
     <Compile Include="Context.fs" />
     <Compile Include="Handler.fs" />
     <Compile Include="Builder.fs" />
+    <Compile Include="Fetch.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
