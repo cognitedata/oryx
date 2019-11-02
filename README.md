@@ -53,7 +53,7 @@ The more complex way to think about a `HttpHandler` is that there are in fact 3 
 
 ## Operators
 
-The fact that everything is an `HttpHandler` makes it easy to compose handlers together. You can think of them as lego bricks that you can fit together. Two `HttpHandler` functions may be composed together using Keisli compsition, i.e using the fish operator `>=>`.
+The fact that everything is an `HttpHandler` makes it easy to compose handlers together. You can think of them as lego bricks that you can fit together. Two `HttpHandler` functions may be composed together using Kleisli composition, i.e using the fish operator `>=>`.
 
 ```fs
 let (>=>) a b = compose a b
