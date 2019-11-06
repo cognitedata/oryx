@@ -7,7 +7,7 @@ group Main
     nuget FSharp.Core ~> 4.7
     nuget Microsoft.Extensions.Http ~> 2.1
     nuget Taskbuilder.fs ~> 2.1
-    nuget Thoth.Json.Net ~> 3.2
+    nuget Thoth.Json.Net ~> 3.6
     nuget Google.Protobuf ~> 3.9
 
 group Test

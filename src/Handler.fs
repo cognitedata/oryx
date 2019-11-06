@@ -2,8 +2,10 @@
 
 namespace Oryx
 
+open System.Net
 open System.Net.Http
 open System.Threading.Tasks
+
 open FSharp.Control.Tasks.V2.ContextInsensitive
 
 type HttpFuncResult<'b> =  Task<Result<Context<'b>, ResponseError>>
@@ -23,7 +25,7 @@ type HttpHandler = HttpHandler<HttpResponseMessage>
 module Handler =
     let finishEarly<'a> : HttpFunc<'a, 'a> = Ok >> Task.FromResult
 
-    /// Run the handler with the given context.
+    /// Run the HTTP handler in the given context.
     let runHandler (handler: HttpHandler<'a,'b,'b>) (ctx : Context<'a>) : Task<Result<'b, ResponseError>> =
         task {
             let! result = handler finishEarly ctx
@@ -106,4 +108,19 @@ module Handler =
             return! next { Request = context.Request; Response = Ok value }
         | _ ->
             return Error { ResponseError.empty with Message = sprintf "Missing header: %s" header }
+    }
+
+    /// A catch handler for catching errors and inssted delegating to the error handler on what to do
+    let catch (errorHandler: ResponseError -> NextFunc<'a, 'b>) (next: HttpFunc<'a, 'b>) (ctx : Context<'a>) = task {
+        let! result = next ctx
+        match result with
+        | Ok ctx -> return Ok ctx
+        | Error err -> return! errorHandler err ctx
+    }
+
+    /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
+    let badRequestHandler<'a, 'b> (response: 'b) (error: ResponseError) (ctx : Context<'a>) = task {
+        match enum<HttpStatusCode>(error.Code) with
+        | HttpStatusCode.BadRequest -> return Ok { Request = ctx.Request; Response = response }
+        | _ -> return Error error
     }

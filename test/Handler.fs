@@ -69,7 +69,54 @@ let ``Simple ok then error is Error``() = task {
     let! result = req finishEarly ctx
 
     // Assert
-    test <@ Result.isError result @>
+    match result with
+    | Ok _ -> failwith "error"
+    | Error err -> test <@ err.Message = "failed" @>
+}
+
+[<Fact>]
+let ``Catching ok is Ok``() = task {
+    // Arrange
+    let ctx = Context.defaultContext
+    let errorHandler = badRequestHandler 420
+    let req = unit 42 >=> catch errorHandler >=> map (fun a -> a * 10)
+
+    // Act
+    let! result = req finishEarly ctx
+
+    // Assert
+    match result with
+    | Ok ctx -> test <@ ctx.Response = 420 @>
+    | Error err -> failwith err.Message
+}
+
+[<Fact>]
+let ``Catching errors is Ok``() = task {
+    // Arrange
+    let ctx = Context.defaultContext
+    let errorHandler = badRequestHandler 420
+    let req = unit 42 >=> catch errorHandler >=> error "failed"
+
+    // Act
+    let! result = req finishEarly ctx
+
+    // Assert
+    match result with
+    | Ok ctx -> test <@ ctx.Response = 420 @>
+    | Error err -> failwith err.Message
+}
+
+[<Fact>]
+let ``Not catching errors is Error``() = task {
+    // Arrange
+    let ctx = Context.defaultContext
+    let errorHandler = badRequestHandler 420
+    let req = unit 42 >=> catch (fun ctx next -> Task.FromResult (Error ctx)) >=> error "failed"
+
+    // Act
+    let! result = req finishEarly ctx
+
+    // Assert
     match result with
     | Ok _ -> failwith "error"
     | Error err -> test <@ err.Message = "failed" @>
