@@ -38,8 +38,7 @@ module Encode =
     /// Encode optional property.
     let optionalProperty<'a> (name: string) (encoder: 'a -> JsonValue) (value : 'a option) =
         [
-            if value.IsSome then
-                yield name, encoder value.Value
+            if value.IsSome then name, encoder value.Value
         ]
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -53,36 +52,6 @@ module Decode =
             return Decode.fromValue "$" decoder json
         }
 
-    let decodeError<'a> (next: NextFunc<HttpResponseMessage, 'a>) (context: Context<HttpResponseMessage>) =
-        task {
-            let result = context.Response
-            if result.IsSuccessStatusCode then
-                return! next context
-            else
-                use! stream = result.Content.ReadAsStreamAsync ()
-                let! res = decodeStreamAsync ApiResponseError.Decoder stream
-                match res with
-                | Ok error ->
-                    return Error error.Error
-                | Error error ->
-                    return Error { ResponseError.empty with Message = error; Code = int result.StatusCode }
-        }
-
-    let decodeContent<'a, 'b, 'c> (decoder : Decoder<'a>) (resultMapper : 'a -> 'b) (next: NextFunc<'b,'c>) (context: Context<HttpResponseMessage>) =
-        task {
-            let response = context.Response
-            use! stream = response.Content.ReadAsStreamAsync ()
-            if response.IsSuccessStatusCode then
-                let! ret = decodeStreamAsync decoder stream
-                match ret with
-                | Ok result ->
-                    return! next { Request = context.Request; Response = resultMapper result }
-                | Error error ->
-                    return Error { ResponseError.empty with Message = error }
-            else
-                return Error { ResponseError.empty with Message = "Error not decoded." }
-        }
-
     /// <summary>
     /// JSON decode response and map decode error string to exception so we don't get more response error types.
     /// </summary>
@@ -90,22 +59,25 @@ module Decode =
     /// <param name="resultMapper">Mapper for transforming the result.</param>
     /// <param name="next">The next handler to use.</param>
     /// <returns>Decoded context.</returns>
-    let decodeResponse<'a, 'b, 'c> (decoder : Decoder<'a>) (resultMapper : 'a -> 'b) : HttpHandler<HttpResponseMessage, 'b, 'c> =
-        decodeError
-        >=> decodeContent decoder resultMapper
-
-    let decodeProtobuf<'b, 'c> (parser : Stream -> 'b) (next: NextFunc<'b, 'c>) (context : Context<HttpResponseMessage>) =
+    let json<'a, 'r, 'err> (decoder : Decoder<'a>) (next: NextFunc<'a,'r, 'err>) (context: HttpContext) : HttpFuncResult<'r, 'err> =
         task {
             let response = context.Response
             use! stream = response.Content.ReadAsStreamAsync ()
-            let result =
-                try
-                    parser stream |> Ok
-                with
-                | ex -> Error { ResponseError.empty with InnerException=Some ex; Message="Unable to decode protobuf message." }
-            match result with
-            | Ok b ->
+            let! ret = decodeStreamAsync decoder stream
+            match ret with
+            | Ok result ->
+                return! next { Request = context.Request; Response = result }
+            | Error error ->
+                return Error (Panic <| JsonDecodeException error)
+        }
+
+    let protobuf<'b, 'r, 'err> (parser : HttpResponseMessage -> 'b) (next: NextFunc<'b, 'r, 'err>) (context : Context<HttpResponseMessage>) =
+        task {
+            let response = context.Response
+            try
+                let b = parser response
                 return! next { Request = context.Request; Response = b }
-            | Error err ->
-                return Error err
+
+            with
+            | ex -> return Error (Panic ex)
         }

@@ -22,27 +22,10 @@ module Retry =
     let rand = System.Random ()
 
     /// A resonable default should retry handler.
-    let shouldRetry (err: ResponseError) =
-        let retryCode =
-            match err.Code with
-            | 429 // Rate limiting
-            | 500 // Internal server error
-            | 502 // Bad gateway
-            | 503 -> true // Service unavailable
-            | _ -> false  // Do not retry other responses.
-
-        let retryEx =
-            match err.InnerException with
-            | Some (:? Net.Http.HttpRequestException) -> true
-            | Some (:? Net.WebException) -> true
-            | _ -> false // Do not retry other exceptions.
-
-        // Retry if retriable code or retryable exception
-        retryCode || retryEx
 
     /// Retries the given HTTP handler up to `maxRetries` retries with
     /// exponential backoff and up to 2 minute with randomness.
-    let rec retry (shouldRetry: ResponseError -> bool) (initialDelay: int<ms>) (maxRetries : int) (handler: HttpHandler<'a,'b,'c>) (next: NextFunc<'b,'c>) (ctx: Context<'a>) : Task<Result<Context<'c>, ResponseError>> = task {
+    let rec retry<'a, 'b, 'r, 'err> (shouldRetry: HandlerError<'err> -> bool) (initialDelay: int<ms>) (maxRetries : int) (handler: HttpHandler<'a,'b,'r,'err>) (next: NextFunc<'b,'r, 'err>) (ctx: Context<'a>) : HttpFuncResult<'r, 'err> = task {
         let exponentialDelay = min (secondsInMilliseconds * DefaultMaxBackoffDelay / 2) (initialDelay * 2)
         let randomDelayScale = min (secondsInMilliseconds * DefaultMaxBackoffDelay / 2) (initialDelay * 2)
         let nextDelay = rand.Next(int randomDelayScale) * 1<ms> + exponentialDelay
