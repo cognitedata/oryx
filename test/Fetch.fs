@@ -1,22 +1,19 @@
 module Tests.Fetch
 
+open System
+open System.Net.Http
+open System.Threading
+open System.Net
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2
 open Swensen.Unquote
 open Xunit
-open FsCheck.Xunit
-open FsCheck
-open FsCheck.Arb
-
 
 open Oryx
-open Tests.Common
-open System
-open System.Net.Http
-open System.Threading
-open System.Net
 open Oryx.Retry
+
+open Tests.Common
 
 [<Fact>]
 let ``Get asset with fusion return expression is Ok``() = task {
@@ -97,7 +94,7 @@ let ``Fetch with retry is Ok``() = task {
 let ``Fetch with retry on internal error will retry``() = task {
     // Arrange
     let mutable retries = 0
-    let json = """{ "error": { "code": 500, "message": "failed" }}"""
+    let json = """{ "code": 500, "message": "failed" }"""
 
     let stub =
         Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->

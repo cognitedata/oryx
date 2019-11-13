@@ -25,7 +25,8 @@ let ``Simple unit handler is Ok``() = task {
     test <@ Result.isOk result @>
     match result with
     | Ok ctx -> test <@ ctx.Response = 42 @>
-    | Error err -> failwith err.Message
+    | Error (Panic err) -> raise err
+    | Error (ApiError err) -> failwith (err.ToString())
 }
 
 [<Fact>]
@@ -40,7 +41,8 @@ let ``Simple error handler is Error``() = task {
     test <@ Result.isError result @>
     match result with
     | Ok _ -> failwith "error"
-    | Error err -> test <@ err.Message = "failed" @>
+    | Error (Panic err) -> test <@ err.ToString() = "failed" @>
+    | Error (ApiError err) -> failwith (err.ToString())
 }
 
 [<Fact>]
@@ -56,7 +58,8 @@ let ``Simple error then ok is Error``() = task {
     test <@ Result.isError result @>
     match result with
     | Ok _ -> failwith "error"
-    | Error err -> test <@ err.Message = "failed" @>
+    | Error (Panic err) -> test <@ err.ToString() = "failed" @>
+    | Error (ApiError err) -> failwith (err.ToString())
 }
 
 [<Fact>]
@@ -71,7 +74,8 @@ let ``Simple ok then error is Error``() = task {
     // Assert
     match result with
     | Ok _ -> failwith "error"
-    | Error err -> test <@ err.Message = "failed" @>
+    | Error (Panic err) -> test <@ err.ToString () = "failed" @>
+    | Error (ApiError err) -> failwith (err.ToString())
 }
 
 [<Fact>]
@@ -87,7 +91,8 @@ let ``Catching ok is Ok``() = task {
     // Assert
     match result with
     | Ok ctx -> test <@ ctx.Response = 420 @>
-    | Error err -> failwith err.Message
+    | Error (Panic err) -> raise err
+    | Error (ApiError err) -> failwith (err.ToString())
 }
 
 [<Fact>]
@@ -95,7 +100,7 @@ let ``Catching errors is Ok``() = task {
     // Arrange
     let ctx = Context.defaultContext
     let errorHandler = badRequestHandler 420
-    let req = unit 42 >=> catch errorHandler >=> error "failed"
+    let req = unit 42 >=> catch errorHandler >=> apiError "failed"
 
     // Act
     let! result = req finishEarly ctx
@@ -103,7 +108,8 @@ let ``Catching errors is Ok``() = task {
     // Assert
     match result with
     | Ok ctx -> test <@ ctx.Response = 420 @>
-    | Error err -> failwith err.Message
+    | Error (Panic err) -> raise err
+    | Error (ApiError err) -> failwith (err.ToString())
 }
 
 [<Fact>]
@@ -119,7 +125,8 @@ let ``Not catching errors is Error``() = task {
     // Assert
     match result with
     | Ok _ -> failwith "error"
-    | Error err -> test <@ err.Message = "failed" @>
+    | Error (Panic err) -> test <@ err.ToString () = "failed" @>
+    | Error (ApiError err) -> failwith (err.ToString())
 }
 
 [<Fact>]
@@ -163,7 +170,8 @@ let ``Sequential handlers with an Error is Error``() = task {
     test <@ Result.isError result @>
     match result with
     | Ok _ -> failwith "expected failure"
-    | Error err -> test <@ err.Message = "fail" @>
+    | Error (Panic err) -> test <@ err.ToString () = "fail" @>
+    | Error (ApiError err) -> failwith (err.ToString())
 }
 
 [<Fact>]
@@ -207,7 +215,8 @@ let ``Concurrent handlers with an Error is Error``() = task {
     test <@ Result.isError result @>
     match result with
     | Ok _ -> failwith "expected failure"
-    | Error err -> test <@ err.Message = "fail" @>
+    | Error (Panic err) -> test <@ err.ToString () = "fail" @>
+    | Error (ApiError err) -> failwith (err.ToString())
 }
 
 [<Property>]

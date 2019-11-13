@@ -43,13 +43,16 @@ let ``Simple unit handler in builder is Ok``() = task {
     test <@ Result.isOk result @>
     match result with
     | Ok value -> test <@ value = 42 @>
-    | Error err -> failwith err.Message
+    | Error (Panic err) -> raise err
+    | Error (ApiError err) -> failwith (err.ToString())
 }
 
 [<Fact>]
 let ``Simple return from unit handler in builder is Ok``() = task {
     // Arrange
     let ctx = Context.defaultContext
+
+    let a = unit 42 finishEarly
 
     // Act
     let req = oryx {
@@ -62,7 +65,8 @@ let ``Simple return from unit handler in builder is Ok``() = task {
     test <@ Result.isOk result @>
     match result with
     | Ok value -> test <@ value = 42 @>
-    | Error err -> failwith err.Message
+    | Error (Panic err) -> raise err
+    | Error (ApiError err) -> failwith (err.ToString())
 }
 
 [<Fact>]
@@ -83,5 +87,6 @@ let ``Multiple handlers in builder is Ok``() = task {
     test <@ Result.isOk result @>
     match result with
     | Ok value -> test <@ value = 30 @>
-    | Error err -> failwith err.Message
+    | Error (Panic err) -> raise err
+    | Error (ApiError err) -> failwith (err.ToString())
 }
