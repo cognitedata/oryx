@@ -9,7 +9,6 @@ open FSharp.Control.Tasks.V2
 open Thoth.Json.Net
 
 open Oryx
-open Oryx.Decode
 open System.Net
 
 type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =

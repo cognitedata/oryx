@@ -41,8 +41,8 @@ module Encode =
             if value.IsSome then name, encoder value.Value
         ]
 
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module Decode =
+[<AutoOpen>]
+module Decoders =
     let decodeStreamAsync (decoder : Decoder<'a>) (stream : IO.Stream) =
         task {
             use tr = new StreamReader(stream) // StreamReader will dispose the stream
@@ -71,11 +71,12 @@ module Decode =
                 return Error (Panic <| JsonDecodeException error)
         }
 
-    let protobuf<'b, 'r, 'err> (parser : HttpResponseMessage -> 'b) (next: NextFunc<'b, 'r, 'err>) (context : Context<HttpResponseMessage>) =
+    let protobuf<'b, 'r, 'err> (parser : Stream -> 'b) (next: NextFunc<'b, 'r, 'err>) (context : Context<HttpResponseMessage>) =
         task {
             let response = context.Response
+            use! stream = response.Content.ReadAsStreamAsync ()
             try
-                let b = parser response
+                let b = parser stream
                 return! next { Request = context.Request; Response = b }
 
             with
