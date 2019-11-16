@@ -23,11 +23,7 @@ type HttpHandler<'err> = HttpHandler<HttpResponseMessage, 'err>
 
 [<AutoOpen>]
 module Handler =
-    let iterate1 (f : unit -> seq<int>) =
-        for e in f() do printfn "%d" e
-    let iterate2 (f : unit -> #seq<int>) =
-        for e in f() do printfn "%d" e
-
+    /// A next continuation that produces an Ok async result. Used to end the processing pipeline.
     let finishEarly<'a, 'err> : HttpFunc<'a, 'a, 'err> = Ok >> Task.FromResult
 
     /// Run the HTTP handler in the given context.

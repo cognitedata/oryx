@@ -52,6 +52,8 @@ module Decoders =
             return Decode.fromValue "$" decoder json
         }
 
+module ResponseReaders =
+
     /// <summary>
     /// JSON decode response and map decode error string to exception so we don't get more response error types.
     /// </summary>

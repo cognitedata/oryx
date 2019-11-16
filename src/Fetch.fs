@@ -100,6 +100,5 @@ module Fetch =
                 use! response = client.SendAsync(message, cancellationToken)
                 return! next { ctx with Response = response }
             with
-            | ex ->
-                return Panic ex |> Error
+            | ex -> return Panic ex |> Error
         }
