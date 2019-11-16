@@ -10,6 +10,7 @@ open Thoth.Json.Net
 
 open Oryx
 open Oryx.ResponseReaders
+open Oryx.Retry
 open System.Net
 
 type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
@@ -37,7 +38,7 @@ type TestError = {
 }
 
 let apiError msg (next: NextFunc<'b, 'c, 'err>) (_: Context<'a>) : HttpFuncResult<'c, TestError> =
-    { Code = 400; Message = msg } |> ApiError |> Error |> Task.FromResult
+    { Code = 400; Message = msg } |> ResponseError |> Error |> Task.FromResult
 
 let error msg (next: NextFunc<'b, 'c, 'err>) (_: Context<'a>) : HttpFuncResult<'c, TestError> =
    TestException msg |> Panic |> Error |> Task.FromResult
@@ -46,7 +47,7 @@ let error msg (next: NextFunc<'b, 'c, 'err>) (_: Context<'a>) : HttpFuncResult<'
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
 let badRequestHandler<'a, 'b> (response: 'b) (error: HandlerError<TestError>) (ctx : Context<'a>) = task {
     match error with
-    | ApiError api ->
+    | ResponseError api ->
         match enum<HttpStatusCode>(api.Code) with
         | HttpStatusCode.BadRequest -> return Ok { Request = ctx.Request; Response = response }
         | _ -> return Error error
@@ -56,7 +57,7 @@ let badRequestHandler<'a, 'b> (response: 'b) (error: HandlerError<TestError>) (c
 
 let shouldRetry (error: HandlerError<TestError>) : bool =
     match error with
-    | ApiError error -> true
+    | ResponseError error -> true
     | Panic _ -> false
 
 let decodeError (response: HttpResponseMessage) : Task<HandlerError<TestError>> = task {
@@ -68,7 +69,7 @@ let decodeError (response: HttpResponseMessage) : Task<HandlerError<TestError>> 
         })
     let! result = decodeStreamAsync decoder stream
     match result with
-    | Ok err -> return ApiError err
+    | Ok err -> return ResponseError err
     | Error reason -> return Panic <| JsonDecodeException reason
 }
 
@@ -79,3 +80,5 @@ let get () =
     >=> fetch
     >=> withError decodeError
     >=> json decoder
+
+let retry next ctx = retry shouldRetry 0<ms> 5 next ctx

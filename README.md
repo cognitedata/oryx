@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/cognitedata/oryx/branch/master/graph/badge.svg)](https://codecov.io/gh/cognitedata/oryx)
 [![Nuget](https://img.shields.io/nuget/v/oryx)](https://www.nuget.org/packages/Oryx/)
 
-Oryx is a high performance .NET cross platform functional HTTP request handler library for writing HTTP web clients in F#.
+Oryx is a high performance .NET cross platform functional HTTP request handler library for writing HTTP clients and orchestrating web requests in F#.
 
 > An SDK for writing HTTP web clients or SDKs.
 
@@ -95,16 +95,40 @@ This enables you to compose your web requests and decode the response, e.g as we
 
 Thus the function `listAssets` is now also an `HttpHandler` and may be composed with other handlers to create complex chains for doing series of multiple requests to a web service.
 
-There is also a `retry` that retries HTTP handlers using max number of retries and exponential backoff.
+There is also a `retry` that retries the `next` HTTP handler using max number of retries and exponential backoff.
 
 ```fs
-val retry : (initialDelay: int<ms>) -> (maxRetries: int) -> (handler: HttpHandler<'a,'b,'c>) -> (next: NextFunc<'b,'c>) -> (ctx: Context<'a>) -> Task<Context<'c>>
+val retry : (initialDelay: int<ms>) -> (maxRetries: int) -> (next: NextFunc<'b,'c>) -> (ctx: Context<'a>) -> Task<Context<'c>>
 ```
 
 And a `concurrent` operator that runs a list of HTTP handlers in parallel.
 
 ```fs
 val concurrent : (handlers: HttpHandler<'a, 'b, 'b> seq) -> (next: NextFunc<'b list, 'c>) -> (ctx: Context<'a>) -> Task<Context<'c>>
+```
+
+## Error handling
+
+Errors are handled by the main handler logic. Every HTTP handler returns `Task<Result<Context<'r>, HandlerError<'err>>>`. Thus every stage in the pipeline may be short-circuit by `Error`, or continued by `Ok`. The error type is generic and needs to be customized by the client SDK or application.
+
+```fs
+type HandlerError<'err> =
+    /// Request failed with some exception, e.g HttpClient throws an exception, or JSON decode error.
+    | Panic of exn
+    /// User defined error response, e.g decoded error response from the API service.
+    | ResponseError of 'err
+```
+
+To produce a custom error response you can use the `withError` handler _after_ e.g `fetch`. The supplied `errorHandler` is given full access the the `HttpResponseMessage` and may produce a custom `ErrorRespose`, or fail with `Panic` if decoding fails.
+
+```fs
+val withError<'a, 'r, 'err> (errorHandler : HttpResponseMessage -> Task<HandlerError<'err>>) -> (next: NextFunc<HttpResponseMessage,'r, 'err>) -> (context: HttpContext) -> HttpFuncResult<'r, 'err>
+```
+
+It's also possible to catch errors using the `catch` handler _before_ e.g `fetch`. The function takes an `errorHandler` that is given the returned error and produces a new `next` continuation that may then decide to return `Ok` instead of `Error`. This is very helpful when a failed request not necessarily means error, e.g if you need to check if an object with a given id exist at the server.
+
+```fs
+val catch (errorHandler: HandlerError<'err> -> NextFunc<'a, 'r, 'err>) -> (next: HttpFunc<'a, 'r, 'err>) -> (ctx : Context<'a>) -> HttpFuncResult<'r, 'err>
 ```
 
 ## JSON and Protobuf
@@ -118,12 +142,18 @@ Both encode and decode uses streaming so no large strings or arrays will be allo
 Working with `Context` objects can be a bit painful since the actual result will be available inside a `Task` effect that has a `Result` that can be either `Ok` of the actual response, or `Error`. To make it simpler to handle multiple requests using handlers you can use the `oryx` builder that will hide the complexity of both the `Context` and the `Result`.
 
 ```fs
-    oryx {
-        let! a = fetchData "service1"
-        let! b = fetchData "service2"
+oryx {
+    let! assetDto = Assets.Entity.get key
 
-        return a + b
-    }
+    let asset = assetDto |> Asset.FromAssetReadDto
+    if expands.Contains("Parent") && assetDto.ParentId.IsSome then
+        let! parentDto = Assets.Entity.get assetDto.ParentId.Value
+        let parent = parentDto |> Asset.FromAssetReadDto
+        let expanded = { asset with Parent = Some parent }
+        return expanded
+    else
+        return asset
+}
 ```
 
 To run a handler you can use the `runHandler` function.

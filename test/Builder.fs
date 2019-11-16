@@ -44,7 +44,7 @@ let ``Simple unit handler in builder is Ok``() = task {
     match result with
     | Ok value -> test <@ value = 42 @>
     | Error (Panic err) -> raise err
-    | Error (ApiError err) -> failwith (err.ToString())
+    | Error (ResponseError err) -> failwith (err.ToString())
 }
 
 [<Fact>]
@@ -66,7 +66,7 @@ let ``Simple return from unit handler in builder is Ok``() = task {
     match result with
     | Ok value -> test <@ value = 42 @>
     | Error (Panic err) -> raise err
-    | Error (ApiError err) -> failwith (err.ToString())
+    | Error (ResponseError err) -> failwith (err.ToString())
 }
 
 [<Fact>]
@@ -88,5 +88,5 @@ let ``Multiple handlers in builder is Ok``() = task {
     match result with
     | Ok value -> test <@ value = 30 @>
     | Error (Panic err) -> raise err
-    | Error (ApiError err) -> failwith (err.ToString())
+    | Error (ResponseError err) -> failwith (err.ToString())
 }
