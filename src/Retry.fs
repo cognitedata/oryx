@@ -21,23 +21,21 @@ module Retry =
 
     let rand = System.Random ()
 
-    /// A resonable default should retry handler.
-
-    /// Retries the given HTTP handler up to `maxRetries` retries with
-    /// exponential backoff and up to 2 minute with randomness.
-    let rec retry<'a, 'b, 'r, 'err> (shouldRetry: HandlerError<'err> -> bool) (initialDelay: int<ms>) (maxRetries : int) (handler: HttpHandler<'a,'b,'r,'err>) (next: NextFunc<'b,'r, 'err>) (ctx: Context<'a>) : HttpFuncResult<'r, 'err> = task {
+    /// Retries the given HTTP handler up to `maxRetries` retries with exponential backoff and up to 2 minute with
+    /// randomness.
+    let rec retry<'a, 'r, 'err> (shouldRetry: HandlerError<'err> -> bool) (initialDelay: int<ms>) (maxRetries : int)  (next: NextFunc<'a,'r, 'err>) (ctx: Context<'a>) : HttpFuncResult<'r, 'err> = task {
         let exponentialDelay = min (secondsInMilliseconds * DefaultMaxBackoffDelay / 2) (initialDelay * 2)
         let randomDelayScale = min (secondsInMilliseconds * DefaultMaxBackoffDelay / 2) (initialDelay * 2)
         let nextDelay = rand.Next(int randomDelayScale) * 1<ms> + exponentialDelay
 
-        let! result = handler next ctx
+        let! result = next ctx
 
         match result with
         | Ok _ -> return result
         | Error err ->
             if shouldRetry err && maxRetries > 0 then
                 do! int initialDelay |> Async.Sleep
-                return! retry shouldRetry nextDelay (maxRetries - 1) handler next ctx
+                return! retry shouldRetry nextDelay (maxRetries - 1) next ctx
             else
                 return result
     }

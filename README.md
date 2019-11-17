@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/cognitedata/oryx/branch/master/graph/badge.svg)](https://codecov.io/gh/cognitedata/oryx)
 [![Nuget](https://img.shields.io/nuget/v/oryx)](https://www.nuget.org/packages/Oryx/)
 
-Oryx is a high performance .NET cross platform functional HTTP request handler library for writing HTTP web clients in F#.
+Oryx is a high performance .NET cross platform functional HTTP request handler library for writing HTTP clients and orchestrating web requests in F#.
 
 > An SDK for writing HTTP web clients or SDKs.
 
@@ -26,17 +26,17 @@ type Context<'a> = {
 The `Context` may be transformed by series of HTTP handlers. The `HttpHandler` takes a `Context` (and a `NextFunc`) and returns a new `Context` wrapped in a `Result` and `Task`.
 
 ```fs
-type HttpFuncResult<'b> =  Task<Result<Context<'b>, ResponseError>>
+type HttpFuncResult<'r, 'err> =  Task<Result<Context<'r>, HandlerError<'err>>>
 
-type HttpFunc<'a, 'b> = Context<'a> -> HttpFuncResult<'b>
-type NextFunc<'a, 'b> = HttpFunc<'a, 'b>
+type HttpFunc<'a, 'r, 'err> = Context<'a> -> HttpFuncResult<'r, 'err>
+type NextFunc<'a, 'r, 'err> = HttpFunc<'a, 'r, 'err>
 
-type HttpHandler<'a, 'b, 'c> = NextFunc<'b, 'c> -> Context<'a> -> HttpFuncResult<'c>
+type HttpHandler<'a, 'b, 'r, 'err> = NextFunc<'b, 'r, 'err> -> Context<'a> -> HttpFuncResult<'r, 'err>
 
 // For convenience
-type HttpHandler<'a, 'b> = HttpHandler<'a, 'a, 'b>
-type HttpHandler<'a> = HttpHandler<HttpResponseMessage, 'a>
-type HttpHandler = HttpHandler<HttpResponseMessage>
+type HttpHandler<'a, 'r, 'err> = HttpHandler<'a, 'a, 'r, 'err>
+type HttpHandler<'r, 'err> = HttpHandler<HttpResponseMessage, 'r, 'err>
+type HttpHandler<'err> = HttpHandler<HttpResponseMessage, 'err>
 ```
 
 An `HttpHandler` is a plain function that takes two curried arguments, a `NextFunc` and a `Context`, and returns a new `Context` (wrapped in a `Result` and `Task`) when finished. On a high level the `HttpHandler` function takes and returns a context object, which means every `HttpHandler` function has full control of the outgoing `HttpRequest` and also the resulting response.
@@ -62,21 +62,23 @@ let (>=>) a b = compose a b
 The `compose` function is the magic that sews it all togheter and explains how you can curry the `HttpHandler` to generate a new `NextFunc` that you give to next `HttpHandler`. If the first handler fails, the next handler will be skipped.
 
 ```fs
-let compose (first : HttpHandler<'a, 'b, 'd>) (second : HttpHandler<'b, 'c, 'd>) : HttpHandler<'a,'c,'d> =
-    fun (next: NextFunc<_, _>) (ctx : Context<'a>) ->
-        let func =
-            next
-            |> second
-            |> first
+    let compose (first : HttpHandler<'a, 'b, 'r, 'err>) (second : HttpHandler<'b, 'c, 'r, 'err>) : HttpHandler<'a,'c,'r, 'err> =
+        fun (next: NextFunc<'c, 'r, 'err>) (ctx : Context<'a>) ->
+            let func =
+                next
+                |> second
+                |> first
 
-        func ctx
+            func ctx
+
+    let (>=>) a b =
+        compose a b
 ```
 
 This enables you to compose your web requests and decode the response, e.g as we do when listing Assets in the  the [Cognite Data Fusion SDK](https://github.com/cognitedata/cognite-sdk-dotnet/blob/master/src/assets/ListAssets.fs#L55):
 
 ```fs
-    let listAssets (options: AssetQuery seq) (filters: AssetFilter seq) (fetch: HttpHandler<HttpResponseMessage, 'a>) =
-        let decodeResponse = Decode.decodeContent AssetItemsReadDto.Decoder id
+    let listCore (options: AssetQuery seq) (filters: AssetFilter seq) (fetch: HttpHandler<HttpResponseMessage, 'a>) =
         let request : Request = {
             Filters = filters
             Options = options
@@ -87,22 +89,46 @@ This enables you to compose your web requests and decode the response, e.g as we
         >=> setContent (Content.JsonValue request.Encoder)
         >=> setResource Url
         >=> fetch
-        >=> Decode.decodeError
-        >=> decodeResponse
+        >=> withError decodeError
+        >=> json AssetItemsReadDto.Decoder
 ```
 
 Thus the function `listAssets` is now also an `HttpHandler` and may be composed with other handlers to create complex chains for doing series of multiple requests to a web service.
 
-There is also a `retry` that retries HTTP handlers using max number of retries and exponential backoff.
+There is also a `retry` that retries the `next` HTTP handler using max number of retries and exponential backoff.
 
 ```fs
-val retry : (initialDelay: int<ms>) -> (maxRetries: int) -> (handler: HttpHandler<'a,'b,'c>) -> (next: NextFunc<'b,'c>) -> (ctx: Context<'a>) -> Task<Context<'c>>
+val retry : (initialDelay: int<ms>) -> (maxRetries: int) -> (next: NextFunc<'b,'c>) -> (ctx: Context<'a>) -> Task<Context<'c>>
 ```
 
 And a `concurrent` operator that runs a list of HTTP handlers in parallel.
 
 ```fs
 val concurrent : (handlers: HttpHandler<'a, 'b, 'b> seq) -> (next: NextFunc<'b list, 'c>) -> (ctx: Context<'a>) -> Task<Context<'c>>
+```
+
+## Error handling
+
+Errors are handled by the main handler logic. Every HTTP handler returns `Task<Result<Context<'r>, HandlerError<'err>>>`. Thus every stage in the pipeline may be short-circuit by `Error`, or continued by `Ok`. The error type is generic and needs to be customized by the client SDK or application.
+
+```fs
+type HandlerError<'err> =
+    /// Request failed with some exception, e.g HttpClient throws an exception, or JSON decode error.
+    | Panic of exn
+    /// User defined error response, e.g decoded error response from the API service.
+    | ResponseError of 'err
+```
+
+To produce a custom error response you can use the `withError` handler _after_ e.g `fetch`. The supplied `errorHandler` is given full access the the `HttpResponseMessage` and may produce a custom `ErrorRespose`, or fail with `Panic` if decoding fails.
+
+```fs
+val withError<'a, 'r, 'err> (errorHandler : HttpResponseMessage -> Task<HandlerError<'err>>) -> (next: NextFunc<HttpResponseMessage,'r, 'err>) -> (context: HttpContext) -> HttpFuncResult<'r, 'err>
+```
+
+It's also possible to catch errors using the `catch` handler _before_ e.g `fetch`. The function takes an `errorHandler` that is given the returned error and produces a new `next` continuation that may then decide to return `Ok` instead of `Error`. This is very helpful when a failed request not necessarily means error, e.g if you need to check if an object with a given id exist at the server.
+
+```fs
+val catch (errorHandler: HandlerError<'err> -> NextFunc<'a, 'r, 'err>) -> (next: HttpFunc<'a, 'r, 'err>) -> (ctx : Context<'a>) -> HttpFuncResult<'r, 'err>
 ```
 
 ## JSON and Protobuf
@@ -113,30 +139,32 @@ Both encode and decode uses streaming so no large strings or arrays will be allo
 
 ## Computational Expression Builder
 
-Working with `Context` objects can be a bit painful since the actual result will be available inside a `Task` effect that has a `Result` that can be either `Ok` with the response or `Error`. To make it simpler to handle multiple requests using handlers you can use the `oryx` builder that will hide the complexity of both the `Context` and the `Result`.
+Working with `Context` objects can be a bit painful since the actual result will be available inside a `Task` effect that has a `Result` that can be either `Ok` of the actual response, or `Error`. To make it simpler to handle multiple requests using handlers you can use the `oryx` builder that will hide the complexity of both the `Context` and the `Result`.
 
 ```fs
-    oryx {
-        let! a = fetchData "service1"
-        let! b = fetchData "service2"
+oryx {
+    let! assetDto = Assets.Entity.get key
 
-        return a + b
-    }
+    let asset = assetDto |> Asset.FromAssetReadDto
+    if expands.Contains("Parent") && assetDto.ParentId.IsSome then
+        let! parentDto = Assets.Entity.get assetDto.ParentId.Value
+        let parent = parentDto |> Asset.FromAssetReadDto
+        let expanded = { asset with Parent = Some parent }
+        return expanded
+    else
+        return asset
+}
 ```
 
-To run a handler u can use the `runHandler` function.
+To run a handler you can use the `runHandler` function.
 
 ```fs
-
-val runHandler : (handler: HttpHandler<'a,'b,'b>) -> (ctx : Context<'a>) -> Task<Result<'b, ResponseError>>
-
+let runHandler (handler: HttpHandler<'a,'r,'r, 'err>) (ctx : Context<'a>) : Task<Result<'r, HandlerError<'err>>>
 ```
 
 ## TODO
 
-- The library currently depends on [`Thoth.Json.Net`](https://mangelmaxime.github.io/Thoth/). This should at some point be split into a separate library.
-
-- The library also assumes the type of the error response. This should perhaps be made more generic.
+- The library currently depends on [`Thoth.Json.Net`](https://github.com/thoth-org/Thoth.Json.Net). This should at some point be split into a separate library.
 
 ## Code of Conduct
 

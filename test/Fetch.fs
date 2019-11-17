@@ -78,9 +78,9 @@ let ``Fetch with retry is Ok``() = task {
     // Act
     let req =
         oryx {
-            let! result = get ()
+            let! result = retry >=> get ()
             return result
-        } |> retry shouldRetry 0<ms> 5
+        }
 
     let! result = runHandler req ctx
     let retries' = retries
@@ -116,9 +116,9 @@ let ``Fetch with retry on internal error will retry``() = task {
     // Act
     let req =
         oryx {
-            let! result = get ()
+            let! result = retry >=> get ()
             return result
-        } |> retry shouldRetry 0<ms> 5
+        }
 
     let! result = runHandler req ctx
     let retries' = retries

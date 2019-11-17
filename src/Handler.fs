@@ -23,11 +23,7 @@ type HttpHandler<'err> = HttpHandler<HttpResponseMessage, 'err>
 
 [<AutoOpen>]
 module Handler =
-    let iterate1 (f : unit -> seq<int>) =
-        for e in f() do printfn "%d" e
-    let iterate2 (f : unit -> #seq<int>) =
-        for e in f() do printfn "%d" e
-
+    /// A next continuation that produces an Ok async result. Used to end the processing pipeline.
     let finishEarly<'a, 'err> : HttpFunc<'a, 'a, 'err> = Ok >> Task.FromResult
 
     /// Run the HTTP handler in the given context.
@@ -112,15 +108,15 @@ module Handler =
         return! next { Request = context.Request; Response = Ok values }
     }
 
-    /// A catch handler for catching errors and then delegating to the error handler on what to do.
-    let catch (errorHandler: HandlerError<'err> -> NextFunc<'a, 'r, 'err>) (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) = task {
+    /// Catch handler for catching errors and then delegating to the error handler on what to do.
+    let catch (errorHandler: HandlerError<'err> -> NextFunc<'a, 'r, 'err>) (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> = task {
         let! result = next ctx
         match result with
         | Ok ctx -> return Ok ctx
         | Error err -> return! errorHandler err ctx
     }
 
-    /// A error handler for decoding fetch responses. Will ignore successful responses.
+    /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
     let withError<'a, 'r, 'err> (errorHandler : HttpResponseMessage -> Task<HandlerError<'err>>) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) : HttpFuncResult<'r, 'err> =
         task {
             let response = context.Response
