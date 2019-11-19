@@ -27,7 +27,7 @@ module Handler =
     let finishEarly<'a, 'err> : HttpFunc<'a, 'a, 'err> = Ok >> Task.FromResult
 
     /// Run the HTTP handler in the given context.
-    let runHandler (handler: HttpHandler<'a,'r,'r, 'err>) (ctx : Context<'a>) : Task<Result<'r, HandlerError<'err>>> =
+    let runAsync (handler: HttpHandler<'a,'r,'r, 'err>) (ctx : Context<'a>) : Task<Result<'r, HandlerError<'err>>> =
         task {
             let! result = handler finishEarly ctx
             match result with
@@ -37,17 +37,10 @@ module Handler =
     let map (mapper: 'a -> 'b) (next : NextFunc<'b,'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
         next { Request = ctx.Request; Response = (mapper ctx.Response) }
 
-    let compose (first : HttpHandler<'a, 'b, 'r, 'err>) (second : HttpHandler<'b, 'c, 'r, 'err>) : HttpHandler<'a,'c,'r, 'err> =
-        fun (next: NextFunc<'c, 'r, 'err>) (ctx : Context<'a>) ->
-            let func =
-                next
-                |> second
-                |> first
+    let inline compose (first : HttpHandler<'a, 'b, 'r, 'err>) (second : HttpHandler<'b, 'c, 'r, 'err>) : HttpHandler<'a,'c,'r, 'err> =
+        second >> first
 
-            func ctx
-
-    let (>=>) a b =
-        compose a b
+    let (>=>) = compose
 
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
@@ -64,10 +57,15 @@ module Handler =
 
     /// Set the method to be used for requests using this context.
     let setMethod<'r, 'err> (method: HttpMethod) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
-        next { context with Request = { context.Request with Method = method; Content = None } }
+        next { context with Request = { context.Request with Method = method } }
 
-    let GET<'r, 'err> = setMethod<'r, 'err> HttpMethod.Get
+    /// Http GET request. Also clears any content set in the context.
+    let GET<'r, 'err> (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+        next { context with Request = { context.Request with Method = HttpMethod.Get; Content = None } }
+
+    /// Http POST request.
     let POST<'r, 'err> = setMethod<'r, 'err> HttpMethod.Post
+    /// Http DELETE request.
     let DELETE<'r, 'err> = setMethod<'r, 'err> HttpMethod.Delete
 
     /// Run list of HTTP handlers concurrently.
@@ -102,7 +100,7 @@ module Handler =
     }
 
     let extractHeader (header: string) (next: NextFunc<_,_, 'err>) (context: HttpContext) = task {
-        let (success, values) = context.Response.Headers.TryGetValues header
+        let success, values = context.Response.Headers.TryGetValues header
         let values = if success then values else Seq.empty
 
         return! next { Request = context.Request; Response = Ok values }
@@ -126,4 +124,3 @@ module Handler =
                 let! err = errorHandler response
                 return err |> Error
         }
-

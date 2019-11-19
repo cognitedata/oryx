@@ -44,7 +44,7 @@ let ``Get asset with fusion return expression is Ok``() = task {
         return result
     }
 
-    let! result = runHandler req ctx
+    let! result = runAsync req ctx
     let retries' = retries
 
     // Assert
@@ -82,7 +82,7 @@ let ``Fetch with retry is Ok``() = task {
             return result
         }
 
-    let! result = runHandler req ctx
+    let! result = runAsync req ctx
     let retries' = retries
 
     // Assert
@@ -120,7 +120,7 @@ let ``Fetch with retry on internal error will retry``() = task {
             return result
         }
 
-    let! result = runHandler req ctx
+    let! result = runAsync req ctx
     let retries' = retries
 
     // Assert
