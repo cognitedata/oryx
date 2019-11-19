@@ -20,7 +20,7 @@ let ``Zero builder is Ok``() = task {
         ()
     }
 
-    let! result = runHandler req ctx
+    let! result = runAsync req ctx
 
     // Assert
     test <@ Result.isOk result @>
@@ -37,7 +37,7 @@ let ``Simple unit handler in builder is Ok``() = task {
         return value
     }
 
-    let! result = runHandler req ctx
+    let! result = runAsync req ctx
 
     // Assert
     test <@ Result.isOk result @>
@@ -59,7 +59,7 @@ let ``Simple return from unit handler in builder is Ok``() = task {
         return! unit 42
     }
 
-    let! result = runHandler req ctx
+    let! result = runAsync req ctx
 
     // Assert
     test <@ Result.isOk result @>
@@ -81,7 +81,7 @@ let ``Multiple handlers in builder is Ok``() = task {
         return! add a b
     }
 
-    let! result = runHandler req ctx
+    let! result = runAsync req ctx
 
     // Assert
     test <@ Result.isOk result @>

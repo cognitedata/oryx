@@ -47,7 +47,7 @@ The easiest way to get your head around a Oryx `HttpHandler` is to think of it a
 
 The more complex way to think about a `HttpHandler` is that there are in fact 3 different ways it may process the request:
 
-1. Call the next handler with an `Ok` result value, and return what the next handler is returning.
+1. Call the next handler with a result value (`'a`), and return what the next handler is returning.
 2. Return an `Error`result to fail the request.
 3. Return `Ok` to short circuit the processing. This is not something you would normally do.
 
@@ -59,7 +59,7 @@ The fact that everything is an `HttpHandler` makes it easy to compose handlers t
 let (>=>) a b = compose a b
 ```
 
-The `compose` function is the magic that sews it all togheter and explains how you can curry the `HttpHandler` to generate a new `NextFunc` that you give to next `HttpHandler`. If the first handler fails, the next handler will be skipped.
+The `compose` function is the magic that sews it all togheter and explains how we curry the `HttpHandler` to generate a new `NextFunc` that we give to next `HttpHandler`.
 
 ```fs
     let compose (first : HttpHandler<'a, 'b, 'r, 'err>) (second : HttpHandler<'b, 'c, 'r, 'err>) : HttpHandler<'a,'c,'r, 'err> =
@@ -70,6 +70,12 @@ The `compose` function is the magic that sews it all togheter and explains how y
                 |> first
 
             func ctx
+
+```
+It turns out that we can simplify this even further using [η-conversion](https://wiki.haskell.org/Eta_conversion). Thus dropping `ctx` and eventually `next` as well:
+
+```fs
+    let compose = second >> first
 
     let (>=>) a b =
         compose a b
@@ -109,7 +115,7 @@ val concurrent : (handlers: HttpHandler<'a, 'b, 'b> seq) -> (next: NextFunc<'b l
 
 ## Error handling
 
-Errors are handled by the main handler logic. Every HTTP handler returns `Task<Result<Context<'r>, HandlerError<'err>>>`. Thus every stage in the pipeline may be short-circuit by `Error`, or continued by `Ok`. The error type is generic and needs to be customized by the client SDK or application.
+Errors are handled by the main handler logic. Every HTTP handler returns `Task<Result<Context<'r>, HandlerError<'err>>>`. Thus every stage in the pipeline may be short-circuit by `Error`, or be continued by `Ok`. The error type is generic and needs to be set by the client SDK or application. Oryx don't know anything about how to decode the `ResponseError`.
 
 ```fs
 type HandlerError<'err> =
@@ -156,10 +162,10 @@ oryx {
 }
 ```
 
-To run a handler you can use the `runHandler` function.
+To run a handler you can use the `runAsync` function.
 
 ```fs
-let runHandler (handler: HttpHandler<'a,'r,'r, 'err>) (ctx : Context<'a>) : Task<Result<'r, HandlerError<'err>>>
+let runAsync (handler: HttpHandler<'a,'r,'r, 'err>) (ctx : Context<'a>) : Task<Result<'r, HandlerError<'err>>>
 ```
 
 ## TODO
