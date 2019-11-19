@@ -77,8 +77,7 @@ It turns out that we can simplify this even further using [η-conversion](https:
 ```fs
     let compose = second >> first
 
-    let (>=>) a b =
-        compose a b
+    let (>=>) = compose
 ```
 
 This enables you to compose your web requests and decode the response, e.g as we do when listing Assets in the  the [Cognite Data Fusion SDK](https://github.com/cognitedata/cognite-sdk-dotnet/blob/master/src/assets/ListAssets.fs#L55):
