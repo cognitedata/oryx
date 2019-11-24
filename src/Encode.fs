@@ -4,6 +4,7 @@ namespace Oryx
 
 open System
 open System.IO
+open System.Threading.Tasks
 
 open Newtonsoft.Json.Linq
 open Thoth.Json.Net
@@ -73,7 +74,7 @@ module ResponseReaders =
                 return Error (Panic <| JsonDecodeException error)
         }
 
-    let protobuf<'b, 'r, 'err> (parser : Stream -> 'b) (next: NextFunc<'b, 'r, 'err>) (context : Context<HttpResponseMessage>) =
+    let protobuf<'b, 'r, 'err> (parser : Stream -> 'b) (next: NextFunc<'b, 'r, 'err>) (context : Context<HttpResponseMessage>) : Task<Result<Context<'r>,HandlerError<'err>>> =
         task {
             let response = context.Response
             use! stream = response.Content.ReadAsStreamAsync ()
