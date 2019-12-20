@@ -9,7 +9,7 @@ open System.Threading.Tasks
 open Newtonsoft.Json.Linq
 open Thoth.Json.Net
 open System.Net.Http
-open FSharp.Control.Tasks.ContextInsensitive
+open FSharp.Control.Tasks.V2.ContextInsensitive
 open Newtonsoft.Json
 
 

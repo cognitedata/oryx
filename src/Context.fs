@@ -20,9 +20,11 @@ type Content =
     internal
     | CaseJsonValue of JsonValue
     | CaseProtobuf of Google.Protobuf.IMessage
+    | CaseUrlEncoded of (string * string) seq
 
     static member JsonValue jsonValue = CaseJsonValue jsonValue
     static member Protobuf protobuf = CaseProtobuf protobuf
+    static member UrlEncoded form = CaseUrlEncoded form
 
 type ResponseType = JsonValue | Protobuf
 
