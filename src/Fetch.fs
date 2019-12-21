@@ -83,7 +83,7 @@ module Fetch =
                     | CaseUrlEncoded values ->
                         let pairs = values |> Seq.map (fun (k, v) -> new KeyValuePair<string, string>(k, v))
                         let content = new FormUrlEncodedContent (pairs)
-                        content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded;charset=UTF-8"
+                        content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded"
                         content :> HttpContent
             request.Content <- content
         request

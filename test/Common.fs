@@ -81,4 +81,13 @@ let get () =
     >=> withError decodeError
     >=> json decoder
 
+let post content =
+    let decoder : Decoder<_> = Decode.object (fun get -> {| Value = get.Required.Field "value" Decode.int |})
+
+    POST
+    >=> setContent content
+    >=> fetch
+    >=> withError decodeError
+    >=> json decoder
+
 let retry next ctx = retry shouldRetry 0<ms> 5 next ctx

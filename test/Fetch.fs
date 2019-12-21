@@ -16,7 +16,7 @@ open Oryx.Retry
 open Tests.Common
 
 [<Fact>]
-let ``Get asset with fusion return expression is Ok``() = task {
+let ``Get with return expression is Ok``() = task {
     // Arrange
     let mutable retries = 0
     let json = """{ "value": 42}"""
@@ -50,6 +50,47 @@ let ``Get asset with fusion return expression is Ok``() = task {
     // Assert
     test <@ Result.isOk result @>
     test <@ retries' = 1 @>
+}
+
+[<Fact>]
+let ``Post url encoded with return expression is Ok``() = task {
+    // Arrange
+    let json = """{ "value": 42}"""
+    let mutable urlencoded = ""
+
+    let stub =
+        Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
+        task {
+            let! content = request.Content.ReadAsStringAsync ()
+            urlencoded <- content
+            let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+            responseMessage.Content <- new StringContent(json)
+            return responseMessage
+        })
+
+    let client = new HttpClient(new HttpMessageHandlerStub(stub))
+
+    let ctx =
+        Context.defaultContext
+        |> Context.setHttpClient client
+        |> Context.setUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.addHeader ("api-key", "test-key")
+
+    let query = Seq.singleton ("foo", "bar")
+    let content = Content.UrlEncoded query
+
+    // Act
+    let req = oryx {
+        let! result = post content
+        return result
+    }
+
+    let! result = runAsync req ctx
+    let urldecoded' = urlencoded
+
+    // Assert
+    test <@ Result.isOk result @>
+    test <@ urldecoded'.Contains "foo=bar" @>
 }
 
 [<Fact>]
