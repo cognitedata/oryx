@@ -1,3 +1,5 @@
 .ionide
 paket-files
 src/obj
+.vs
+.config

@@ -3,6 +3,7 @@
 namespace Oryx
 
 open System
+open System.Collections.Generic
 open System.IO
 open System.Net
 open System.Net.Http
@@ -45,7 +46,7 @@ module Fetch =
             base.Headers.ContentType <- MediaTypeHeaderValue "application/protobuf"
 
         override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
-            content.WriteTo(stream) |> Task.FromResult :> _
+            content.WriteTo stream |> Task.FromResult :> _
 
         override this.TryComputeLength(length: byref<int64>) : bool =
             length <- -1L
@@ -65,12 +66,12 @@ module Fetch =
 
         let request = new HttpRequestMessage (ctx.Request.Method, url)
 
-        let contentHeader =
+        let acceptHeader =
             match ctx.Request.ResponseType with
             | JsonValue -> "Accept", "application/json"
             | Protobuf -> "Accept", "application/protobuf"
 
-        for header, value in contentHeader :: ctx.Request.Headers do
+        for header, value in acceptHeader :: ctx.Request.Headers do
             if not (client.DefaultRequestHeaders.Contains header) then
                 request.Headers.Add (header, value)
 
@@ -79,6 +80,11 @@ module Fetch =
                 match ctx.Request.Content.Value with
                     | CaseJsonValue value -> new JsonPushStreamContent (value) :> HttpContent
                     | CaseProtobuf value -> new ProtobufPushStreamContent (value) :> HttpContent
+                    | CaseUrlEncoded values ->
+                        let pairs = values |> Seq.map (fun (k, v) -> new KeyValuePair<string, string>(k, v))
+                        let content = new FormUrlEncodedContent (pairs)
+                        content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded"
+                        content :> HttpContent
             request.Content <- content
         request
 
