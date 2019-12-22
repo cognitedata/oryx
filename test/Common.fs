@@ -77,6 +77,7 @@ let get () =
     let decoder : Decoder<_> = Decode.object (fun get -> {| Value = get.Required.Field "value" Decode.int |})
 
     GET
+    >=> setUrl "http://test"
     >=> fetch
     >=> withError decodeError
     >=> json decoder
@@ -85,6 +86,7 @@ let post content =
     let decoder : Decoder<_> = Decode.object (fun get -> {| Value = get.Required.Field "value" Decode.int |})
 
     POST
+    >=> setUrl "http://test"
     >=> setContent content
     >=> fetch
     >=> withError decodeError
