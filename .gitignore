@@ -3,3 +3,4 @@ paket-files
 src/obj
 .vs
 .config
+BenchmarkDotNet.Artifacts

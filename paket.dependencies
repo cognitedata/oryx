@@ -22,3 +22,9 @@ group Test
     nuget Serilog.Sinks.XUnit
     nuget Microsoft.NET.Test.Sdk ~> 16
     nuget FsCheck.Xunit
+
+group Benchmark
+    source https://www.nuget.org/api/v2
+    storage: none
+
+    nuget BenchmarkDotNet
