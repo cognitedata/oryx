@@ -1,0 +1,1 @@
+sudo dotnet run -c release --runtimes netcoreapp3.1
