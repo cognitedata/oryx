@@ -65,7 +65,7 @@ module Context =
         {| Major=version.Major; Minor=version.Minor; Build=version.Build |}
 
     /// Default context to use.
-    let internal defaultRequest =
+    let defaultRequest =
         let ua = sprintf "Oryx / v%d.%d.%d (Cognite)" version.Major version.Minor version.Build
         {
             HttpClient = None
@@ -79,7 +79,7 @@ module Context =
             CancellationToken = None
         }
 
-    let internal defaultResult =
+    let defaultResult =
         new HttpResponseMessage (HttpStatusCode.NotFound)
 
     let defaultContext : Context<HttpResponseMessage> = {

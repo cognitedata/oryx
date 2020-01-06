@@ -4,3 +4,5 @@ src/obj
 .vs
 .config
 BenchmarkDotNet.Artifacts
+benchmark/bin
+benchmark/obj
