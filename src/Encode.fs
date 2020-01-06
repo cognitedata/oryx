@@ -59,8 +59,8 @@ module ResponseReaders =
     /// JSON decode response and map decode error string to exception so we don't get more response error types.
     /// </summary>
     /// <param name="decoder">Decoder to use. </param>
-    /// <param name="resultMapper">Mapper for transforming the result.</param>
     /// <param name="next">The next handler to use.</param>
+    /// <param name="context">HttpContext.</param>
     /// <returns>Decoded context.</returns>
     let json<'a, 'r, 'err> (decoder : Decoder<'a>) (next: NextFunc<'a,'r, 'err>) (context: HttpContext) : HttpFuncResult<'r, 'err> =
         task {

@@ -1,4 +1,4 @@
-module Benchmark.Fetch
+module Benchmark.Json
 
 open System
 open System.Net
@@ -19,20 +19,16 @@ open FSharp.Control.Tasks.Builders.Unsafe
 
 [<MemoryDiagnoser>]
 [<SimpleJob(targetCount = 20)>]
-type FetchBenchmark () =
+type JsonBenchmark () =
     let mutable ctx = Context.defaultContext
-
-    let compiled =
-        (oryx {
-            let! a = Common.get ()
-            let! b = Common.get ()
-
-            return b
-        }) finishEarly
 
     [<GlobalSetup>]
     member self.GlobalSetupData () =
-        let json = """{ "name": "test", "value": 42}"""
+        let json =
+            (List.replicate 10000 "{ \"name\": \"test\", \"value\": 42}")
+            |> String.concat ","
+            |> sprintf "[%s]"
+            |> fun a -> a.Replace(";", ",")
 
         let stub =
             Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
@@ -51,14 +47,12 @@ type FetchBenchmark () =
             |> Context.addHeader ("api-key", "test-key")
 
 
-    [<Benchmark(Description = "Oryx", Baseline = true)>]
-    member self.Fetch () =
+    [<Benchmark(Description = "Toth", Baseline = true)>]
+    member self.FetchToth () =
         (task {
             let req = oryx {
-                let! a = Common.get ()
-                let! b = Common.get ()
-
-                return b
+                let! a = Common.getList ()
+                return a
             }
             let! res = runAsync req ctx
             match res with
@@ -66,41 +60,40 @@ type FetchBenchmark () =
             | Ok data -> ()
         }).Result
 
-    [<Benchmark(Description = "Oryx Compiled")>]
-    member self.FetchCompiled () =
+    [<Benchmark(Description = "Utf8Json")>]
+    member self.FetchUtf8 () =
         (task {
-            let! res = compiled ctx
+            let req = oryx {
+                let! a = Common.get2 (readUtf8)
+                return a
+            }
+            let! res = runAsync req ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()
         }).Result
 
-    [<Benchmark(Description = "No next handler")>]
-    member self.FetchClassic () =
+    [<Benchmark(Description = "System.Text.Json")>]
+    member self.FetchJson () =
         (task {
-            let req = Classic.Builder.oryx {
-                let! a = ClassicHandler.get ()
-                let! b = ClassicHandler.get ()
-
-                return b
+            let req = oryx {
+                let! a = Common.get2 (readJson)
+                return a
             }
-            let! res = req ctx
+            let! res = runAsync req ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()
         }).Result
 
-
-    [<Benchmark(Description = "No next handler w/Ply")>]
-    member self.FetchClassicPly () =
-        (uply {
-            let req = Ply.Builder.oryx {
-                let! a = Ply.Handler.get ()
-                let! b = Ply.Handler.get ()
-
-                return b
+    [<Benchmark(Description = "Newtonsoft")>]
+    member self.FetchNewtonsoft () =
+        (task {
+            let req = oryx {
+                let! a = Common.get2 (readNewtonsoft)
+                return a
             }
-            let! res = req ctx
+            let! res = runAsync req ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()
