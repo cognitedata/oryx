@@ -2,3 +2,4 @@ group Benchmark
 
 BenchmarkDotNet
 Ply
+Utf8Json

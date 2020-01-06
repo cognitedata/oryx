@@ -9,6 +9,7 @@
     <Compile Include="Classic.fs" />
     <Compile Include="ClassicPly.fs" />
     <Compile Include="Fetch.fs" />
+    <Compile Include="Json.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

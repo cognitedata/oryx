@@ -5,6 +5,7 @@ open BenchmarkDotNet.Attributes
 open BenchmarkDotNet.Running
 
 open Benchmark.Fetch
+open Benchmark.Json
 
 let add ((a, b) : int * int) = a + b
 
@@ -16,7 +17,7 @@ type OryxBenchmark () =
 
 [<EntryPoint>]
 let main argv =
-    let summary = BenchmarkRunner.Run typeof<FetchBenchmark>
+    let summary = BenchmarkRunner.Run typeof<JsonBenchmark>
     printfn "%A" summary
     0
 
