@@ -28,3 +28,4 @@ group Benchmark
     storage: none
 
     nuget BenchmarkDotNet
+    nuget Ply

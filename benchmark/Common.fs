@@ -10,8 +10,6 @@ open Thoth.Json.Net
 
 open Oryx
 open Oryx.ResponseReaders
-open Oryx.Retry
-open System.Net
 
 type TestError = {
     Code : int
@@ -27,6 +25,11 @@ type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationTok
             return! sendAsync.Invoke(request, cancellationToken)
         }
 
+type TestType = {
+    Name: string
+    Value: int
+}
+
 let decodeError (response: HttpResponseMessage) : Task<HandlerError<TestError>> = task {
     use! stream = response.Content.ReadAsStreamAsync ()
     let decoder = Decode.object (fun get ->
@@ -40,18 +43,12 @@ let decodeError (response: HttpResponseMessage) : Task<HandlerError<TestError>> 
     | Error reason -> return Panic <| JsonDecodeException reason
 }
 
-type TestType = {
-    Name: string
-    Value: int
-}
-
 let get () =
-    let decoder : Decoder<TestType list> =
+    let decoder : Decoder<TestType> =
         Decode.object (fun get -> {
             Name = get.Required.Field "name" Decode.string
             Value = get.Required.Field "value" Decode.int
-            })
-        |> Decode.list
+        })
 
     GET
     >=> setUrl "http://test"

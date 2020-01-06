@@ -77,6 +77,7 @@ NUGET
       System.ValueTuple (>= 4.5) - restriction: >= netstandard2.0
     BenchmarkDotNet.Annotations (0.12) - restriction: >= netstandard2.0
     CommandLineParser (2.6) - restriction: >= netstandard2.0
+    FSharp.Core (4.7) - restriction: >= netstandard2.0
     Microsoft.CodeAnalysis.Analyzers (2.9.8) - restriction: >= netstandard2.0
     Microsoft.CodeAnalysis.Common (3.4) - restriction: >= netstandard2.0
       Microsoft.CodeAnalysis.Analyzers (>= 2.9.6) - restriction: >= netstandard2.0
@@ -96,6 +97,8 @@ NUGET
       System.Memory (>= 4.5.3) - restriction: || (&& (< net46) (< netcoreapp2.0) (>= netstandard2.0) (< xamarinios) (< xamarinmac)) (&& (>= netcoreapp2.0) (< netcoreapp2.1)) (>= uap10.1)
       System.Security.AccessControl (>= 4.7) - restriction: || (&& (>= monoandroid) (< netstandard2.0)) (>= monotouch) (&& (< net46) (>= netstandard2.0)) (>= net461) (>= netcoreapp2.0) (>= xamarinios) (>= xamarinmac) (>= xamarintvos) (>= xamarinwatchos)
       System.Security.Principal.Windows (>= 4.7) - restriction: || (&& (>= monoandroid) (< netstandard2.0)) (>= monotouch) (&& (< net46) (>= netstandard2.0)) (>= net461) (>= netcoreapp2.0) (>= xamarinios) (>= xamarinmac) (>= xamarintvos) (>= xamarinwatchos)
+    Ply (0.1.7)
+      FSharp.Core (>= 4.6.2) - restriction: >= netstandard2.0
     System.Buffers (4.5) - restriction: || (&& (< monoandroid) (< netstandard1.1) (>= netstandard2.0) (< win8)) (&& (>= monotouch) (>= netcoreapp2.0)) (&& (>= monotouch) (>= netstandard2.0)) (&& (< net45) (< netcoreapp2.0) (>= netstandard2.0)) (&& (< net46) (>= net461) (>= netstandard2.0)) (&& (< net46) (< netcoreapp2.0) (>= netstandard2.0)) (&& (>= net461) (>= netcoreapp2.0)) (&& (>= netcoreapp2.0) (< netstandard1.1)) (&& (>= netcoreapp2.0) (< netstandard2.0)) (&& (>= netcoreapp2.0) (>= xamarintvos)) (&& (>= netcoreapp2.0) (>= xamarinwatchos)) (&& (< netstandard1.1) (>= netstandard2.0) (>= win8)) (&& (>= netstandard2.0) (>= uap10.1)) (&& (>= netstandard2.0) (>= xamarintvos)) (&& (>= netstandard2.0) (>= xamarinwatchos)) (>= xamarinios) (>= xamarinmac)
     System.CodeDom (4.7) - restriction: || (&& (< net45) (>= netstandard2.0)) (>= netcoreapp2.0)
     System.Collections.Immutable (1.7) - restriction: >= netstandard2.0
