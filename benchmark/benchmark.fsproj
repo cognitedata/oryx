@@ -1,17 +1,9 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <IsPackable>false</IsPackable>
-    <IsTestProject>true</IsTestProject>
-    <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="../src/Oryx.fsproj">
-      <Name>Oryx.fsproj</Name>
-    </ProjectReference>
-  </ItemGroup>
+
   <ItemGroup>
     <Compile Include="Common.fs" />
     <Compile Include="Classic.fs" />
@@ -19,5 +11,12 @@
     <Compile Include="Fetch.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../src/Oryx.fsproj">
+      <Name>Oryx.fsproj</Name>
+    </ProjectReference>
+  </ItemGroup>
+
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>

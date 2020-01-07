@@ -61,7 +61,7 @@ let shouldRetry (error: HandlerError<TestError>) : bool =
     | Panic _ -> false
 
 let decodeError (response: HttpResponseMessage) : Task<HandlerError<TestError>> = task {
-    use! stream = response.Content.ReadAsStreamAsync ()
+    let! stream = response.Content.ReadAsStreamAsync ()
     let decoder = Decode.object (fun get ->
         {
             Code = get.Required.Field "code" Decode.int

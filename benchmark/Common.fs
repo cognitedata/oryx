@@ -31,7 +31,7 @@ type TestType = {
 }
 
 let decodeError (response: HttpResponseMessage) : Task<HandlerError<TestError>> = task {
-    use! stream = response.Content.ReadAsStreamAsync ()
+    let! stream = response.Content.ReadAsStreamAsync ()
     let decoder = Decode.object (fun get ->
         {
             Code = get.Required.Field "code" Decode.int
@@ -43,15 +43,23 @@ let decodeError (response: HttpResponseMessage) : Task<HandlerError<TestError>> 
     | Error reason -> return Panic <| JsonDecodeException reason
 }
 
-let get () =
-    let decoder : Decoder<TestType> =
-        Decode.object (fun get -> {
-            Name = get.Required.Field "name" Decode.string
-            Value = get.Required.Field "value" Decode.int
-        })
+let decoder : Decoder<TestType> =
+    Decode.object (fun get -> {
+        Name = get.Required.Field "name" Decode.string
+        Value = get.Required.Field "value" Decode.int
+    })
 
+let noop (next: NextFunc<int, int, 'err>) (ctx: Context<'a>) : HttpFuncResult<int, 'err> =
+    task {
+        let ctx' = { Request = ctx.Request; Response = 42 }
+        return! next ctx'
+    }
+
+let get () =
     GET
     >=> setUrl "http://test"
     >=> fetch
     >=> withError decodeError
     >=> json decoder
+    >=> noop
+    >=> noop

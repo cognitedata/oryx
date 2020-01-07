@@ -65,7 +65,7 @@ module ResponseReaders =
     let json<'a, 'r, 'err> (decoder : Decoder<'a>) (next: NextFunc<'a,'r, 'err>) (context: HttpContext) : HttpFuncResult<'r, 'err> =
         task {
             let response = context.Response
-            use! stream = response.Content.ReadAsStreamAsync ()
+            let! stream = response.Content.ReadAsStreamAsync ()
             let! ret = decodeStreamAsync decoder stream
             match ret with
             | Ok result ->
@@ -77,11 +77,10 @@ module ResponseReaders =
     let protobuf<'b, 'r, 'err> (parser : Stream -> 'b) (next: NextFunc<'b, 'r, 'err>) (context : Context<HttpResponseMessage>) : Task<Result<Context<'r>,HandlerError<'err>>> =
         task {
             let response = context.Response
-            use! stream = response.Content.ReadAsStreamAsync ()
+            let! stream = response.Content.ReadAsStreamAsync ()
             try
                 let b = parser stream
                 return! next { Request = context.Request; Response = b }
-
             with
             | ex -> return Error (Panic ex)
         }
