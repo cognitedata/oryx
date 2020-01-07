@@ -103,8 +103,12 @@ module Fetch =
         task {
             try
                 use message = buildRequest client ctx
-                use! response = client.SendAsync(message, cancellationToken)
-                return! next { ctx with Response = response }
+                // Note we don't use `use!` here since the next handler will never throw exceptions. Thus we can
+                // dispose ourselves which is much faster than using `use!`.
+                let! response = client.SendAsync(message, cancellationToken)
+                let! result = next { ctx with Response = response }
+                response.Dispose ()
+                return result
             with
             | ex -> return Panic ex |> Error
         }

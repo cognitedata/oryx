@@ -81,7 +81,7 @@ module Handler =
 
         uply {
             try
-                let message = buildRequest client ctx
+                use message = buildRequest client ctx
                 let! response = client.SendAsync(message, cancellationToken)
                 return Ok { ctx with Response = response }
             with
@@ -90,9 +90,10 @@ module Handler =
 
     let json<'a, 'err> (decoder : Decoder<'a>) (context: HttpContext) : HttpFuncResultClassic<'a, 'err> =
         uply {
-            let response = context.Response
-            use! stream = response.Content.ReadAsStreamAsync ()
+            use response = context.Response
+            let! stream = response.Content.ReadAsStreamAsync ()
             let! ret = decodeStreamAsync decoder stream
+            do! stream.DisposeAsync ()
             match ret with
             | Ok result ->
                 return Ok { Request = context.Request; Response = result }
@@ -100,18 +101,26 @@ module Handler =
                 return Error (Panic <| JsonDecodeException error)
         }
 
-    let get () =
-        let decoder : Decoder<TestType> =
-            Decode.object (fun get -> {
-                Name = get.Required.Field "name" Decode.string
-                Value = get.Required.Field "value" Decode.int
-            })
+    let decoder : Decoder<TestType> =
+        Decode.object (fun get -> {
+            Name = get.Required.Field "name" Decode.string
+            Value = get.Required.Field "value" Decode.int
+        })
 
+    let noop (ctx: Context<'a>) : HttpFuncResultClassic<int, 'err> =
+        let ctx' = { Request = ctx.Request; Response = 42 }
+        uply {
+            return Ok ctx'
+        }
+
+    let get () =
         GET
         >=> setUrl "http://test"
         >=> fetch
         >=> withError decodeError
         >=> json decoder
+        >=> noop
+        >=> noop
 
 type RequestBuilder () =
     member this.Zero () : HttpHandlerClassic<HttpResponseMessage, _, 'err> =
