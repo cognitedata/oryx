@@ -7,6 +7,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Oryx", "src\Oryx.fsproj", "
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Tests", "test\Tests.fsproj", "{708710D0-07E1-4CDB-AB4C-B86E90A74426}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "benchmark", "benchmark\benchmark.fsproj", "{218FB8E8-EBE7-4B37-98A4-F455151073E0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,5 +46,17 @@ Global
 		{708710D0-07E1-4CDB-AB4C-B86E90A74426}.Release|x64.Build.0 = Release|Any CPU
 		{708710D0-07E1-4CDB-AB4C-B86E90A74426}.Release|x86.ActiveCfg = Release|Any CPU
 		{708710D0-07E1-4CDB-AB4C-B86E90A74426}.Release|x86.Build.0 = Release|Any CPU
+		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Debug|x64.Build.0 = Debug|Any CPU
+		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Debug|x86.Build.0 = Debug|Any CPU
+		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Release|x64.ActiveCfg = Release|Any CPU
+		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Release|x64.Build.0 = Release|Any CPU
+		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Release|x86.ActiveCfg = Release|Any CPU
+		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -12,19 +12,19 @@ open Oryx
 open Common
 open System.Threading
 
-type HttpFuncResultClassic<'r, 'err> =  Ply.Ply<Result<Context<'r>, HandlerError<'err>>>
+type HttpFuncResultPly<'r, 'err> =  Ply.Ply<Result<Context<'r>, HandlerError<'err>>>
 
-type HttpFuncClassic<'a, 'r, 'err> = Context<'a> -> HttpFuncResultClassic<'r, 'err>
+type HttpFuncPly<'a, 'r, 'err> = Context<'a> -> HttpFuncResultPly<'r, 'err>
 
-type HttpHandlerClassic<'a, 'r, 'err> = Context<'a> -> HttpFuncResultClassic<'r, 'err>
+type HttpHandlerPly<'a, 'r, 'err> = Context<'a> -> HttpFuncResultPly<'r, 'err>
 
-type HttpHandlerClassic<'r, 'err> = HttpHandlerClassic<HttpResponseMessage, 'r, 'err>
+type HttpHandlerPly<'r, 'err> = HttpHandlerPly<HttpResponseMessage, 'r, 'err>
 
-type HttpHandlerClassic<'err> = HttpHandlerClassic<HttpResponseMessage, 'err>
+type HttpHandlerPly<'err> = HttpHandlerPly<HttpResponseMessage, 'err>
 
 module Handler =
     /// Run the HTTP handler in the given context.
-    let runAsync (handler: HttpHandlerClassic<'a,'r,'err>) (ctx : Context<'a>) : Ply.Ply<Result<'r, HandlerError<'err>>> =
+    let runAsync (handler: HttpHandlerPly<'a,'r,'err>) (ctx : Context<'a>) : Ply.Ply<Result<'r, HandlerError<'err>>> =
         uply {
             let! result = handler ctx
             match result with
@@ -32,11 +32,11 @@ module Handler =
             | Error err -> return Error err
         }
 
-    let map (mapper: 'a -> 'b) (ctx : Context<'a>) : HttpFuncResultClassic<'b, 'err> =
+    let map (mapper: 'a -> 'b) (ctx : Context<'a>) : HttpFuncResultPly<'b, 'err> =
         uply {
             return Ok { Request = ctx.Request; Response = (mapper ctx.Response) }
         }
-    let inline compose (first : HttpHandlerClassic<'a, 'b, 'err>) (second : HttpHandlerClassic<'b, 'r, 'err>) : HttpHandlerClassic<'a, 'r, 'err> =
+    let inline compose (first : HttpHandlerPly<'a, 'b, 'err>) (second : HttpHandlerPly<'b, 'r, 'err>) : HttpHandlerPly<'a, 'r, 'err> =
         fun (ctx : Context<'a>) -> uply {
             let! result = first ctx
             match result with
@@ -50,7 +50,7 @@ module Handler =
         uply {
             return Ok { context with Request = { context.Request with Method = HttpMethod.Get; Content = None } }
         }
-    let withError<'err> (errorHandler : HttpResponseMessage -> Task<HandlerError<'err>>) (context: HttpContext) : HttpFuncResultClassic<HttpResponseMessage, 'err> =
+    let withError<'err> (errorHandler : HttpResponseMessage -> Task<HandlerError<'err>>) (context: HttpContext) : HttpFuncResultPly<HttpResponseMessage, 'err> =
         uply {
             let response = context.Response
             match response.IsSuccessStatusCode with
@@ -64,10 +64,11 @@ module Handler =
         uply {
             return Ok { context with Request = { context.Request with UrlBuilder = builder } }
         }
+
     let setUrl<'r, 'err> (url: string) (context: HttpContext) =
         setUrlBuilder (fun _ -> url) context
 
-    let fetch<'err> (ctx: HttpContext) : HttpFuncResultClassic<HttpResponseMessage, 'err> =
+    let fetch<'err> (ctx: HttpContext) : HttpFuncResultPly<HttpResponseMessage, 'err> =
         let client =
             match ctx.Request.HttpClient with
             | Some client -> client
@@ -88,7 +89,7 @@ module Handler =
             | ex -> return Panic ex |> Error
         }
 
-    let json<'a, 'err> (decoder : Decoder<'a>) (context: HttpContext) : HttpFuncResultClassic<'a, 'err> =
+    let json<'a, 'err> (decoder : Decoder<'a>) (context: HttpContext) : HttpFuncResultPly<'a, 'err> =
         uply {
             use response = context.Response
             let! stream = response.Content.ReadAsStreamAsync ()
@@ -107,7 +108,7 @@ module Handler =
             Value = get.Required.Field "value" Decode.int
         })
 
-    let noop (ctx: Context<'a>) : HttpFuncResultClassic<int, 'err> =
+    let noop (ctx: Context<'a>) : HttpFuncResultPly<int, 'err> =
         let ctx' = { Request = ctx.Request; Response = 42 }
         uply {
             return Ok ctx'
@@ -123,24 +124,24 @@ module Handler =
         >=> noop
 
 type RequestBuilder () =
-    member this.Zero () : HttpHandlerClassic<HttpResponseMessage, _, 'err> =
+    member this.Zero () : HttpHandlerPly<HttpResponseMessage, _, 'err> =
         fun _ -> uply {
             return Ok Context.defaultContext
         }
-    member this.Return (res: 'a) : HttpHandlerClassic<HttpResponseMessage, 'a, 'err> =
+    member this.Return (res: 'a) : HttpHandlerPly<HttpResponseMessage, 'a, 'err> =
         fun _ -> uply {
             return Ok { Request = Context.defaultRequest; Response = res }
         }
 
-    member this.Return (req: HttpRequest) : HttpHandlerClassic<HttpResponseMessage, _, 'err> =
+    member this.Return (req: HttpRequest) : HttpHandlerPly<HttpResponseMessage, _, 'err> =
         fun _ -> uply {
             return Ok { Request = req; Response = Context.defaultResult }
         }
-    member this.ReturnFrom (req : HttpHandlerClassic<'a, 'r, 'err>) : HttpHandlerClassic<'a, 'r, 'err> = req
+    member this.ReturnFrom (req : HttpHandlerPly<'a, 'r, 'err>) : HttpHandlerPly<'a, 'r, 'err> = req
 
     member this.Delay (fn) = fn ()
 
-    member this.Bind(source: HttpHandlerClassic<'a, 'b, 'err>, fn: 'b -> HttpHandlerClassic<'a, 'r, 'err>) : HttpHandlerClassic<'a, 'r, 'err> =
+    member this.Bind(source: HttpHandlerPly<'a, 'b, 'err>, fn: 'b -> HttpHandlerPly<'a, 'r, 'err>) : HttpHandlerPly<'a, 'r, 'err> =
         fun ctx -> uply {
             let! br = source ctx
             match br with
@@ -149,7 +150,6 @@ type RequestBuilder () =
                 return! (fn cb.Response) ctx
             | Error err -> return Error err
         }
-
 
 module Builder =
     /// Request builder for an async context of request/result
