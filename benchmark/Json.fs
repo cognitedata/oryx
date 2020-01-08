@@ -64,7 +64,7 @@ type JsonBenchmark () =
     member self.FetchUtf8 () =
         (task {
             let req = oryx {
-                let! a = Common.get2 (readUtf8)
+                let! a = Common.getJson (readUtf8)
                 return a
             }
             let! res = runAsync req ctx
@@ -77,7 +77,7 @@ type JsonBenchmark () =
     member self.FetchJson () =
         (task {
             let req = oryx {
-                let! a = Common.get2 (readJson)
+                let! a = Common.getJson (readJson)
                 return a
             }
             let! res = runAsync req ctx
@@ -90,7 +90,7 @@ type JsonBenchmark () =
     member self.FetchNewtonsoft () =
         (task {
             let req = oryx {
-                let! a = Common.get2 (readNewtonsoft)
+                let! a = Common.getJson (readNewtonsoft)
                 return a
             }
             let! res = runAsync req ctx
