@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <Compile Include="JsonPushStreamContent.fs" />
+    <Compile Include="ResponseReader.fs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\LICENSE" Pack="true" Visible="false" PackagePath=""/>
