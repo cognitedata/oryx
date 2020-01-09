@@ -1,13 +1,9 @@
 namespace Oryx.Thoth
 
+open System.Net.Http
 open System.Text.Json
-open System.IO
-open System.Threading.Tasks
-
-open FSharp.Control.Tasks.V2.ContextInsensitive
 
 open Oryx
-open System.Net.Http
 
 module ResponseReader =
 
