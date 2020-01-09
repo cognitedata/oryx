@@ -9,6 +9,7 @@ open FSharp.Control.Tasks.Builders.Unsafe
 open Thoth.Json.Net
 
 open Oryx
+open Oryx.ThothJsonNet
 open Common
 open System.Threading
 

@@ -6,3 +6,11 @@ src/obj
 BenchmarkDotNet.Artifacts
 benchmark/bin
 benchmark/obj
+extensions/Oryx.NewtonsoftJson/bin
+extensions/Oryx.NewtonsoftJson/obj
+extensions/Oryx.Protobuf/bin
+extensions/Oryx.Protobuf/obj
+extensions/Oryx.SystemTextJson/bin
+extensions/Oryx.SystemTextJson/obj
+extensions/Oryx.ThothJsonNet/bin
+extensions/Oryx.ThothJsonNet/obj

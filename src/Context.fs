@@ -8,23 +8,12 @@ open System.Net.Http
 open System.Reflection
 open System.Threading
 
-open Thoth.Json.Net
 
 type RequestMethod =
     | POST
     | PUT
     | GET
     | DELETE
-
-type Content =
-    internal
-    | CaseJsonValue of JsonValue
-    | CaseProtobuf of Google.Protobuf.IMessage
-    | CaseUrlEncoded of (string * string) seq
-
-    static member JsonValue jsonValue = CaseJsonValue jsonValue
-    static member Protobuf protobuf = CaseProtobuf protobuf
-    static member UrlEncoded form = CaseUrlEncoded form
 
 type ResponseType = JsonValue | Protobuf
 
@@ -37,7 +26,7 @@ and HttpRequest = {
     /// HTTP method to be used.
     Method: HttpMethod
     /// Content to be sent as body of the request.
-    Content: Content option
+    Content: HttpContent option
     /// Query parameters
     Query: (string * string) list
     /// Responsetype. JSON or Protobuf

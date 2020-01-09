@@ -13,7 +13,8 @@ open Thoth.Json.Net
 open Utf8Json
 
 open Oryx
-open Oryx.ResponseReaders
+open Oryx.ThothJsonNet
+open Oryx.ThothJsonNet.ResponseReader
 
 type TestError = {
     Code : int

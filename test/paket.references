@@ -8,3 +8,4 @@ Unquote
 xunit
 xunit.runner.visualstudio
 FsCheck.Xunit
+Thoth.Json.Net

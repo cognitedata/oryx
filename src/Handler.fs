@@ -6,6 +6,7 @@ open System.Net.Http
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2.ContextInsensitive
+open System.IO
 
 type HttpFuncResult<'r, 'err> =  Task<Result<Context<'r>, HandlerError<'err>>>
 
@@ -49,7 +50,7 @@ module Handler =
 
     /// Add content to context. These content will be added to the HTTP body of
     /// requests that uses this context.
-    let setContent (content: Content) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let setContent (content: HttpContent) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with Content = Some content } }
 
     let setResponseType (respType: ResponseType) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
@@ -105,6 +106,26 @@ module Handler =
             return! next bs
         | Error err -> return Error err
     }
+
+    let parse<'a, 'r, 'err> (parser : Stream -> 'a) (next: NextFunc<'a, 'r, 'err>) (context : Context<HttpResponseMessage>) : Task<Result<Context<'r>,HandlerError<'err>>> =
+        task {
+            let! stream = context.Response.Content.ReadAsStreamAsync ()
+            try
+                let a = parser stream
+                return! next { Request = context.Request; Response = a }
+            with
+            | ex -> return Error (Panic ex)
+        }
+
+    let parseAsync<'a, 'r, 'err> (parser : Stream -> Task<'a>) (next: NextFunc<'a, 'r, 'err>) (context : Context<HttpResponseMessage>) : Task<Result<Context<'r>,HandlerError<'err>>> =
+        task {
+            let! stream = context.Response.Content.ReadAsStreamAsync ()
+            try
+                let! a = parser stream
+                return! next { Request = context.Request; Response = a }
+            with
+            | ex -> return Error (Panic ex)
+        }
 
     let extractHeader (header: string) (next: NextFunc<_,_, 'err>) (context: HttpContext) = task {
         let success, values = context.Response.Headers.TryGetValues header
