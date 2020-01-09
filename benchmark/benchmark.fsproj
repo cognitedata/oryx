@@ -17,6 +17,7 @@
     <ProjectReference Include="../src/Oryx.fsproj">
       <Name>Oryx.fsproj</Name>
     </ProjectReference>
+    <ProjectReference Include="../extensions/Thoth.Json.Net/Oryx.Thoth.Json.Net.fsproj"></ProjectReference>
   </ItemGroup>
 
   <Import Project="..\.paket\Paket.Restore.targets" />

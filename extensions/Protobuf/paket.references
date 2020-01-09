@@ -1,0 +1,6 @@
+group Google
+
+FSharp.Core
+Google.Protobuf
+Taskbuilder.fs
+Oryx

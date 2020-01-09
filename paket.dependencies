@@ -7,8 +7,46 @@ group Main
     nuget FSharp.Core ~> 4.7
     nuget Microsoft.Extensions.Http ~> 2.1
     nuget Taskbuilder.fs ~> 2.1
-    nuget Thoth.Json.Net ~> 3.6
+
+group Json
+    source https://www.nuget.org/api/v2
+    storage: none
+
+    framework: netstandard2.0
+    nuget FSharp.Core ~> 4.7
+    nuget System.Text.Json
+    nuget Taskbuilder.fs ~> 2.1
+    nuget Oryx
+
+group Newtonsoft
+    source https://www.nuget.org/api/v2
+    storage: none
+
+    framework: netstandard2.0
+    nuget FSharp.Core ~> 4.7
+    nuget Newtonsoft.Json
+    nuget Taskbuilder.fs ~> 2.1
+    nuget Oryx
+
+group Thoth
+    source https://www.nuget.org/api/v2
+    storage: none
+
+    framework: netstandard2.0
+    nuget FSharp.Core ~> 4.7
+    nuget Thoth.Json.Net
+    nuget Taskbuilder.fs ~> 2.1
+    nuget Oryx
+
+group Google
+    source https://www.nuget.org/api/v2
+    storage: none
+
+    framework: netstandard2.0
+    nuget FSharp.Core ~> 4.7
     nuget Google.Protobuf ~> 3.9
+    nuget Taskbuilder.fs ~> 2.1
+    nuget Oryx
 
 group Test
     source https://www.nuget.org/api/v2
@@ -22,11 +60,14 @@ group Test
     nuget Serilog.Sinks.XUnit
     nuget Microsoft.NET.Test.Sdk ~> 16
     nuget FsCheck.Xunit
+    nuget Thoth.Json.Net
 
 group Benchmark
     source https://www.nuget.org/api/v2
     storage: none
 
     nuget BenchmarkDotNet
-    nuget Ply
+    nuget Newtonsoft.Json
+    nuget Thoth.Json.Net
     nuget Utf8Json
+    nuget Ply

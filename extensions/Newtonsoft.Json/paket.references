@@ -1,0 +1,6 @@
+group Newtonsoft
+
+FSharp.Core
+Newtonsoft.Json
+Taskbuilder.fs
+Oryx

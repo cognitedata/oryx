@@ -3,54 +3,22 @@
 namespace Oryx
 
 open System
-open System.Collections.Generic
-open System.IO
-open System.Net
 open System.Net.Http
-open System.Net.Http.Headers
-open System.Text
 open System.Threading
-open System.Threading.Tasks
 open System.Web
 
 open FSharp.Control.Tasks.V2.ContextInsensitive
-open Google.Protobuf
-open Newtonsoft.Json
-open Thoth.Json.Net
+open System.Collections.Generic
+open System.Net.Http.Headers
 
 [<AutoOpen>]
 module Fetch =
-
-    /// HttpContent implementation to push a JsonValue directly to the output stream.
-    type JsonPushStreamContent (content : JsonValue) =
-        inherit HttpContent ()
-        let _content = content
-        do
-            base.Headers.ContentType <- MediaTypeHeaderValue "application/json"
-
-        override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
-            task {
-                use sw = new StreamWriter(stream, UTF8Encoding(false), 1024, true)
-                use jtw = new JsonTextWriter(sw, Formatting = Formatting.None)
-                do! content.WriteToAsync(jtw)
-                do! jtw.FlushAsync()
-            } :> _
-        override this.TryComputeLength(length: byref<int64>) : bool =
-            length <- -1L
-            false
-
-    type ProtobufPushStreamContent (content : IMessage) =
-        inherit HttpContent ()
-        let _content = content
-        do
-            base.Headers.ContentType <- MediaTypeHeaderValue "application/protobuf"
-
-        override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
-            content.WriteTo stream |> Task.FromResult :> _
-
-        override this.TryComputeLength(length: byref<int64>) : bool =
-            length <- -1L
-            false
+    type FormUrlEncodedContent with
+        static member FromTuples values =
+            let pairs = values |> Seq.map (fun (k, v) -> new KeyValuePair<string, string>(k, v))
+            let content = new FormUrlEncodedContent (pairs)
+            content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded"
+            content :> HttpContent
 
     let buildRequest (client: HttpClient) (ctx: HttpContext) : HttpRequestMessage =
         let query = ctx.Request.Query
@@ -76,16 +44,7 @@ module Fetch =
                 request.Headers.Add (header, value)
 
         if ctx.Request.Content.IsSome then
-            let content =
-                match ctx.Request.Content.Value with
-                    | CaseJsonValue value -> new JsonPushStreamContent (value) :> HttpContent
-                    | CaseProtobuf value -> new ProtobufPushStreamContent (value) :> HttpContent
-                    | CaseUrlEncoded values ->
-                        let pairs = values |> Seq.map (fun (k, v) -> new KeyValuePair<string, string>(k, v))
-                        let content = new FormUrlEncodedContent (pairs)
-                        content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded"
-                        content :> HttpContent
-            request.Content <- content
+            request.Content <- ctx.Request.Content.Value
         request
 
     let fetch<'r, 'err> (next: NextFunc<HttpResponseMessage, 'r, 'err>) (ctx: HttpContext) : HttpFuncResult<'r, 'err> =
@@ -102,10 +61,10 @@ module Fetch =
 
         task {
             try
-                use message = buildRequest client ctx
+                use request = buildRequest client ctx
                 // Note we don't use `use!` here since the next handler will never throw exceptions. Thus we can
                 // dispose ourselves which is much faster than using `use!`.
-                let! response = client.SendAsync(message, cancellationToken)
+                let! response = client.SendAsync(request, cancellationToken)
                 let! result = next { ctx with Response = response }
                 response.Dispose ()
                 return result

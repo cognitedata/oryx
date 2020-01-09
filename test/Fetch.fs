@@ -77,7 +77,7 @@ let ``Post url encoded with return expression is Ok``() = task {
         |> Context.addHeader ("api-key", "test-key")
 
     let query = Seq.singleton ("foo", "bar")
-    let content = Content.UrlEncoded query
+    let content = FormUrlEncodedContent.FromTuples query
 
     // Act
     let req = oryx {
