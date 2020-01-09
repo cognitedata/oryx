@@ -16,11 +16,13 @@
     <Compile Include="Decode.fs" />
     <Compile Include="ResponseReader.fs" />
   </ItemGroup>
+
   <ItemGroup>
     <None Include="..\..\LICENSE" Pack="true" Visible="false" PackagePath=""/>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Oryx.fsproj"></ProjectReference>
   </ItemGroup>
+
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

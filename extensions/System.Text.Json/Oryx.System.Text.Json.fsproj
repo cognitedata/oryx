@@ -17,5 +17,8 @@
   <ItemGroup>
     <None Include="../../LICENSE" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
+  <ItemGroup>
+    <ProjectReference Include="../../src/Oryx.fsproj"></ProjectReference>
+  </ItemGroup>
+  <Import Project="../../.paket\Paket.Restore.targets" />
 </Project>

@@ -7,6 +7,7 @@ open System.Threading.Tasks
 open FSharp.Control.Tasks.V2.ContextInsensitive
 
 open Oryx
+open System.Net.Http
 
 module ResponseReader =
 
@@ -17,17 +18,11 @@ module ResponseReader =
     /// <param name="next">The next handler to use.</param>
     /// <param name="context">HttpContext.</param>
     /// <returns>Decoded context.</returns>
-    let json<'a, 'r, 'err> (options: JsonSerializerOptions option) (next: NextFunc<'a,'r, 'err>) (context: HttpContext) : HttpFuncResult<'r, 'err> =
+    let json<'a, 'r, 'err> (options: JsonSerializerOptions option) : HttpHandler<HttpResponseMessage, 'a, 'r, 'err> =
         let options =
             if options.IsSome
             then options.Value
             else JsonSerializerOptions(AllowTrailingCommas=true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase)
 
-        task {
-            use! stream = context.Response.Content.ReadAsStreamAsync ()
-            try
-                let! result = (JsonSerializer.DeserializeAsync<'a>(stream, options)).AsTask()
-                return! next { Request = context.Request; Response = result }
-            with
-            | error -> return Error (Panic <| JsonDecodeException (error.ToString ()))
-        }
+        let parser stream = (JsonSerializer.DeserializeAsync<'a>(stream, options)).AsTask()
+        parseAsync parser
