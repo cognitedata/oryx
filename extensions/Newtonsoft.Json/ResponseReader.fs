@@ -6,7 +6,6 @@ open FSharp.Control.Tasks.V2.ContextInsensitive
 open Newtonsoft.Json
 open Oryx
 
-[<AutoOpen>]
 module ResponseReader =
 
     /// <summary>

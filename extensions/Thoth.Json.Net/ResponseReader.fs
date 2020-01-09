@@ -4,7 +4,6 @@ open FSharp.Control.Tasks.V2.ContextInsensitive
 open Oryx
 open Thoth.Json.Net
 
-[<AutoOpen>]
 module ResponseReader =
 
     /// <summary>
