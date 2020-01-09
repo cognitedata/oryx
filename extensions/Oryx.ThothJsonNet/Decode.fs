@@ -1,6 +1,6 @@
 // Copyright 2019 Cognite AS
 
-namespace Oryx.Thoth
+namespace Oryx.ThothJsonNet
 
 open System
 open System.IO

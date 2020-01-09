@@ -1,4 +1,4 @@
-namespace Oryx.Thoth
+namespace Oryx.NewtonsoftJson
 
 open System.IO
 
@@ -7,7 +7,6 @@ open Newtonsoft.Json
 open Oryx
 
 module ResponseReader =
-
     /// <summary>
     /// JSON decode response and map decode error string to exception so we don't get more response error types.
     /// </summary>

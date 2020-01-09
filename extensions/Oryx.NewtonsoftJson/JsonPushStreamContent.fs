@@ -1,4 +1,4 @@
-namespace Oryx.Content
+namespace Oryx.NewtonsoftJson
 
 open System.Net.Http
 open System.IO

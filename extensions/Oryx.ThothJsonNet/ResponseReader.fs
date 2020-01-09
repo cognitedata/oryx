@@ -1,4 +1,4 @@
-namespace Oryx.Thoth
+namespace Oryx.ThothJsonNet
 
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Oryx

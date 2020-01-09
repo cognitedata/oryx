@@ -1,4 +1,4 @@
-namespace Oryx.Thoth
+namespace Oryx.SystemTextJson
 
 open System.Net.Http
 open System.Text.Json
