@@ -11,7 +11,6 @@ open Swensen.Unquote
 open Xunit
 
 open Oryx
-open Oryx.Retry
 
 open Tests.Common
 
@@ -39,12 +38,12 @@ let ``Get with return expression is Ok``() = task {
         |> Context.addHeader ("api-key", "test-key")
 
     // Act
-    let req = oryx {
+    let request = req {
         let! result = get ()
         return result
     }
 
-    let! result = runAsync req ctx
+    let! result = runAsync request ctx
     let retries' = retries
 
     // Assert
@@ -55,7 +54,7 @@ let ``Get with return expression is Ok``() = task {
 [<Fact>]
 let ``Post url encoded with return expression is Ok``() = task {
     // Arrange
-    let json = """{ "value": 42}"""
+    let json = """{ "value": 42 }"""
     let mutable urlencoded = ""
 
     let stub =
@@ -80,12 +79,12 @@ let ``Post url encoded with return expression is Ok``() = task {
     let content = FormUrlEncodedContent.FromTuples query
 
     // Act
-    let req = oryx {
+    let request = req {
         let! result = post content
         return result
     }
 
-    let! result = runAsync req ctx
+    let! result = runAsync request ctx
     let urldecoded' = urlencoded
 
     // Assert
@@ -117,13 +116,13 @@ let ``Fetch with retry is Ok``() = task {
         |> Context.addHeader ("api-key", "test-key")
 
     // Act
-    let req =
-        oryx {
+    let request =
+        req {
             let! result = retry >=> get ()
             return result
         }
 
-    let! result = runAsync req ctx
+    let! result = runAsync request ctx
     let retries' = retries
 
     // Assert
@@ -155,13 +154,13 @@ let ``Fetch with retry on internal error will retry``() = task {
         |> Context.addHeader ("api-key", "test-key")
 
     // Act
-    let req =
-        oryx {
+    let request =
+        req {
             let! result = retry >=> get ()
             return result
         }
 
-    let! result = runAsync req ctx
+    let! result = runAsync request ctx
     let retries' = retries
 
     // Assert

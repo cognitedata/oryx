@@ -50,11 +50,11 @@ type JsonBenchmark () =
     [<Benchmark(Description = "Toth", Baseline = true)>]
     member self.FetchToth () =
         (task {
-            let req = oryx {
+            let request = req {
                 let! a = Common.getList ()
                 return a
             }
-            let! res = runAsync req ctx
+            let! res = runAsync request ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()
@@ -63,11 +63,11 @@ type JsonBenchmark () =
     [<Benchmark(Description = "Utf8Json")>]
     member self.FetchUtf8 () =
         (task {
-            let req = oryx {
+            let request = req {
                 let! a = Common.getJson (readUtf8)
                 return a
             }
-            let! res = runAsync req ctx
+            let! res = runAsync request ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()
@@ -76,11 +76,11 @@ type JsonBenchmark () =
     [<Benchmark(Description = "System.Text.Json")>]
     member self.FetchJson () =
         (task {
-            let req = oryx {
+            let request = req {
                 let! a = Common.getJson (readJson)
                 return a
             }
-            let! res = runAsync req ctx
+            let! res = runAsync request ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()
@@ -89,11 +89,11 @@ type JsonBenchmark () =
     [<Benchmark(Description = "Newtonsoft")>]
     member self.FetchNewtonsoft () =
         (task {
-            let req = oryx {
+            let request = req {
                 let! a = Common.getJson (readNewtonsoft)
                 return a
             }
-            let! res = runAsync req ctx
+            let! res = runAsync request ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()
