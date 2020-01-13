@@ -23,7 +23,7 @@ type FetchBenchmark () =
     let mutable ctx = Context.defaultContext
 
     let compiled =
-        (oryx {
+        (req {
             let! a = Common.get ()
             let! b = Common.get ()
 
@@ -54,13 +54,13 @@ type FetchBenchmark () =
     [<Benchmark(Description = "Oryx", Baseline = true)>]
     member self.Fetch () =
         (task {
-            let req = oryx {
+            let request = req {
                 let! a = Common.get ()
                 let! b = Common.get ()
 
                 return b
             }
-            let! res = runAsync req ctx
+            let! res = runAsync request ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()
@@ -78,13 +78,13 @@ type FetchBenchmark () =
     [<Benchmark(Description = "No next handler")>]
     member self.FetchClassic () =
         (task {
-            let req = Classic.Builder.oryx {
+            let request = Classic.Builder.req {
                 let! a = ClassicHandler.get ()
                 let! b = ClassicHandler.get ()
 
                 return b
             }
-            let! res = req ctx
+            let! res = request ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()

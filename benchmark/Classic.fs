@@ -147,4 +147,4 @@ module ClassicHandler =
 
 module Builder =
     /// Request builder for an async context of request/result
-    let oryx = RequestBuilder ()
+    let req = RequestBuilder ()

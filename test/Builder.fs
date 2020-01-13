@@ -16,11 +16,11 @@ let ``Zero builder is Ok``() = task {
     let ctx = Context.defaultContext
 
     // Act
-    let req = oryx {
+    let request = req {
         ()
     }
 
-    let! result = runAsync req ctx
+    let! result = runAsync request ctx
 
     // Assert
     test <@ Result.isOk result @>
@@ -32,12 +32,12 @@ let ``Simple unit handler in builder is Ok``() = task {
     let ctx = Context.defaultContext
 
     // Act
-    let req = oryx {
+    let request = req {
         let! value = unit 42
         return value
     }
 
-    let! result = runAsync req ctx
+    let! result = runAsync request ctx
 
     // Assert
     test <@ Result.isOk result @>
@@ -55,11 +55,11 @@ let ``Simple return from unit handler in builder is Ok``() = task {
     let a = unit 42 finishEarly
 
     // Act
-    let req = oryx {
+    let request = req {
         return! unit 42
     }
 
-    let! result = runAsync req ctx
+    let! result = runAsync request ctx
 
     // Assert
     test <@ Result.isOk result @>
@@ -75,13 +75,13 @@ let ``Multiple handlers in builder is Ok``() = task {
     let ctx = Context.defaultContext
 
     // Act
-    let req = oryx {
+    let request = req {
         let! a = unit 10
         let! b = unit 20
         return! add a b
     }
 
-    let! result = runAsync req ctx
+    let! result = runAsync request ctx
 
     // Assert
     test <@ Result.isOk result @>

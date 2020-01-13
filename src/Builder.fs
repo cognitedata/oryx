@@ -3,7 +3,6 @@
 namespace Oryx
 
 open System.Net.Http
-open FSharp.Control.Tasks.V2.ContextInsensitive
 
 
 type RequestBuilder () =
@@ -38,4 +37,4 @@ type RequestBuilder () =
 [<AutoOpen>]
 module Builder =
     /// Request builder for an async context of request/result
-    let oryx = RequestBuilder ()
+    let req = RequestBuilder ()
