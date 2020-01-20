@@ -83,19 +83,16 @@ It turns out that we can simplify this even further using [η-conversion](https:
 This enables you to compose your web requests and decode the response, e.g as we do when listing Assets in the [Cognite Data Fusion SDK](https://github.com/cognitedata/cognite-sdk-dotnet/blob/master/src/assets/ListAssets.fs#L55):
 
 ```fs
-    let listCore (options: AssetQuery seq) (filters: AssetFilter seq) (fetch: HttpHandler<HttpResponseMessage, 'a>) =
-        let request : Request = {
-            Filters = filters
-            Options = options
-        }
+    let list (query: AssetQuery) : HttpHandler<HttpResponseMessage, ItemsWithCursor<AssetReadDto>, 'a> =
+        let url = Url +/ "list"
 
         POST
         >=> setVersion V10
-        >=> setContent (Content.JsonValue request.Encoder)
-        >=> setResource Url
+        >=> setResource url
+        >=> setContent (new JsonPushStreamContent<AssetQuery>(query, jsonOptions))
         >=> fetch
         >=> withError decodeError
-        >=> json AssetItemsReadDto.Decoder
+        >=> json jsonOptions
 ```
 
 Thus the function `listAssets` is now also an `HttpHandler` and may be composed with other handlers to create complex chains for doing series of multiple requests to a web service.

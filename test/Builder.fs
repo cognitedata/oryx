@@ -1,7 +1,5 @@
 module Tests.Builder
 
-open System.Threading.Tasks
-
 open FSharp.Control.Tasks.V2
 open Swensen.Unquote
 open Xunit
@@ -16,11 +14,7 @@ let ``Zero builder is Ok``() = task {
     let ctx = Context.defaultContext
 
     // Act
-    let request = req {
-        ()
-    }
-
-    let! result = runAsync request ctx
+    let! result = req { () } |> runAsync ctx
 
     // Assert
     test <@ Result.isOk result @>
@@ -32,12 +26,12 @@ let ``Simple unit handler in builder is Ok``() = task {
     let ctx = Context.defaultContext
 
     // Act
-    let request = req {
-        let! value = unit 42
-        return value
-    }
-
-    let! result = runAsync request ctx
+    let! result =
+        req {
+            let! value = unit 42
+            return value
+        }
+        |> runAsync ctx
 
     // Assert
     test <@ Result.isOk result @>
@@ -55,11 +49,9 @@ let ``Simple return from unit handler in builder is Ok``() = task {
     let a = unit 42 finishEarly
 
     // Act
-    let request = req {
-        return! unit 42
-    }
-
-    let! result = runAsync request ctx
+    let! result =
+        req { return! unit 42 }
+        |> runAsync ctx
 
     // Assert
     test <@ Result.isOk result @>
@@ -81,7 +73,7 @@ let ``Multiple handlers in builder is Ok``() = task {
         return! add a b
     }
 
-    let! result = runAsync request ctx
+    let! result = request |> runAsync ctx
 
     // Assert
     test <@ Result.isOk result @>

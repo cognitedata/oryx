@@ -54,7 +54,7 @@ type JsonBenchmark () =
                 let! a = Common.getList ()
                 return a
             }
-            let! res = runAsync request ctx
+            let! res = request |> runAsync ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()
@@ -67,7 +67,7 @@ type JsonBenchmark () =
                 let! a = Common.getJson (readUtf8)
                 return a
             }
-            let! res = runAsync request ctx
+            let! res = request |> runAsync ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()
@@ -80,7 +80,7 @@ type JsonBenchmark () =
                 let! a = Common.getJson (readJson)
                 return a
             }
-            let! res = runAsync request ctx
+            let! res = request |> runAsync ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()
@@ -93,7 +93,7 @@ type JsonBenchmark () =
                 let! a = Common.getJson (readNewtonsoft)
                 return a
             }
-            let! res = runAsync request ctx
+            let! res = request |> runAsync ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()

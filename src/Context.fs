@@ -28,7 +28,7 @@ and HttpRequest = {
     /// Content to be sent as body of the request.
     Content: HttpContent option
     /// Query parameters
-    Query: (string * string) list
+    Query: struct (string * string) seq
     /// Responsetype. JSON or Protobuf
     ResponseType: ResponseType
     /// List of headers to be sent

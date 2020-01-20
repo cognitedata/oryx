@@ -43,7 +43,7 @@ let ``Get with return expression is Ok``() = task {
         return result
     }
 
-    let! result = runAsync request ctx
+    let! result = request |> runAsync ctx
     let retries' = retries
 
     // Assert
@@ -84,7 +84,7 @@ let ``Post url encoded with return expression is Ok``() = task {
         return result
     }
 
-    let! result = runAsync request ctx
+    let! result = request |> runAsync ctx
     let urldecoded' = urlencoded
 
     // Assert
@@ -122,7 +122,7 @@ let ``Fetch with retry is Ok``() = task {
             return result
         }
 
-    let! result = runAsync request ctx
+    let! result = request |> runAsync ctx
     let retries' = retries
 
     // Assert
@@ -160,7 +160,7 @@ let ``Fetch with retry on internal error will retry``() = task {
             return result
         }
 
-    let! result = runAsync request ctx
+    let! result = request |> runAsync ctx
     let retries' = retries
 
     // Assert
