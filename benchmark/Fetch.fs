@@ -60,7 +60,7 @@ type FetchBenchmark () =
 
                 return b
             }
-            let! res = runAsync request ctx
+            let! res = request |> runAsync ctx
             match res with
             | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
             | Ok data -> ()
