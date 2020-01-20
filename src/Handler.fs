@@ -28,7 +28,7 @@ module Handler =
     let finishEarly<'a, 'err> : HttpFunc<'a, 'a, 'err> = Ok >> Task.FromResult
 
     /// Run the HTTP handler in the given context.
-    let runAsync (handler: HttpHandler<'a,'r,'r, 'err>) (ctx : Context<'a>) : Task<Result<'r, HandlerError<'err>>> =
+    let runAsync (ctx : Context<'a>) (handler: HttpHandler<'a,'r,'r, 'err>) : Task<Result<'r, HandlerError<'err>>> =
         task {
             let! result = handler finishEarly ctx
             match result with
@@ -45,7 +45,7 @@ module Handler =
 
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
-    let addQuery (query: (string * string) list) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let addQuery (query: struct (string * string) seq) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with Query = query } }
 
     /// Add content to context. These content will be added to the HTTP body of

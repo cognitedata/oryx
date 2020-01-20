@@ -24,7 +24,7 @@ module Fetch =
         let query = ctx.Request.Query
         let url =
             let result = ctx.Request.UrlBuilder ctx.Request
-            if List.isEmpty query
+            if Seq.isEmpty query
             then result
             else
                 let queryString = HttpUtility.ParseQueryString(String.Empty)
@@ -62,7 +62,7 @@ module Fetch =
         task {
             try
                 use request = buildRequest client ctx
-                // Note we don't use `use!` here since the next handler will never throw exceptions. Thus we can
+                // Note: we don't use `use!` here since the next handler will never throw exceptions. Thus we can
                 // dispose ourselves which is much faster than using `use!`.
                 let! response = client.SendAsync(request, cancellationToken)
                 let! result = next { ctx with Response = response }
