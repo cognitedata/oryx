@@ -12,7 +12,6 @@ open FSharp.Control.Tasks.V2
 
 open Oryx
 open Oryx.Retry
-open System.Text
 
 type PushStreamContent (content : string) =
     inherit HttpContent ()

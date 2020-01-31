@@ -60,7 +60,6 @@ group Test
     nuget Microsoft.NET.Test.Sdk ~> 16
     nuget FsCheck.Xunit
     nuget Thoth.Json.Net
-    nuget System.Memory
 
 group Benchmark
     source https://www.nuget.org/api/v2
