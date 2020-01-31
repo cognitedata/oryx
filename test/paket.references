@@ -1,5 +1,6 @@
 group Test
 
+System.Memory
 coverlet.msbuild
 FSharp.Core
 Microsoft.NET.Test.Sdk

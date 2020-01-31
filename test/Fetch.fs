@@ -18,7 +18,7 @@ open Tests.Common
 let ``Get with return expression is Ok``() = task {
     // Arrange
     let mutable retries = 0
-    let json = """{ "value": 42}"""
+    let json = """{ "value": 42 }"""
 
     let stub =
         Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
@@ -80,7 +80,7 @@ let ``Post url encoded with return expression is Ok``() = task {
 
     // Act
     let request = req {
-        let! result = post content
+        let! result = post (fun _ -> content)
         return result
     }
 
@@ -155,8 +155,9 @@ let ``Fetch with retry on internal error will retry``() = task {
 
     // Act
     let request =
+        let content = new PushStreamContent("testing")
         req {
-            let! result = retry >=> get ()
+            let! result = retry >=> post (fun _ -> new PushStreamContent("testing") :> _)
             return result
         }
 

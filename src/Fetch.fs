@@ -43,8 +43,7 @@ module Fetch =
             if not (client.DefaultRequestHeaders.Contains header) then
                 request.Headers.Add (header, value)
 
-        if ctx.Request.Content.IsSome then
-            request.Content <- ctx.Request.Content.Value
+        request.Content <- ctx.Request.Content ()
         request
 
     let fetch<'r, 'err> (next: NextFunc<HttpResponseMessage, 'r, 'err>) (ctx: HttpContext) : HttpFuncResult<'r, 'err> =
@@ -62,9 +61,9 @@ module Fetch =
         task {
             try
                 use request = buildRequest client ctx
-                // Note: we don't use `use!` here since the next handler will never throw exceptions. Thus we can
-                // dispose ourselves which is much faster than using `use!`.
-                let! response = client.SendAsync(request, cancellationToken)
+                // Note: we don't use `use!` for response since the next handler will never throw exceptions. Thus we
+                // can dispose ourselves which is much faster than using `use!`.
+                let! response = client.SendAsync (request, cancellationToken)
                 let! result = next { ctx with Response = response }
                 response.Dispose ()
                 return result

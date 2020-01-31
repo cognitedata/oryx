@@ -1,16 +1,42 @@
 module Tests.Common
 
 open System
+open System.IO
 open System.Net.Http
+open System.Net
+open System.Net.Http.Headers
 open System.Threading
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2
-open Thoth.Json.Net
 
 open Oryx
 open Oryx.Retry
-open System.Net
+open System.Text
+
+type PushStreamContent (content : string) =
+    inherit HttpContent ()
+    let _content = content
+    let mutable _disposed = false
+    do
+        base.Headers.ContentType <- MediaTypeHeaderValue "application/json"
+
+    override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
+        task {
+            do! stream.FlushAsync()
+        } :> _
+
+    override this.TryComputeLength(length: byref<int64>) : bool =
+        length <- -1L
+        false
+
+    override this.Dispose (disposing) =
+        if _disposed then
+            failwith "Already disposed!"
+            ()
+
+        base.Dispose(disposing)
+        _disposed <- true
 
 type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
     inherit HttpMessageHandler ()
@@ -64,19 +90,15 @@ let errorHandler (response : HttpResponseMessage) = task {
 }
 
 let get () =
-    let decoder : Decoder<_> = Decode.object (fun get -> {| Value = get.Required.Field "value" Decode.int |})
-
     GET
     >=> setUrl "http://test"
     >=> fetch
     >=> withError errorHandler
 
 let post content =
-    let decoder : Decoder<_> = Decode.object (fun get -> {| Value = get.Required.Field "value" Decode.int |})
-
     POST
     >=> setUrl "http://test"
-    >=> setContent content
+    >=> getContent content
     >=> fetch
     >=> withError errorHandler
 

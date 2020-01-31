@@ -51,7 +51,12 @@ module Handler =
     /// Add content to context. These content will be added to the HTTP body of
     /// requests that uses this context.
     let setContent (content: HttpContent) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
-        next { context with Request = { context.Request with Content = Some content } }
+        next { context with Request = { context.Request with Content = Context.nullContent } }
+
+    /// Add content builder to context. These content will be added to the HTTP body of
+    /// requests that uses this context.
+    let getContent (content: unit -> HttpContent) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+        next { context with Request = { context.Request with Content = content } }
 
     let setResponseType (respType: ResponseType) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with ResponseType = respType }}
@@ -69,7 +74,7 @@ module Handler =
 
     /// Http GET request. Also clears any content set in the context.
     let GET<'r, 'err> (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
-        next { context with Request = { context.Request with Method = HttpMethod.Get; Content = None } }
+        next { context with Request = { context.Request with Method = HttpMethod.Get; Content = Context.nullContent } }
 
     /// Http POST request.
     let POST<'r, 'err> = setMethod<'r, 'err> HttpMethod.Post

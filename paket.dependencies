@@ -5,7 +5,6 @@ group Main
     framework: netstandard2.0
 
     nuget FSharp.Core ~> 4.7
-    nuget Microsoft.Extensions.Http ~> 2.1
     nuget Taskbuilder.fs ~> 2.1
 
 group Json
@@ -61,6 +60,7 @@ group Test
     nuget Microsoft.NET.Test.Sdk ~> 16
     nuget FsCheck.Xunit
     nuget Thoth.Json.Net
+    nuget System.Memory
 
 group Benchmark
     source https://www.nuget.org/api/v2

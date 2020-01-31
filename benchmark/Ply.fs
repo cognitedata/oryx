@@ -1,8 +1,9 @@
 module Benchmark.Ply
 
 open System
-open System.Threading.Tasks
 open System.Net.Http
+open System.Threading
+open System.Threading.Tasks
 
 open FSharp.Control.Tasks.Builders
 open FSharp.Control.Tasks.Builders.Unsafe
@@ -10,8 +11,8 @@ open Thoth.Json.Net
 
 open Oryx
 open Oryx.ThothJsonNet
+open Oryx.Context
 open Common
-open System.Threading
 
 type HttpFuncResultPly<'r, 'err> =  Ply.Ply<Result<Context<'r>, HandlerError<'err>>>
 
@@ -49,7 +50,7 @@ module Handler =
 
     let GET<'r, 'err> (context: HttpContext) =
         uply {
-            return Ok { context with Request = { context.Request with Method = HttpMethod.Get; Content = None } }
+            return Ok { context with Request = { context.Request with Method = HttpMethod.Get; Content = nullContent } }
         }
     let withError<'err> (errorHandler : HttpResponseMessage -> Task<HandlerError<'err>>) (context: HttpContext) : HttpFuncResultPly<HttpResponseMessage, 'err> =
         uply {
