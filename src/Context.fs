@@ -53,6 +53,7 @@ module Context =
         {| Major=version.Major; Minor=version.Minor; Build=version.Build |}
 
     let nullContent = fun () -> null
+    let lazyContent content = fun () -> content
 
     /// Default context to use.
     let defaultRequest =

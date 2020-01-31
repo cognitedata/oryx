@@ -51,7 +51,7 @@ module Handler =
     /// Add content to context. These content will be added to the HTTP body of
     /// requests that uses this context.
     let setContent (content: HttpContent) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
-        next { context with Request = { context.Request with Content = Context.nullContent } }
+        next { context with Request = { context.Request with Content = Context.lazyContent content } }
 
     /// Add content builder to context. These content will be added to the HTTP body of
     /// requests that uses this context.
