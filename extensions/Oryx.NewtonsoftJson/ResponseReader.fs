@@ -25,12 +25,12 @@ module ResponseReader =
                 try
                     serializer.Deserialize<'a> (jtr) |> Ok
                 with
-                | ex ->  Error (ex.ToString ())
+                | ex ->  Error (Panic ex)
 
             match ret with
             | Ok result ->
                 return! next { Request = context.Request; Response = result }
             | Error error ->
-                return Error (Panic <| JsonDecodeException error)
+                return Error error
         }
 

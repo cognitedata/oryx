@@ -9,6 +9,7 @@ open Thoth.Json.Net
 
 open Oryx
 open Oryx.ThothJsonNet
+open Oryx.Context
 open Common
 open System.Threading
 
@@ -46,7 +47,7 @@ module ClassicHandler =
     let (>=>) = compose
 
     let GET<'r, 'err> (context: HttpContext) =
-        Ok { context with Request = { context.Request with Method = HttpMethod.Get; Content = None } } |> Task.FromResult
+        Ok { context with Request = { context.Request with Method = HttpMethod.Get; Content = nullContent } } |> Task.FromResult
 
     let withError<'err> (errorHandler : HttpResponseMessage -> Task<HandlerError<'err>>) (context: HttpContext) : HttpFuncResultClassic<HttpResponseMessage, 'err> =
         task {

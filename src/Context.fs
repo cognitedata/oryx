@@ -8,7 +8,6 @@ open System.Net.Http
 open System.Reflection
 open System.Threading
 
-
 type RequestMethod =
     | POST
     | PUT
@@ -25,8 +24,8 @@ and HttpRequest = {
     HttpClient: HttpClient option
     /// HTTP method to be used.
     Method: HttpMethod
-    /// Content to be sent as body of the request.
-    Content: HttpContent option
+    /// Getter for content to be sent as body of the request. We use a getter so content may be re-created for retries.
+    Content: unit -> HttpContent
     /// Query parameters
     Query: struct (string * string) seq
     /// Responsetype. JSON or Protobuf
@@ -53,13 +52,15 @@ module Context =
         let version = Assembly.GetExecutingAssembly().GetName().Version
         {| Major=version.Major; Minor=version.Minor; Build=version.Build |}
 
+    let nullContent = fun () -> null
+
     /// Default context to use.
     let defaultRequest =
         let ua = sprintf "Oryx / v%d.%d.%d (Cognite)" version.Major version.Minor version.Build
         {
             HttpClient = None
             Method = HttpMethod.Get
-            Content = None
+            Content = nullContent
             Query = List.empty
             ResponseType = JsonValue
             Headers = [ "User-Agent", ua ]

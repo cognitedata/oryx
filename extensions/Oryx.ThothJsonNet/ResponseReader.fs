@@ -4,6 +4,8 @@ open FSharp.Control.Tasks.V2.ContextInsensitive
 open Oryx
 open Thoth.Json.Net
 
+exception JsonDecodeException of string
+
 module ResponseReader =
 
     /// <summary>
