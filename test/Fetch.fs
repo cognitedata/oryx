@@ -168,3 +168,85 @@ let ``Fetch with retry on internal error will retry``() = task {
     test <@ Result.isError result @>
     test <@ retries' = 6 @>
 }
+
+[<Fact>]
+let ``Get with logging response is OK``() = task {
+    // Arrange
+    let mutable retries = 0
+    let logger = new TestLogger<string>()
+    let json = """{ "value": 42 }"""
+
+    let stub =
+        Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
+        (task {
+            retries <- retries + 1
+            let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+            responseMessage.Content <- new StringContent(json)
+            return responseMessage
+        }))
+
+    let client = new HttpClient(new HttpMessageHandlerStub(stub))
+
+    let ctx =
+        Context.defaultContext
+        |> Context.setHttpClient client
+        |> Context.setUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.addHeader ("api-key", "test-key")
+        |> Context.setLogger(logger)
+
+    // Act
+    let request = req {
+        let! result = get () >=> logResponse
+        return result
+    }
+
+    let! result = request |> runAsync ctx
+    let retries' = retries
+
+    // Assert
+    test <@ logger.Output = json @>
+    test <@ Result.isOk result @>
+    test <@ retries' = 1 @>
+}
+
+[<Fact>]
+let ``Get with logging request is OK``() = task {
+    // Arrange
+    let mutable retries = 0
+    let logger = new TestLogger<string>()
+    let json = """{ "value": 42 }"""
+
+    let stub =
+        Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
+        (task {
+            retries <- retries + 1
+            let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+            responseMessage.Content <- new StringContent("")
+            return responseMessage
+        }))
+
+    let client = new HttpClient(new HttpMessageHandlerStub(stub))
+    let content () = new StringContent(json) :> HttpContent
+
+    let ctx =
+        Context.defaultContext
+        |> Context.setHttpClient client
+        |> Context.setUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.addHeader ("api-key", "test-key")
+        |> Context.setLogger(logger)
+
+
+    // Act
+    let request = req {
+        let! result = post content >=> logRequest
+        return result
+    }
+
+    let! result = request |> runAsync ctx
+    let retries' = retries
+
+    // Assert
+    test <@ logger.Output = json @>
+    test <@ Result.isOk result @>
+    test <@ retries' = 1 @>
+}

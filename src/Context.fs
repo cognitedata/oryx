@@ -8,6 +8,8 @@ open System.Net.Http
 open System.Reflection
 open System.Threading
 
+open Microsoft.Extensions.Logging
+
 type RequestMethod =
     | POST
     | PUT
@@ -38,6 +40,10 @@ and HttpRequest = {
     Extra: PropertyBag
     /// Optional CancellationToken for cancelling the request.
     CancellationToken: CancellationToken option
+    /// Logger for logging requests
+    Logger: ILogger option
+    /// LogLevel to log at
+    LoggerLevel: LogLevel option
 }
 
 type Context<'a> = {
@@ -68,6 +74,8 @@ module Context =
             UrlBuilder = fun _ -> String.Empty
             Extra = Map.empty
             CancellationToken = None
+            Logger = None
+            LoggerLevel = None
         }
 
     let defaultResult =
@@ -98,3 +106,9 @@ module Context =
 
     let setCancellationToken (token: CancellationToken) (context: HttpContext) =
         { context with Request = { context.Request with CancellationToken = Some token } }
+
+    let setLogger (logger: ILogger) (context: HttpContext) =
+        { context with Request = { context.Request with Logger = Some logger } }
+
+    let setLoggerLevel (logLevel: LogLevel) (context: HttpContext) =
+        { context with Request = { context.Request with LoggerLevel = Some logLevel } }

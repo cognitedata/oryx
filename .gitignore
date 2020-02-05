@@ -1,6 +1,7 @@
 .ionide
 paket-files
-src/obj
+obj
+bin
 .vs
 .config
 BenchmarkDotNet.Artifacts

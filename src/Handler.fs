@@ -7,6 +7,7 @@ open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open System.IO
+open Microsoft.Extensions.Logging
 
 type HttpFuncResult<'r, 'err> =  Task<Result<Context<'r>, HandlerError<'err>>>
 
@@ -71,6 +72,12 @@ module Handler =
     // A basic way to set the request URL. Use custom builders for more advanced usage.
     let setUrl<'r, 'err> (url: string) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         setUrlBuilder (fun _ -> url) next context
+
+    let setLogger (logger: ILogger) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+        next { context with Request = { context.Request with Logger = Some logger } }
+
+    let setLoggerLevel (logLevel: LogLevel) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+        next { context with Request = { context.Request with LoggerLevel = Some logLevel } }
 
     /// Http GET request. Also clears any content set in the context.
     let GET<'r, 'err> (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
@@ -156,4 +163,40 @@ module Handler =
             | false ->
                 let! err = errorHandler response
                 return err |> Error
+        }
+
+    let logCtx (request: HttpRequest) (message: string) =
+        let message' = if isNull message then "" else message
+        request.Logger |> Option.iter (fun logger ->
+            let logLevel = request.LoggerLevel |> Option.defaultValue LogLevel.Information
+            logger.Log(logLevel, message')
+        )
+
+    let logCtxResponse (ctx: Context<'a>) (response: HttpResponseMessage) =
+        if ctx.Request.Logger.IsSome then
+            task {
+                let! message = response.Content.ReadAsStringAsync()
+                do logCtx ctx.Request message
+            }
+        else task { return () }
+
+    let logCtxRequest (request: HttpRequest) =
+        let content = request.Content()
+        if isNull content then task { return () }
+        else
+        task {
+            let! res = content.ReadAsStringAsync ()
+            logCtx request res
+        }
+
+    let logRequest (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
+        task {
+            do! logCtxRequest ctx.Request
+            return! next ctx
+        }
+
+    let logResponse (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
+        task {
+            do! logCtxResponse ctx ctx.Response
+            return! next ctx
         }

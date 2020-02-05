@@ -12,6 +12,7 @@ open FSharp.Control.Tasks.V2
 
 open Oryx
 open Oryx.Retry
+open Microsoft.Extensions.Logging
 
 type PushStreamContent (content : string) =
     inherit HttpContent ()
@@ -102,3 +103,18 @@ let post content =
     >=> withError errorHandler
 
 let retry next ctx = retry shouldRetry 0<ms> 5 next ctx
+
+type TestLogger<'a> () =
+    member val Output : string = "" with get, set
+    member val LoggerLevel : LogLevel = LogLevel.Information with get, set
+    member this.Log(logLevel: LogLevel, message: string) =
+        this.Output <- message
+        this.LoggerLevel <- logLevel
+    interface IDisposable with
+        member this.Dispose() = ()
+    interface ILogger<'a> with
+        member this.Log<'TState>(logLevel: LogLevel, eventId: EventId, state: 'TState, exception': exn, formatter: Func<'TState,exn,string>) : unit =
+            this.Output <- state.ToString()
+            this.LoggerLevel <- logLevel
+        member this.IsEnabled (logLevel: LogLevel): bool = true
+        member this.BeginScope<'TState>(state: 'TState) : IDisposable = this :> IDisposable
