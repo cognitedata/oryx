@@ -43,7 +43,7 @@ and HttpRequest = {
     /// Logger for logging requests
     Logger: ILogger option
     /// LogLevel to log at
-    LoggerLevel: LogLevel option
+    LoggerLevel: LogLevel
 }
 
 type Context<'a> = {
@@ -75,7 +75,7 @@ module Context =
             Extra = Map.empty
             CancellationToken = None
             Logger = None
-            LoggerLevel = None
+            LoggerLevel = LogLevel.Debug
         }
 
     let defaultResult =
@@ -111,4 +111,4 @@ module Context =
         { context with Request = { context.Request with Logger = Some logger } }
 
     let setLoggerLevel (logLevel: LogLevel) (context: HttpContext) =
-        { context with Request = { context.Request with LoggerLevel = Some logLevel } }
+        { context with Request = { context.Request with LoggerLevel = logLevel } }

@@ -141,7 +141,7 @@ let ``Fetch with retry on internal error will retry``() = task {
         (task {
             retries <- retries + 1
             let responseMessage = new HttpResponseMessage(HttpStatusCode.InternalServerError)
-            responseMessage.Content <- new StringContent(json)
+            responseMessage.Content <- new StringableContent(json)
             return responseMessage
         }))
 
@@ -192,7 +192,7 @@ let ``Get with logging response is OK``() = task {
         |> Context.setHttpClient client
         |> Context.setUrlBuilder (fun _ -> "http://test.org/")
         |> Context.addHeader ("api-key", "test-key")
-        |> Context.setLogger(logger)
+        |> Context.setLogger logger
 
     // Act
     let request = req {
@@ -204,7 +204,7 @@ let ``Get with logging response is OK``() = task {
     let retries' = retries
 
     // Assert
-    test <@ logger.Output = json @>
+    test <@ logger.Output.Contains json @>
     test <@ Result.isOk result @>
     test <@ retries' = 1 @>
 }
@@ -226,7 +226,7 @@ let ``Get with logging request is OK``() = task {
         }))
 
     let client = new HttpClient(new HttpMessageHandlerStub(stub))
-    let content () = new StringContent(json) :> HttpContent
+    let content () = new StringableContent(json) :> HttpContent
 
     let ctx =
         Context.defaultContext
@@ -246,7 +246,7 @@ let ``Get with logging request is OK``() = task {
     let retries' = retries
 
     // Assert
-    test <@ logger.Output = json @>
+    test <@ logger.Output.Contains json @>
     test <@ Result.isOk result @>
     test <@ retries' = 1 @>
 }
