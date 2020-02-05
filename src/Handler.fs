@@ -173,21 +173,20 @@ module Handler =
         )
 
     let logCtxResponse (ctx: Context<'a>) (response: HttpResponseMessage) =
-        if ctx.Request.Logger.IsSome then
-            task {
-                let! message = response.Content.ReadAsStringAsync()
-                do logCtx ctx.Request message
-            }
-        else task { return () }
+        if ctx.Request.Logger.IsSome
+        then
+            let message = response.Content.ToString()
+            logCtx ctx.Request message
+        else ()
 
     let logCtxRequest (request: HttpRequest) =
         let content = request.Content()
-        if isNull content then task { return () }
+        if isNull content then Task.FromResult ()
         else
-        task {
-            let! res = content.ReadAsStringAsync ()
-            logCtx request res
-        }
+            task {
+                let! res = content.ReadAsStringAsync()
+                logCtx request res
+            }
 
     let logRequest (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
         task {
@@ -197,6 +196,6 @@ module Handler =
 
     let logResponse (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
         task {
-            do! logCtxResponse ctx ctx.Response
+            do logCtxResponse ctx ctx.Response
             return! next ctx
         }

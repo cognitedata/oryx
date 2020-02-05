@@ -181,7 +181,7 @@ let ``Get with logging response is OK``() = task {
         (task {
             retries <- retries + 1
             let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-            responseMessage.Content <- new StringContent(json)
+            responseMessage.Content <- new PushStreamContent(json)
             return responseMessage
         }))
 
@@ -221,7 +221,7 @@ let ``Get with logging request is OK``() = task {
         (task {
             retries <- retries + 1
             let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-            responseMessage.Content <- new StringContent("")
+            responseMessage.Content <- new PushStreamContent("")
             return responseMessage
         }))
 

@@ -38,6 +38,8 @@ type PushStreamContent (content : string) =
         base.Dispose(disposing)
         _disposed <- true
 
+    override this.ToString() = _content
+
 type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
     inherit HttpMessageHandler ()
     let sendAsync = sendAsync
