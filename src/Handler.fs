@@ -36,7 +36,7 @@ module Handler =
             | Error err -> return Error err
         }
     let map (mapper: 'a -> 'b) (next : NextFunc<'b,'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
-        next { Request = ctx.Request; Response = (mapper ctx.Response) }
+        next { Request = ctx.Request; Response = (mapper ctx.Response); Logger = ctx.Logger; LoggerLevel = ctx.LoggerLevel }
 
     let inline compose (first : HttpHandler<'a, 'b, 'r, 'err>) (second : HttpHandler<'b, 'c, 'r, 'err>) : HttpHandler<'a,'c,'r, 'err> =
         second >> first
@@ -91,7 +91,7 @@ module Handler =
         let result = res |> List.ofArray |> Result.sequenceList
         match result with
         | Ok results ->
-            let bs = { Request = ctx.Request; Response = results |> List.map (fun r -> r.Response) }
+            let bs = { Request = ctx.Request; Response = results |> List.map (fun r -> r.Response); Logger = ctx.Logger; LoggerLevel = ctx.LoggerLevel  }
             return! next bs
         | Error err -> return Error err
     }
@@ -107,7 +107,7 @@ module Handler =
         let result = res |> List.ofSeq |> Result.sequenceList
         match result with
         | Ok results ->
-            let bs = { Request = ctx.Request; Response = results |> List.map (fun c -> c.Response) }
+            let bs = { Request = ctx.Request; Response = results |> List.map (fun c -> c.Response) ; Logger = ctx.Logger; LoggerLevel = ctx.LoggerLevel }
             return! next bs
         | Error err -> return Error err
     }
@@ -136,7 +136,7 @@ module Handler =
         let success, values = context.Response.Headers.TryGetValues header
         let values = if success then values else Seq.empty
 
-        return! next { Request = context.Request; Response = Ok values }
+        return! next { Request = context.Request; Response = Ok values; Logger = context.Logger; LoggerLevel = context.LoggerLevel }
     }
 
     /// Catch handler for catching errors and then delegating to the error handler on what to do.

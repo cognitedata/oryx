@@ -10,6 +10,8 @@ open System.Web
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open System.Collections.Generic
 open System.Net.Http.Headers
+open Google.Protobuf
+open Microsoft.Extensions.Logging
 
 [<AutoOpen>]
 module Fetch =
@@ -46,6 +48,27 @@ module Fetch =
         request.Content <- ctx.Request.Content ()
         request
 
+    let logCtx (ctx: HttpContext) (message: string) =
+        ctx.Logger |> Option.iter (fun logger ->
+            let logLevel = ctx.LoggerLevel |> Option.defaultValue LogLevel.Information
+            logger.Log(logLevel, message)
+        )
+
+    let logCtxResponse (ctx: HttpContext) (response: HttpResponseMessage) =
+        if ctx.Logger.IsSome then
+            task {
+                let! message = response.Content.ReadAsStringAsync()
+                do logCtx ctx message
+            }
+        else task { return () }
+
+    let logCtxContent (ctx: HttpContext) =
+        let content =
+            ctx.Request.Content
+            |> Option.map (fun content -> content.ToString())
+            |> Option.defaultValue ""
+        logCtx ctx content
+
     let fetch<'r, 'err> (next: NextFunc<HttpResponseMessage, 'r, 'err>) (ctx: HttpContext) : HttpFuncResult<'r, 'err> =
         let client =
             match ctx.Request.HttpClient with
@@ -58,12 +81,16 @@ module Fetch =
             | Some token -> token
             | None -> source.Token
 
+        do logCtxContent ctx
+
         task {
             try
                 use request = buildRequest client ctx
                 // Note: we don't use `use!` for response since the next handler will never throw exceptions. Thus we
                 // can dispose ourselves which is much faster than using `use!`.
                 let! response = client.SendAsync (request, cancellationToken)
+                do! logCtxResponse ctx response
+
                 let! result = next { ctx with Response = response }
                 response.Dispose ()
                 return result

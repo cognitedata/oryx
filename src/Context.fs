@@ -8,6 +8,9 @@ open System.Net.Http
 open System.Reflection
 open System.Threading
 
+open Thoth.Json.Net
+open Microsoft.Extensions.Logging
+
 type RequestMethod =
     | POST
     | PUT
@@ -43,6 +46,8 @@ and HttpRequest = {
 type Context<'a> = {
     Request: HttpRequest
     Response: 'a
+    Logger: ILogger option
+    LoggerLevel: LogLevel option
 }
 
 type HttpContext = Context<HttpResponseMessage>
@@ -73,10 +78,13 @@ module Context =
     let defaultResult =
         new HttpResponseMessage (HttpStatusCode.NotFound)
 
-    let defaultContext : Context<HttpResponseMessage> = {
-        Request = defaultRequest
-        Response = defaultResult
-    }
+    let defaultContext : Context<HttpResponseMessage> =
+        {
+            Request = defaultRequest
+            Response = defaultResult
+            Logger = None
+            LoggerLevel = None
+        }
 
     let bind (fn: 'a -> Context<'b>) (ctx: Context<'a>) : Context<'b> =
         fn ctx.Response
@@ -98,3 +106,6 @@ module Context =
 
     let setCancellationToken (token: CancellationToken) (context: HttpContext) =
         { context with Request = { context.Request with CancellationToken = Some token } }
+
+    let setLogger (logger: ILogger) (context: HttpContext) =
+        { context with Logger = Some logger }

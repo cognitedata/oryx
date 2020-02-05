@@ -1,0 +1,11 @@
+group Test
+
+coverlet.msbuild
+FSharp.Core
+Microsoft.NET.Test.Sdk
+Serilog.Sinks.XUnit
+Unquote
+xunit
+xunit.runner.visualstudio
+FsCheck.Xunit
+Thoth.Json.Net

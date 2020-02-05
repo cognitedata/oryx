@@ -8,6 +8,7 @@ open System.Net.Http.Headers
 open System.Threading
 open System.Threading.Tasks
 
+open Microsoft.Extensions.Logging
 open FSharp.Control.Tasks.V2
 
 open Oryx
@@ -47,7 +48,7 @@ type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationTok
         }
 
 let unit (value: 'a) (next: NextFunc<'a, 'r, 'err>) (context: HttpContext) : HttpFuncResult<'r, 'err> =
-    next { Request=context.Request; Response = value }
+    next { Request=context.Request; Response = value; Logger = context.Logger; LoggerLevel = context.LoggerLevel }
 
 let add (a: int) (b: int) (next: NextFunc<int, 'b, 'err>) (context: HttpContext) : HttpFuncResult<'b, 'err>  =
     unit (a + b) next context
@@ -73,7 +74,7 @@ let badRequestHandler<'a, 'b> (response: 'b) (error: HandlerError<TestError>) (c
     match error with
     | ResponseError api ->
         match enum<HttpStatusCode>(api.Code) with
-        | HttpStatusCode.BadRequest -> return Ok { Request = ctx.Request; Response = response }
+        | HttpStatusCode.BadRequest -> return Ok { Request = ctx.Request; Response = response; Logger = ctx.Logger; LoggerLevel = ctx.LoggerLevel }
         | _ -> return Error error
     | _ ->
         return Error error
@@ -102,3 +103,19 @@ let post content =
     >=> withError errorHandler
 
 let retry next ctx = retry shouldRetry 0<ms> 5 next ctx
+
+type TestLogger<'a> () =
+    member val Output : string = "" with get, set
+    member val LoggerLevel : LogLevel = LogLevel.Information with get, set
+    member this.Log(logLevel: LogLevel, message: string) =
+        this.Output <- message
+        this.LoggerLevel <- logLevel
+    interface IDisposable with
+        member this.Dispose() = ()
+    interface ILogger<'a> with
+        member this.Log<'TState>(logLevel: LogLevel, eventId: EventId, state: 'TState, exception': exn, formatter: Func<'TState,exn,string>) : unit =
+            this.Output <- state.ToString()
+            this.LoggerLevel <- logLevel
+        member this.IsEnabled (logLevel: LogLevel): bool = true
+        member this.BeginScope<'TState>(state: 'TState) : IDisposable = this :> IDisposable
+

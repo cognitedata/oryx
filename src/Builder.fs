@@ -12,11 +12,11 @@ type RequestBuilder () =
 
     member this.Return (res: 'a) : HttpHandler<HttpResponseMessage, 'a, _, 'err> =
         fun next _ ->
-            next { Request = Context.defaultRequest; Response = res }
+            next { Request = Context.defaultRequest; Response = res; Logger = None; LoggerLevel = None }
 
     member this.Return (req: HttpRequest) : HttpHandler<HttpResponseMessage, HttpResponseMessage, _, 'err> =
         fun next _ ->
-            next { Request = req; Response = Context.defaultResult }
+            next { Request = req; Response = Context.defaultResult; Logger = None; LoggerLevel = None  }
 
     member this.ReturnFrom (req : HttpHandler<'a, 'b, 'r, 'err>) : HttpHandler<'a, 'b, 'r, 'err> = req
 
