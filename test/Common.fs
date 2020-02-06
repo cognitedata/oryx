@@ -147,15 +147,15 @@ type TestMetrics () =
     interface IMetrics with
         member this.TraceFetchInc inc =
             this.Fetches <- this.Fetches + inc
-            ()
+
         member this.TraceFetchErrorInc inc =
             this.Errors <- this.Errors + inc
-            ()
+
         member this.TraceFetchRetryInc inc =
             this.Retries <- this.Retries + inc
-            ()
+
         member this.TraceFetchLatencyUpdate msecs =
             this.Latency <- msecs
-            ()
+
         member this.TraceDecodeErrorInc inc =
             this.DecodeErrors <- this.DecodeErrors + inc
