@@ -213,6 +213,48 @@ let ``Get with logging response is OK``() = task {
 }
 
 [<Fact>]
+let ``Get with logging request is OK``() = task {
+    // Arrange
+    let mutable retries = 0
+    let logger = new TestLogger<string>()
+    let json = """{ "value": 42 }"""
+
+    let stub =
+        Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
+        (task {
+            retries <- retries + 1
+            let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+            responseMessage.Content <- new PushStreamContent("")
+            return responseMessage
+        }))
+
+    let client = new HttpClient(new HttpMessageHandlerStub(stub))
+    let content () = new StringableContent(json) :> HttpContent
+
+    let ctx =
+        Context.defaultContext
+        |> Context.setHttpClient client
+        |> Context.setUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.addHeader ("api-key", "test-key")
+        |> Context.setLogger(logger)
+
+
+    // Act
+    let request = req {
+        let! result = post content >=> logRequest
+        return result
+    }
+
+    let! result = request |> runAsync ctx
+    let retries' = retries
+
+    // Assert
+    test <@ logger.Output.Contains json @>
+    test <@ Result.isOk result @>
+    test <@ retries' = 1 @>
+}
+
+
 let ``Get with logging request and response is OK``() = task {
     // Arrange
     let mutable retries = 0

@@ -126,7 +126,7 @@ type TestLogger<'a> () =
     member val Output : string = String.Empty with get, set
     member val LoggerLevel : LogLevel = LogLevel.Information with get, set
     member this.Log(logLevel: LogLevel, message: string) =
-        this.Output <- message
+        this.Output <- this.Output + message
         this.LoggerLevel <- logLevel
 
     interface IDisposable with
