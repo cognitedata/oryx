@@ -95,8 +95,6 @@ module Context =
         Response = defaultResult
     }
 
-    let bind (fn: 'a -> Context<'b>) (ctx: Context<'a>) : Context<'b> =
-        fn ctx.Response
 
     /// Add HTTP header to context.
     let addHeader (header: string*string) (context: HttpContext) =

@@ -279,6 +279,7 @@ let ``Get with logging request and response is OK``() = task {
         |> Context.setUrlBuilder (fun _ -> "http://test.org/")
         |> Context.addHeader ("api-key", "test-key")
         |> Context.setLogger(logger)
+        |> Context.setLoggerLevel LogLevel.Debug
 
 
     // Act
