@@ -119,7 +119,8 @@ let post content =
     >=> withError errorHandler
     >=> json
 
-let retry next ctx = retry shouldRetry 0<ms> 5 next ctx
+let retryCount = 5
+let retry next ctx = retry shouldRetry 0<ms> retryCount next ctx
 
 type TestLogger<'a> () =
     member val Output : string = String.Empty with get, set
@@ -137,3 +138,26 @@ type TestLogger<'a> () =
             this.LoggerLevel <- logLevel
         member this.IsEnabled (logLevel: LogLevel): bool = true
         member this.BeginScope<'TState>(state: 'TState) : IDisposable = this :> IDisposable
+
+type TestMetrics () =
+    member val Fetches = 0L with get, set
+    member val Errors = 0L with get, set
+    member val Retries = 0L with get, set
+    member val Latency = 0L with get, set
+    member val DecodeErrors = 0L with get, set
+
+    interface IMetrics with
+        member this.TraceFetchInc inc =
+            this.Fetches <- this.Fetches + inc
+            ()
+        member this.TraceFetchErrorInc inc =
+            this.Errors <- this.Errors + inc
+            ()
+        member this.TraceFetchRetryInc inc =
+            this.Retries <- this.Retries + inc
+            ()
+        member this.TraceFetchLatencyUpdate msecs =
+            this.Latency <- msecs
+            ()
+        member this.TraceDecodeErrorInc inc =
+            this.DecodeErrors <- this.DecodeErrors + inc

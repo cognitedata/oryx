@@ -2,21 +2,17 @@
 
 namespace Oryx
 
-type Counter = int64 -> unit
-
-type Gauge = int64 -> unit
-
 type IMetrics =
-    abstract member TraceFetchInc : Counter
-    abstract member TraceFetchErrorInc : Counter
-    abstract member TraceFetchRetryInc : Counter
-    abstract member TraceFetchLatencyUpdate : Gauge
-    abstract member TraceDecodeErrorInc : Counter
+    abstract member TraceFetchInc : int64 -> unit
+    abstract member TraceFetchErrorInc : int64 -> unit
+    abstract member TraceFetchRetryInc : int64 -> unit
+    abstract member TraceFetchLatencyUpdate : int64 -> unit
+    abstract member TraceDecodeErrorInc : int64 -> unit
 
 type EmptyMetrics () =
     interface IMetrics with
-        member this.TraceFetchInc = ignore
-        member this.TraceFetchErrorInc = ignore
-        member this.TraceFetchRetryInc = ignore
-        member this.TraceFetchLatencyUpdate = ignore
-        member this.TraceDecodeErrorInc = ignore
+        member this.TraceFetchInc _ = ()
+        member this.TraceFetchErrorInc _ = ()
+        member this.TraceFetchRetryInc _ = ()
+        member this.TraceFetchLatencyUpdate _ = ()
+        member this.TraceDecodeErrorInc _ = ()
