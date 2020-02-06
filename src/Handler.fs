@@ -194,4 +194,4 @@ module Handler =
         | _ -> ()
         next ctx
 
-    let log<'a, 'err> : HttpHandler<'a, 'err> = logRequest >=> logResponse
+    let log<'a, 'b, 'err> : HttpHandler<'a, 'b, 'err> = logRequest >=> logResponse

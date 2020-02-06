@@ -213,7 +213,7 @@ let ``Get with logging response is OK``() = task {
 }
 
 [<Fact>]
-let ``Get with logging request is OK``() = task {
+let ``Get with logging request and response is OK``() = task {
     // Arrange
     let mutable retries = 0
     let logger = new TestLogger<string>()
@@ -241,7 +241,7 @@ let ``Get with logging request is OK``() = task {
 
     // Act
     let request = req {
-        let! result = post content >=> logRequest
+        let! result = post content >=> log
         return result
     }
 
