@@ -1,6 +1,7 @@
 .ionide
 paket-files
-src/obj
+obj
+bin
 .vs
 .config
 BenchmarkDotNet.Artifacts
@@ -14,3 +15,4 @@ extensions/Oryx.SystemTextJson/bin
 extensions/Oryx.SystemTextJson/obj
 extensions/Oryx.ThothJsonNet/bin
 extensions/Oryx.ThothJsonNet/obj
+.idea

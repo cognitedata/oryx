@@ -3,7 +3,6 @@
 namespace Oryx
 
 open System
-open System.Threading.Tasks
 
 open Microsoft.FSharp.Data.UnitSystems.SI
 open FSharp.Control.Tasks.V2.ContextInsensitive
@@ -19,7 +18,7 @@ module Retry =
     [<Literal>]
     let DefaultMaxBackoffDelay = 120<UnitSymbols.s>
 
-    let rand = System.Random ()
+    let rand = Random ()
 
     /// Retries the given HTTP handler up to `maxRetries` retries with exponential backoff and up to 2 minute with
     /// randomness.
@@ -35,6 +34,7 @@ module Retry =
         | Error err ->
             if shouldRetry err && maxRetries > 0 then
                 do! int initialDelay |> Async.Sleep
+                ctx.Request.Metrics.TraceFetchRetryInc 1L
                 return! retry shouldRetry nextDelay (maxRetries - 1) next ctx
             else
                 return result

@@ -12,6 +12,13 @@ open FSharp.Control.Tasks.V2
 
 open Oryx
 open Oryx.Retry
+open Microsoft.Extensions.Logging
+open System.Text
+
+type StringableContent (content: string) =
+    inherit StringContent (content)
+    override this.ToString () =
+        content
 
 type PushStreamContent (content : string) =
     inherit HttpContent ()
@@ -22,6 +29,8 @@ type PushStreamContent (content : string) =
 
     override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
         task {
+            let bytes = Encoding.ASCII.GetBytes(_content);
+            do! stream.AsyncWrite(bytes)
             do! stream.FlushAsync()
         } :> _
 
@@ -36,6 +45,7 @@ type PushStreamContent (content : string) =
 
         base.Dispose(disposing)
         _disposed <- true
+
 
 type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
     inherit HttpMessageHandler ()
@@ -88,17 +98,66 @@ let errorHandler (response : HttpResponseMessage) = task {
     return { Code = int response.StatusCode; Message = "Got error" } |> ResponseError
 }
 
+let json (next: NextFunc<string, 'c, 'err>) (ctx: Context<HttpResponseMessage>) : HttpFuncResult<'c, 'err> =
+    parseAsync (fun stream -> task { return! ctx.Response.Content.ReadAsStringAsync () }) next ctx
+
+
 let get () =
     GET
     >=> setUrl "http://test"
+    >=> addQuery [ struct ("debug", "true") ]
     >=> fetch
     >=> withError errorHandler
+    >=> json
 
 let post content =
     POST
     >=> setUrl "http://test"
+    >=> setResponseType JsonValue
     >=> getContent content
     >=> fetch
     >=> withError errorHandler
+    >=> json
 
-let retry next ctx = retry shouldRetry 0<ms> 5 next ctx
+let retryCount = 5
+let retry next ctx = retry shouldRetry 0<ms> retryCount next ctx
+
+type TestLogger<'a> () =
+    member val Output : string = String.Empty with get, set
+    member val LoggerLevel : LogLevel = LogLevel.Information with get, set
+    member this.Log(logLevel: LogLevel, message: string) =
+        this.Output <- this.Output + message
+        this.LoggerLevel <- logLevel
+
+    interface IDisposable with
+        member this.Dispose() = ()
+
+    interface ILogger<'a> with
+        member this.Log<'TState>(logLevel: LogLevel, eventId: EventId, state: 'TState, exception': exn, formatter: Func<'TState,exn,string>) : unit =
+            this.Output <- formatter.Invoke(state, exception')
+            this.LoggerLevel <- logLevel
+        member this.IsEnabled (logLevel: LogLevel): bool = true
+        member this.BeginScope<'TState>(state: 'TState) : IDisposable = this :> IDisposable
+
+type TestMetrics () =
+    member val Fetches = 0L with get, set
+    member val Errors = 0L with get, set
+    member val Retries = 0L with get, set
+    member val Latency = 0L with get, set
+    member val DecodeErrors = 0L with get, set
+
+    interface IMetrics with
+        member this.TraceFetchInc inc =
+            this.Fetches <- this.Fetches + inc
+
+        member this.TraceFetchErrorInc inc =
+            this.Errors <- this.Errors + inc
+
+        member this.TraceFetchRetryInc inc =
+            this.Retries <- this.Retries + inc
+
+        member this.TraceFetchLatencyUpdate msecs =
+            this.Latency <- msecs
+
+        member this.TraceDecodeErrorInc inc =
+            this.DecodeErrors <- this.DecodeErrors + inc

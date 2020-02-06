@@ -2,3 +2,4 @@ group Main
 
 FSharp.Core
 Taskbuilder.fs
+Microsoft.Extensions.Logging

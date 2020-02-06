@@ -4,6 +4,7 @@ group Main
 
     framework: netstandard2.0
 
+    nuget Microsoft.Extensions.Logging
     nuget FSharp.Core ~> 4.7
     nuget Taskbuilder.fs ~> 2.1
 
