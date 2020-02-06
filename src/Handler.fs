@@ -179,7 +179,7 @@ module Handler =
             let uri = request.Extra.TryFind "Url"
             match uri with
             | Some (Url url) ->
-                logger.Log (request.LoggerLevel, "> {url} {content}", url, request.Content ())
+                logger.Log (request.LoggerLevel, "> {url}\n{content}", url, request.Content ())
             | _ ->
                 logger.Log (request.LoggerLevel, "> {content}", request.Content ())
         | _ -> ()
