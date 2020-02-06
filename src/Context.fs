@@ -18,7 +18,12 @@ type RequestMethod =
 
 type ResponseType = JsonValue | Protobuf
 
-type PropertyBag = Map<string, string>
+type Value =
+    | String of string
+    | Number of int64
+    | Url of Uri
+
+type PropertyBag = Map<string, Value>
 type UrlBuilder = HttpRequest -> string
 
 and HttpRequest = {
@@ -36,14 +41,17 @@ and HttpRequest = {
     Headers: (string * string) list
     /// A function that builds the request URL based on the collected extra info.
     UrlBuilder: UrlBuilder
-    /// Extra info used to build the URL
-    Extra: PropertyBag
     /// Optional CancellationToken for cancelling the request.
     CancellationToken: CancellationToken option
-    /// Logger for logging requests
+    /// Optional Logger for logging requests.
     Logger: ILogger option
-    /// LogLevel to log at
+    /// The LogLevel to log at
     LoggerLevel: LogLevel
+    /// Optional Metrics for recording metrics.
+    Metrics: IMetrics
+    /// Extra info used to e.g build the URL. Clients are free to utilize this property for adding extra information to
+    /// the context.
+    Extra: PropertyBag
 }
 
 type Context<'a> = {
@@ -72,10 +80,11 @@ module Context =
             ResponseType = JsonValue
             Headers = [ "User-Agent", ua ]
             UrlBuilder = fun _ -> String.Empty
-            Extra = Map.empty
             CancellationToken = None
             Logger = None
             LoggerLevel = LogLevel.Debug
+            Metrics = EmptyMetrics ()
+            Extra = Map.empty
         }
 
     let defaultResult =
@@ -112,3 +121,6 @@ module Context =
 
     let setLoggerLevel (logLevel: LogLevel) (context: HttpContext) =
         { context with Request = { context.Request with LoggerLevel = logLevel } }
+
+    let setMetrics (metrics: IMetrics) (context: HttpContext) =
+        { context with Request = { context.Request with Metrics = metrics } }

@@ -13,6 +13,7 @@ open Xunit
 open Oryx
 
 open Tests.Common
+open Microsoft.Extensions.Logging
 
 [<Fact>]
 let ``Get with return expression is Ok``() = task {

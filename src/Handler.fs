@@ -119,24 +119,28 @@ module Handler =
         | Error err -> return Error err
     }
 
-    let parse<'a, 'r, 'err> (parser : Stream -> 'a) (next: NextFunc<'a, 'r, 'err>) (context : Context<HttpResponseMessage>) : Task<Result<Context<'r>,HandlerError<'err>>> =
+    let parse<'a, 'r, 'err> (parser : Stream -> 'a) (next: NextFunc<'a, 'r, 'err>) (ctx : Context<HttpResponseMessage>) : Task<Result<Context<'r>,HandlerError<'err>>> =
         task {
-            let! stream = context.Response.Content.ReadAsStreamAsync ()
+            let! stream = ctx.Response.Content.ReadAsStreamAsync ()
             try
                 let a = parser stream
-                return! next { Request = context.Request; Response = a }
+                return! next { Request = ctx.Request; Response = a }
             with
-            | ex -> return Error (Panic ex)
+            | ex ->
+                ctx.Request.Metrics.TraceDecodeErrorInc 1L
+                return Error (Panic ex)
         }
 
-    let parseAsync<'a, 'r, 'err> (parser : Stream -> Task<'a>) (next: NextFunc<'a, 'r, 'err>) (context : Context<HttpResponseMessage>) : Task<Result<Context<'r>,HandlerError<'err>>> =
+    let parseAsync<'a, 'r, 'err> (parser : Stream -> Task<'a>) (next: NextFunc<'a, 'r, 'err>) (ctx : Context<HttpResponseMessage>) : Task<Result<Context<'r>,HandlerError<'err>>> =
         task {
-            let! stream = context.Response.Content.ReadAsStreamAsync ()
+            let! stream = ctx.Response.Content.ReadAsStreamAsync ()
             try
                 let! a = parser stream
-                return! next { Request = context.Request; Response = a }
+                return! next { Request = ctx.Request; Response = a }
             with
-            | ex -> return Error (Panic ex)
+            | ex ->
+                ctx.Request.Metrics.TraceDecodeErrorInc 1L
+                return Error (Panic ex)
         }
 
     let extractHeader (header: string) (next: NextFunc<_,_, 'err>) (context: HttpContext) = task {
@@ -155,12 +159,14 @@ module Handler =
     }
 
     /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
-    let withError<'a, 'r, 'err> (errorHandler : HttpResponseMessage -> Task<HandlerError<'err>>) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) : HttpFuncResult<'r, 'err> =
+    let withError<'a, 'r, 'err> (errorHandler : HttpResponseMessage -> Task<HandlerError<'err>>) (next: NextFunc<HttpResponseMessage,'r, 'err>) (ctx: HttpContext) : HttpFuncResult<'r, 'err> =
         task {
-            let response = context.Response
+            let response = ctx.Response
             match response.IsSuccessStatusCode with
-            | true -> return! next context
+            | true -> return! next ctx
             | false ->
+                ctx.Request.Metrics.TraceFetchErrorInc 1L
+
                 let! err = errorHandler response
                 return err |> Error
         }
@@ -169,7 +175,13 @@ module Handler =
         let request = ctx.Request
 
         match request.Logger with
-        | Some logger -> logger.Log (request.LoggerLevel, "> {url} {content}", request.UrlBuilder request, request.Content ())
+        | Some logger ->
+            let uri = request.Extra.TryFind "Url"
+            match uri with
+            | Some (Url url) ->
+                logger.Log (request.LoggerLevel, "> {url} {content}", url, request.Content ())
+            | _ ->
+                logger.Log (request.LoggerLevel, "> {content}", request.Content ())
         | _ -> ()
         next ctx
 
