@@ -99,10 +99,8 @@ let errorHandler (response : HttpResponseMessage) = task {
 }
 
 let json (next: NextFunc<string, 'c, 'err>) (ctx: Context<HttpResponseMessage>) : HttpFuncResult<'c, 'err> =
-    task {
-        let! b = ctx.Response.Content.ReadAsStringAsync ()
-        return! next { Request = ctx.Request ; Response = b }
-    }
+    parseAsync (fun stream -> task { return! ctx.Response.Content.ReadAsStringAsync () }) next ctx
+
 
 let get () =
     GET
