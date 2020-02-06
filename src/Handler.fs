@@ -167,18 +167,19 @@ module Handler =
 
     let logRequest (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
         let request = ctx.Request
-        do request.Logger |> Option.iter (fun logger ->
-            logger.Log (request.LoggerLevel, "Request: {content}", request.Content ())
-        )
+
+        match request.Logger with
+        | Some logger -> logger.Log (request.LoggerLevel, "> {url} {content}", request.UrlBuilder request, request.Content ())
+        | _ -> ()
         next ctx
 
     let logResponse (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
         let request = ctx.Request
         let content = ctx.Response
 
-        do request.Logger |> Option.iter (fun logger ->
-            logger.Log (request.LoggerLevel, sprintf "Response: {content}", content)
-        )
+        match request.Logger with
+        | Some logger -> logger.Log (request.LoggerLevel, "< {content}", content)
+        | _ -> ()
         next ctx
 
-    let log<'a, 'b, 'err> : HttpHandler<'a, 'b, 'err> = logRequest >=> logResponse
+    let log<'a, 'err> : HttpHandler<'a, 'err> = logRequest >=> logResponse
