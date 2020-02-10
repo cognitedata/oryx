@@ -46,7 +46,7 @@ and HttpRequest = {
     /// Optional Logger for logging requests.
     Logger: ILogger option
     /// The LogLevel to log at
-    LoggerLevel: LogLevel
+    LogLevel: LogLevel
     /// Optional Metrics for recording metrics.
     Metrics: IMetrics
     /// Extra info used to e.g build the URL. Clients are free to utilize this property for adding extra information to
@@ -82,7 +82,7 @@ module Context =
             UrlBuilder = fun _ -> String.Empty
             CancellationToken = None
             Logger = None
-            LoggerLevel = LogLevel.Debug
+            LogLevel = LogLevel.Debug
             Metrics = EmptyMetrics ()
             Extra = Map.empty
         }
@@ -117,8 +117,8 @@ module Context =
     let setLogger (logger: ILogger) (context: HttpContext) =
         { context with Request = { context.Request with Logger = Some logger } }
 
-    let setLoggerLevel (logLevel: LogLevel) (context: HttpContext) =
-        { context with Request = { context.Request with LoggerLevel = logLevel } }
+    let setLogLevel (logLevel: LogLevel) (context: HttpContext) =
+        { context with Request = { context.Request with LogLevel = logLevel } }
 
     let setMetrics (metrics: IMetrics) (context: HttpContext) =
         { context with Request = { context.Request with Metrics = metrics } }

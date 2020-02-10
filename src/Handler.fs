@@ -77,7 +77,7 @@ module Handler =
         next { context with Request = { context.Request with Logger = Some logger } }
 
     let setLoggerLevel (logLevel: LogLevel) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
-        next { context with Request = { context.Request with LoggerLevel = logLevel } }
+        next { context with Request = { context.Request with LogLevel = logLevel } }
 
     /// Http GET request. Also clears any content set in the context.
     let GET<'r, 'err> (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
@@ -177,21 +177,28 @@ module Handler =
         match request.Logger with
         | Some logger ->
             let uri = request.Extra.TryFind "Url"
-            match uri with
-            | Some (Url url) ->
-                logger.Log (request.LoggerLevel, "> {url}\n{content}", url, request.Content ())
-            | _ ->
-                logger.Log (request.LoggerLevel, "> {content}", request.Content ())
+            let content = request.Content () |> Option.ofObj
+
+            match (uri, content) with
+            | Some (Url url), Some content ->
+                logger.Log (request.LogLevel, "> {Method} {Url}\n{Content}", request.Method, url, content)
+            | Some (Url url), None ->
+                logger.Log (request.LogLevel, "> {Method} {Url}", request.Method, url)
+            | _, Some content ->
+                logger.Log (request.LogLevel, ">\n{Content}", content)
+            | _, _ ->
+                logger.Log (request.LogLevel, ">")
         | _ -> ()
         next ctx
 
-    let logResponse (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
+    let logResponse<'a, 'r, 'err when 'a: null> (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) =
         let request = ctx.Request
-        let content = ctx.Response
+        let content = ctx.Response |> Option.ofObj
 
-        match request.Logger with
-        | Some logger -> logger.Log (request.LoggerLevel, "< {content}", content)
+        match request.Logger, content with
+        | Some logger, Some content -> logger.Log (request.LogLevel, "<\n{content}", content)
+        | Some logger, None -> logger.Log (request.LogLevel, "<")
         | _ -> ()
         next ctx
 
-    let log<'a, 'b, 'err> : HttpHandler<'a, 'b, 'err> = logRequest >=> logResponse
+    let log<'a, 'b, 'err when 'a: null> : HttpHandler<'a, 'b, 'err> = logRequest >=> logResponse

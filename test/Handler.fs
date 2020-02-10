@@ -11,6 +11,7 @@ open FsCheck.Arb
 
 
 open Oryx
+open Oryx.Chunk
 open Tests.Common
 
 [<Fact>]
@@ -224,7 +225,7 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
     task {
         // Arrange
         let ctx = Context.defaultContext
-        let req = Chunk.chunk chunkSize maxConcurrency unit [1; 2; 3; 4; 5]
+        let req = chunk chunkSize maxConcurrency unit [1; 2; 3; 4; 5]
 
         // Act
         let! result = req finishEarly ctx

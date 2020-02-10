@@ -703,7 +703,7 @@ NUGET
     Fable.Core (3.1.4)
       FSharp.Core (>= 4.7)
     FSharp.Core (4.7)
-    Google.Protobuf (3.11.2)
+    Google.Protobuf (3.11.3)
       System.Memory (>= 4.5.2)
     Microsoft.Bcl.AsyncInterfaces (1.1)
       System.Threading.Tasks.Extensions (>= 4.5.2)
@@ -772,7 +772,7 @@ NUGET
     Fable.Core (3.1.4)
       FSharp.Core (>= 4.7)
     FSharp.Core (4.7)
-    Google.Protobuf (3.11.2)
+    Google.Protobuf (3.11.3)
       System.Memory (>= 4.5.2)
     Microsoft.Bcl.AsyncInterfaces (1.1)
       System.Threading.Tasks.Extensions (>= 4.5.2)
@@ -851,7 +851,7 @@ NUGET
     Fable.Core (3.1.4)
       FSharp.Core (>= 4.7)
     FSharp.Core (4.7)
-    Google.Protobuf (3.11.2)
+    Google.Protobuf (3.11.3)
       System.Memory (>= 4.5.2)
     Microsoft.Bcl.AsyncInterfaces (1.1)
       System.Threading.Tasks.Extensions (>= 4.5.2)
@@ -926,20 +926,20 @@ NUGET
       FsCheck (2.14)
       xunit.extensibility.execution (>= 2.2 < 3.0)
     FSharp.Core (4.7)
-    Microsoft.CodeCoverage (16.4) - restriction: || (>= net45) (>= netcoreapp2.1)
-    Microsoft.NET.Test.Sdk (16.4)
-      Microsoft.CodeCoverage (>= 16.4) - restriction: || (>= net45) (>= netcoreapp2.1)
-      Microsoft.TestPlatform.TestHost (>= 16.4) - restriction: >= netcoreapp2.1
+    Microsoft.CodeCoverage (16.5) - restriction: || (>= net45) (>= netcoreapp2.1)
+    Microsoft.NET.Test.Sdk (16.5)
+      Microsoft.CodeCoverage (>= 16.5) - restriction: || (>= net45) (>= netcoreapp2.1)
+      Microsoft.TestPlatform.TestHost (>= 16.5) - restriction: >= netcoreapp2.1
       Newtonsoft.Json (>= 9.0.1) - restriction: >= uap10.0
       System.ComponentModel.Primitives (>= 4.1) - restriction: >= uap10.0
       System.ComponentModel.TypeConverter (>= 4.1) - restriction: >= uap10.0
       System.Runtime.InteropServices.RuntimeInformation (>= 4.0) - restriction: >= uap10.0
     Microsoft.NETCore.Platforms (3.1) - restriction: || (&& (< monoandroid) (< net45) (< netstandard1.2) (>= netstandard1.3) (< win8)) (&& (< monoandroid) (< net45) (< netstandard1.2) (>= netstandard1.4) (< win8)) (&& (< monoandroid) (< net45) (< netstandard1.2) (>= netstandard1.5) (< win8)) (&& (< monoandroid) (< net45) (< netstandard1.2) (>= netstandard1.6) (< win8)) (&& (< monoandroid) (< net45) (< netstandard1.3) (>= netstandard1.4) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (< netstandard1.3) (>= netstandard1.5) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (< netstandard1.3) (>= netstandard1.6) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (< netstandard1.4) (>= netstandard1.5) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (< netstandard1.4) (>= netstandard1.6) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (< netstandard1.5) (>= netstandard1.6) (< win8) (< wpa81)) (&& (< monoandroid) (< netstandard1.1) (>= netstandard1.2) (< win8)) (&& (< monoandroid) (< netstandard1.1) (>= netstandard1.3) (< win8)) (&& (< monoandroid) (< netstandard1.1) (>= netstandard1.4) (< win8)) (&& (< monoandroid) (< netstandard1.1) (>= netstandard1.5) (< win8)) (&& (< monoandroid) (< netstandard1.1) (>= netstandard1.6) (< win8)) (&& (< net45) (>= net46) (< netstandard1.4)) (&& (< net45) (>= net461)) (&& (< net45) (>= netstandard1.1) (< netstandard1.2) (< win8)) (&& (< net45) (>= netstandard1.2) (< netstandard1.3) (< win8) (< wpa81)) (&& (< net45) (>= netstandard1.3) (< netstandard1.4) (< win8) (< wpa81)) (&& (< net45) (>= netstandard1.4) (< netstandard1.5) (< win8) (< wpa81)) (&& (< net45) (>= netstandard1.5) (< netstandard1.6) (< win8) (< wpa81)) (&& (< net45) (>= netstandard1.6) (< netstandard2.0) (< win8) (< wpa81)) (&& (< net45) (>= netstandard2.0)) (>= netcoreapp2.0) (&& (>= netstandard1.0) (< portable-net45+win8+wpa81)) (&& (>= netstandard1.1) (< portable-net45+win8+wpa81)) (&& (< netstandard1.1) (>= uap10.0) (< win8)) (&& (< netstandard1.2) (>= uap10.0) (< win8)) (&& (>= netstandard1.3) (< portable-net45+win8+wpa81)) (&& (< netstandard1.3) (>= uap10.0) (< win8) (< wpa81)) (&& (< netstandard1.3) (< win8) (>= wpa81)) (&& (< netstandard1.5) (>= uap10.0)) (>= uap10.1) (>= wp8)
     Microsoft.NETCore.Targets (3.1) - restriction: || (&& (< monoandroid) (< monotouch) (< net45) (>= netstandard1.6) (< netstandard2.0) (< win8) (< wpa81) (< xamarintvos) (< xamarinwatchos)) (&& (< monoandroid) (< net45) (>= netstandard1.1) (< netstandard1.2) (< win8)) (&& (< monoandroid) (< net45) (>= netstandard1.2) (< netstandard1.3) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (< netstandard1.2) (>= netstandard1.3) (< win8)) (&& (< monoandroid) (< net45) (< netstandard1.2) (>= netstandard1.4) (< win8)) (&& (< monoandroid) (< net45) (< netstandard1.2) (>= netstandard1.5) (< win8)) (&& (< monoandroid) (< net45) (< netstandard1.2) (>= netstandard1.6) (< win8)) (&& (< monoandroid) (< net45) (>= netstandard1.3) (< netstandard1.4) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (< netstandard1.3) (>= netstandard1.4) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (< netstandard1.3) (>= netstandard1.5) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (< netstandard1.3) (>= netstandard1.6) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (>= netstandard1.4) (< netstandard1.5) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (< netstandard1.4) (>= netstandard1.5) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (< netstandard1.4) (>= netstandard1.6) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (>= netstandard1.5) (< netstandard1.6) (< win8) (< wpa81)) (&& (< monoandroid) (< net45) (< netstandard1.5) (>= netstandard1.6) (< win8) (< wpa81)) (&& (< monoandroid) (< netstandard1.1) (>= netstandard1.2) (< win8)) (&& (< monoandroid) (< netstandard1.1) (>= netstandard1.3) (< win8)) (&& (< monoandroid) (< netstandard1.1) (>= netstandard1.4) (< win8)) (&& (< monoandroid) (< netstandard1.1) (>= netstandard1.5) (< win8)) (&& (< monoandroid) (< netstandard1.1) (>= netstandard1.6) (< win8)) (&& (< net45) (>= net46) (< netstandard1.4)) (&& (>= netstandard1.0) (< portable-net45+win8+wpa81) (< wp8)) (&& (>= netstandard1.1) (< portable-net45+win8+wpa81)) (&& (< netstandard1.1) (>= uap10.0) (< win8)) (&& (< netstandard1.2) (>= uap10.0) (< win8)) (&& (>= netstandard1.3) (< portable-net45+win8+wpa81)) (&& (< netstandard1.3) (>= uap10.0) (< win8) (< wpa81)) (&& (< netstandard1.5) (>= netstandard1.6) (>= uap10.0)) (&& (< netstandard1.5) (>= uap10.0) (< uap10.1)) (&& (< netstandard1.5) (>= uap10.0) (< win8) (< wpa81)) (&& (< netstandard1.5) (>= uap10.0) (< win81) (< wpa81))
-    Microsoft.TestPlatform.ObjectModel (16.4) - restriction: >= netcoreapp2.1
+    Microsoft.TestPlatform.ObjectModel (16.5) - restriction: >= netcoreapp2.1
       NuGet.Frameworks (>= 5.0) - restriction: || (>= net451) (>= netstandard2.0)
-    Microsoft.TestPlatform.TestHost (16.4) - restriction: >= netcoreapp2.1
-      Microsoft.TestPlatform.ObjectModel (>= 16.4) - restriction: || (>= netcoreapp2.1) (>= uap10.0)
+    Microsoft.TestPlatform.TestHost (16.5) - restriction: >= netcoreapp2.1
+      Microsoft.TestPlatform.ObjectModel (>= 16.5) - restriction: || (>= netcoreapp2.1) (>= uap10.0)
       Newtonsoft.Json (>= 9.0.1) - restriction: || (>= netcoreapp2.1) (>= uap10.0)
     Microsoft.Win32.Primitives (4.3) - restriction: || (&& (< monoandroid) (< net45) (< netstandard1.2) (>= netstandard1.3) (< win8)) (&& (< net45) (>= net46) (< netstandard1.4)) (&& (< net45) (>= netstandard1.3) (< netstandard1.4) (< win8) (< wpa81)) (&& (< net45) (>= netstandard1.4) (< netstandard1.5) (< win8) (< wpa81)) (&& (< net45) (>= netstandard1.5) (< netstandard1.6) (< win8) (< wpa81)) (&& (< net45) (>= netstandard1.6) (< netstandard2.0) (< win8) (< wpa81)) (&& (< netstandard1.5) (>= uap10.0) (< uap10.1)) (&& (< netstandard1.5) (>= uap10.0) (< win8) (< wpa81))
       Microsoft.NETCore.Platforms (>= 1.1) - restriction: && (< monoandroid) (< monotouch) (< net46) (>= netstandard1.3) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)
@@ -1511,7 +1511,7 @@ NUGET
     Fable.Core (3.1.4)
       FSharp.Core (>= 4.7)
     FSharp.Core (4.7)
-    Google.Protobuf (3.11.2)
+    Google.Protobuf (3.11.3)
       System.Memory (>= 4.5.2)
     Microsoft.Bcl.AsyncInterfaces (1.1)
       System.Threading.Tasks.Extensions (>= 4.5.2)
