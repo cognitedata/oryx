@@ -281,7 +281,6 @@ let ``Post with disabled logging does not log``() = task {
         |> Context.setLogger(logger)
         |> Context.setLogLevel LogLevel.None
 
-
     // Act
     let request = req {
         let! result = post content >=> log

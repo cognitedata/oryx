@@ -100,7 +100,32 @@ Thus the function `listAssets` is now also an `HttpHandler` and may be composed 
 There is also a `retry` that retries the `next` HTTP handler using max number of retries and exponential backoff.
 
 ```fs
-val retry : (initialDelay: int<ms>) -> (maxRetries: int) -> (next: NextFunc<'b,'c>) -> (ctx: Context<'a>) -> Task<Context<'c>>
+val retry : (shouldRetry: HandlerError<'err> -> bool) -> (initialDelay: int<ms>) -> (maxRetries: int) -> (next: NextFunc<'b,'c>) -> (ctx: Context<'a>) -> Task<Context<'c>>
+```
+
+The `shouldRetry` handler takes the `HandlerError<'err>` and should return `true` if the request should be retried e.g:
+
+```fs
+let shouldRetry (error: HandlerError<ResponseException>) : bool =
+    match error with
+    | ResponseError err ->
+        match err.Code with
+        // Rate limiting
+        | 429 -> true
+        // 500 is hard to say, but we should avoid having those in the api. We get random and transient 500
+        // responses often enough that it's worth retrying them.
+        | 500 -> true
+        // 502 and 503 are usually transient.
+        | 502 -> true
+        | 503 -> true
+        // Do not retry other responses.
+        | _ -> false
+    | Panic err ->
+        match err with
+        | :? Net.Http.HttpRequestException
+        | :? System.Net.WebException -> true
+        // do not retry other exceptions.
+        | _ -> false
 ```
 
 A `sequential` operator for running a list of HTTP handlers in sequence.
@@ -210,7 +235,7 @@ Working with `Context` objects can be a bit painful since the actual result will
 
 ```fs
 req {
-    let! assetDto = retry >=> Assets.Entity.get key
+    let! assetDto = Assets.Entity.get key
 
     let asset = assetDto |> Asset.FromAssetReadDto
     if expands.Contains("Parent") && assetDto.ParentId.IsSome then
