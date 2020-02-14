@@ -32,7 +32,7 @@ and HttpRequest = {
     /// HTTP method to be used.
     Method: HttpMethod
     /// Getter for content to be sent as body of the request. We use a getter so content may be re-created for retries.
-    Content: unit -> HttpContent
+    ContentBuilder: (unit -> HttpContent) option
     /// Query parameters
     Query: struct (string * string) seq
     /// Responsetype. JSON or Protobuf
@@ -66,8 +66,8 @@ module Context =
         let version = Assembly.GetExecutingAssembly().GetName().Version
         {| Major=version.Major; Minor=version.Minor; Build=version.Build |}
 
-    let nullContent = fun () -> null
-    let lazyContent content = fun () -> content
+    /// Note that lazy content may not work with retry, logging etc where content may have been disposed.
+    let lazyContent content = Some <| fun () -> content
 
     /// Default context to use.
     let defaultRequest =
@@ -75,14 +75,14 @@ module Context =
         {
             HttpClient = None
             Method = HttpMethod.Get
-            Content = nullContent
+            ContentBuilder = None
             Query = List.empty
             ResponseType = JsonValue
             Headers = [ "User-Agent", ua ]
             UrlBuilder = fun _ -> String.Empty
             CancellationToken = None
             Logger = None
-            LogLevel = LogLevel.Debug
+            LogLevel = LogLevel.None
             Metrics = EmptyMetrics ()
             Extra = Map.empty
         }
@@ -94,7 +94,6 @@ module Context =
         Request = defaultRequest
         Response = defaultResult
     }
-
 
     /// Add HTTP header to context.
     let addHeader (header: string*string) (context: HttpContext) =

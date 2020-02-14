@@ -3,14 +3,14 @@
 namespace Oryx
 
 open System
+open System.Collections.Generic
+open System.Diagnostics
 open System.Net.Http
+open System.Net.Http.Headers
 open System.Threading
 open System.Web
 
 open FSharp.Control.Tasks.V2.ContextInsensitive
-open System.Collections.Generic
-open System.Net.Http.Headers
-open System.Diagnostics
 
 [<AutoOpen>]
 module Fetch =
@@ -44,7 +44,10 @@ module Fetch =
             if not (client.DefaultRequestHeaders.Contains header) then
                 request.Headers.Add (header, value)
 
-        request.Content <- ctx.Request.Content ()
+        let content = ctx.Request.ContentBuilder |> Option.map (fun builder -> builder ())
+        match content with
+        | Some content -> request.Content <- content
+        | None -> ()
         request
 
     let fetch<'r, 'err> (next: NextFunc<HttpResponseMessage, 'r, 'err>) (ctx: HttpContext) : HttpFuncResult<'r, 'err> =

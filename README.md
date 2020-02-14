@@ -6,7 +6,7 @@
 
 Oryx is a high performance .NET cross platform functional HTTP request handler library for writing HTTP clients and orchestrating web requests in F#.
 
-> An SDK for writing HTTP web clients or SDKs.
+> An SDK for writing HTTP web clients and orchestrating web requests.
 
 This library enables you to write Web and REST clients and SDKs for various APIs and is currently used by the [.NET SDK for Cognite Data Fusion (CDF)](https://github.com/cognitedata/cognite-sdk-dotnet).
 
@@ -14,7 +14,7 @@ Oryx is heavily inspired by the [Giraffe](https://github.com/giraffe-fsharp/Gira
 
 ## Fundamentals
 
-The main building blocks in Oryx is the `Context` and the `HttpHandler`. The Context stores all the state needed for making the request and any response or error received from the server:
+The main building blocks in Oryx is the `Context` and the `HttpHandler`. The Context stores all the state needed for making the request, and any response (or error) received from the server:
 
 ```fs
 type Context<'a> = {
@@ -47,13 +47,13 @@ The easiest way to get your head around a Oryx `HttpHandler` is to think of it a
 
 The more complex way to think about a `HttpHandler` is that there are in fact 3 different ways it may process the request:
 
-1. Call the next handler with a result value (`'a`), and return what the next handler is returning.
-2. Return an `Error`result to fail the request.
+1. Call the next handler with a result value (`'a`), and return what the next handler is returning. Here you have the option to eliding the await by returning the `Task` returned by the `next` function.
+2. Return an `Error`result to short circuit and fail the request.
 3. Return `Ok` to short circuit the processing. This is not something you would normally do.
 
-## Operators
+## Operators and Composition
 
-The fact that everything is an `HttpHandler` makes it easy to compose handlers together. You can think of them as lego bricks that you can fit together. Two `HttpHandler` functions may be composed together using Kleisli composition, i.e using the fish operator `>=>`.
+The fact that everything is an `HttpHandler` makes it easy to compose handlers together. You can think of them as lego bricks that you can fit together. Two or more `HttpHandler` functions may be composed together using Kleisli composition, i.e using the fish operator `>=>`.
 
 ```fs
 let (>=>) a b = compose a b
@@ -89,13 +89,13 @@ This enables you to compose your web requests and decode the response, e.g as we
         POST
         >=> setVersion V10
         >=> setResource url
-        >=> setContent (new JsonPushStreamContent<AssetQuery>(query, jsonOptions))
+        >=> setContent (() -> new JsonPushStreamContent<AssetQuery>(query, jsonOptions))
         >=> fetch
         >=> withError decodeError
         >=> json jsonOptions
 ```
 
-Thus the function `listAssets` is now also an `HttpHandler` and may be composed with other handlers to create complex chains for doing series of multiple requests to a web service.
+Thus the function `listAssets` is now also an `HttpHandler` and may be composed with other handlers to create complex chains for doing multiple requests in series (or concurrently) to a web service.
 
 There is also a `retry` that retries the `next` HTTP handler using max number of retries and exponential backoff.
 
@@ -210,7 +210,7 @@ Working with `Context` objects can be a bit painful since the actual result will
 
 ```fs
 req {
-    let! assetDto = Assets.Entity.get key
+    let! assetDto = retry >=> Assets.Entity.get key
 
     let asset = assetDto |> Asset.FromAssetReadDto
     if expands.Contains("Parent") && assetDto.ParentId.IsSome then
@@ -223,23 +223,61 @@ req {
 }
 ```
 
+The request may then be composed with other handlers, e.g chunced, retried, and/or logged.
+
 To run a handler you can use the `runAsync` function.
 
 ```fs
 let runAsync (handler: HttpHandler<'a,'r,'r, 'err>) (ctx : Context<'a>) : Task<Result<'r, HandlerError<'err>>>
 ```
 
+## Logging and Metrics
+
+TBW:
+
+## Creating Custom Handlers
+
+It's easy to extend Oryx with your own HTTP handlers.
+
+```fs
+let setResource (resource: string) (next: NextFunc<_,_>) (context: HttpContext) =
+    next { context with Request = { context.Request with Extra = context.Request.Extra.Add("resource", String resource) } }
+
+let setVersion (version: ApiVersion) (next: NextFunc<_,_>) (context: HttpContext) =
+    next { context with Request = { context.Request with Extra = context.Request.Extra.Add("apiVersion", String (version.ToString ())) } }
+```
+
+The handlers above will add custom values to the context that may be used by the supplied URL builder.
+
+```fs
+let urlBuilder (request: HttpRequest) : string =
+    let extra = request.Extra
+    ...
+```
+
 ## Differences from Giraffe
 
-Oryx and Giraffe is very similar, but the model is a bit different. Oryx is for clients, Giraffe is for servers. In addition:
+Oryx and Giraffe is very similar, but Oryx is for clients while Giraffe is for servers. In addition:
 
 The Oryx `HttpHandler` is generic both on the response and error types. This means that you may decode the response or the error response to user defined types within the pipeline itself.
 
 ```fs
 type HttpHandler<'a, 'b, 'r, 'err> = NextFunc<'b, 'r, 'err> -> Context<'a> -> HttpFuncResult<'r, 'err>
-````
+```
 
 So an `HttpHandler` takes a context of `'a`. The handler itself transforms the context from `'a` to `'b`. Then the next handler continuation transforms from `'b` to `'r`, and the handler will return a result of `'r`. The types makes the pipeline a bit more challenging to work with but makes it easier to stay within the pipeline for the full processing of the request.
+
+If you are using a fixed error type with your SDK you may pin the error type using shadow types to simplify the handlers e.g:
+
+```fs
+type HttpFuncResult<'r> = Task<Result<Context<'r>, HandlerError<ResponseException>>>
+type HttpFunc<'a, 'r> = Context<'a> -> HttpFuncResult<'r, ResponseException>
+type NextFunc<'a, 'r> = HttpFunc<'a, 'r, ResponseException>
+type HttpHandler<'a, 'b, 'r> = NextFunc<'b, 'r, ResponseException> -> Context<'a> -> HttpFuncResult<'r, ResponseException>
+type HttpHandler<'a, 'r> = HttpHandler<'a, 'a, 'r, ResponseException>
+type HttpHandler<'r> = HttpHandler<HttpResponseMessage, 'r, ResponseException>
+type HttpHandler = HttpHandler<HttpResponseMessage, ResponseException>
+```
 
 ## Code of Conduct
 

@@ -2,11 +2,11 @@
 
 namespace Oryx
 
+open System.IO
 open System.Net.Http
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2.ContextInsensitive
-open System.IO
 open Microsoft.Extensions.Logging
 
 type HttpFuncResult<'r, 'err> =  Task<Result<Context<'r>, HandlerError<'err>>>
@@ -49,15 +49,10 @@ module Handler =
     let addQuery (query: struct (string * string) seq) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with Query = query } }
 
-    /// Add content to context. These content will be added to the HTTP body of
-    /// requests that uses this context.
-    let setContent (content: HttpContent) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
-        next { context with Request = { context.Request with Content = Context.lazyContent content } }
-
     /// Add content builder to context. These content will be added to the HTTP body of
     /// requests that uses this context.
-    let getContent (content: unit -> HttpContent) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
-        next { context with Request = { context.Request with Content = content } }
+    let setContent (builder: unit -> HttpContent) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+        next { context with Request = { context.Request with ContentBuilder = Some builder } }
 
     let setResponseType (respType: ResponseType) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with ResponseType = respType }}
@@ -76,12 +71,12 @@ module Handler =
     let setLogger (logger: ILogger) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with Logger = Some logger } }
 
-    let setLoggerLevel (logLevel: LogLevel) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let setLogLevel (logLevel: LogLevel) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with LogLevel = logLevel } }
 
     /// Http GET request. Also clears any content set in the context.
     let GET<'r, 'err> (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
-        next { context with Request = { context.Request with Method = HttpMethod.Get; Content = Context.nullContent } }
+        next { context with Request = { context.Request with Method = HttpMethod.Get; ContentBuilder = None } }
 
     /// Http POST request.
     let POST<'r, 'err> = setMethod<'r, 'err> HttpMethod.Post
@@ -171,34 +166,28 @@ module Handler =
                 return err |> Error
         }
 
-    let logRequest (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
+    /// Logger handler. Needs to be composed in the request after the fetch handler.
+    let log (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
         let request = ctx.Request
 
-        match request.Logger with
-        | Some logger ->
+        match request.Logger, request.LogLevel with
+        | _, LogLevel.None -> ()
+        | Some logger, _ ->
             let uri = request.Extra.TryFind "Url"
-            let content = request.Content () |> Option.ofObj
+            let content = ctx.Request.ContentBuilder |> Option.map (fun builder -> builder ())
 
             match (uri, content) with
             | Some (Url url), Some content ->
                 logger.Log (request.LogLevel, "> {Method} {Url}\n{Content}", request.Method, url, content)
+                content.Dispose ()
             | Some (Url url), None ->
                 logger.Log (request.LogLevel, "> {Method} {Url}", request.Method, url)
             | _, Some content ->
                 logger.Log (request.LogLevel, ">\n{Content}", content)
+                content.Dispose ()
             | _, _ ->
                 logger.Log (request.LogLevel, ">")
+
+            logger.Log (request.LogLevel, "<\n{content}", ctx.Response)
         | _ -> ()
         next ctx
-
-    let logResponse<'a, 'r, 'err when 'a: null> (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) =
-        let request = ctx.Request
-        let content = ctx.Response |> Option.ofObj
-
-        match request.Logger, content with
-        | Some logger, Some content -> logger.Log (request.LogLevel, "<\n{content}", content)
-        | Some logger, None -> logger.Log (request.LogLevel, "<")
-        | _ -> ()
-        next ctx
-
-    let log<'a, 'b, 'err when 'a: null> : HttpHandler<'a, 'b, 'err> = logRequest >=> logResponse

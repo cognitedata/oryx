@@ -47,7 +47,7 @@ module ClassicHandler =
     let (>=>) = compose
 
     let GET<'r, 'err> (context: HttpContext) =
-        Ok { context with Request = { context.Request with Method = HttpMethod.Get; Content = nullContent } } |> Task.FromResult
+        Ok { context with Request = { context.Request with Method = HttpMethod.Get; ContentBuilder = None } } |> Task.FromResult
 
     let withError<'err> (errorHandler : HttpResponseMessage -> Task<HandlerError<'err>>) (context: HttpContext) : HttpFuncResultClassic<HttpResponseMessage, 'err> =
         task {
