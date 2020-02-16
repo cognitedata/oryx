@@ -1,18 +1,10 @@
 module Tests.Context
 
-open System.IO
 open System.Net.Http
 open System.Threading
 
-open Xunit
-open Swensen.Unquote
-
-open Tests.Common
-
 open Oryx
 open FsCheck.Xunit
-open FsCheck
-open FsCheck.Arb
 
 [<Property>]
 let ``Adding a header to a context creates a context that contains that header`` header =

@@ -159,7 +159,7 @@ let ``Fetch with retry on internal error will retry``() = task {
     let request =
         let content = new PushStreamContent("testing")
         req {
-            let! result = retry >=> post (fun _ -> new PushStreamContent("testing") :> _)
+            let! result = retry >=> post (fun _ -> new PushStreamContent("testing") :> HttpContent)
             return result
         }
 
@@ -172,7 +172,7 @@ let ``Fetch with retry on internal error will retry``() = task {
     test <@ metrics.Errors = int64 retryCount + 1L @>}
 
 [<Fact>]
-let ``Get with logging response is OK``() = task {
+let ``Get with logging is OK``() = task {
     // Arrange
     let metrics = TestMetrics ()
     let logger = new TestLogger<string>()
@@ -195,10 +195,11 @@ let ``Get with logging response is OK``() = task {
         |> Context.addHeader ("api-key", "test-key")
         |> Context.setMetrics metrics
         |> Context.setLogger logger
+        |> Context.setLogLevel LogLevel.Debug
 
     // Act
     let request = req {
-        let! result = get () >=> logResponse
+        let! result = get () >=> log
         return result
     }
 
@@ -212,50 +213,7 @@ let ``Get with logging response is OK``() = task {
     test <@ metrics.Errors = 0L @>
 }
 
-[<Fact>]
-let ``Get with logging request is OK``() = task {
-    // Arrange
-    let mutable retries = 0
-    let logger = new TestLogger<string>()
-    let json = """{ "value": 42 }"""
-
-    let stub =
-        Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
-        (task {
-            retries <- retries + 1
-            let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-            responseMessage.Content <- new PushStreamContent("")
-            return responseMessage
-        }))
-
-    let client = new HttpClient(new HttpMessageHandlerStub(stub))
-    let content () = new StringableContent(json) :> HttpContent
-
-    let ctx =
-        Context.defaultContext
-        |> Context.setHttpClient client
-        |> Context.setUrlBuilder (fun _ -> "http://test.org/")
-        |> Context.addHeader ("api-key", "test-key")
-        |> Context.setLogger(logger)
-
-
-    // Act
-    let request = req {
-        let! result = post content >=> logRequest
-        return result
-    }
-
-    let! result = request |> runAsync ctx
-    let retries' = retries
-
-    // Assert
-    test <@ logger.Output.Contains json @>
-    test <@ Result.isOk result @>
-    test <@ retries' = 1 @>
-}
-
-
-let ``Get with logging request and response is OK``() = task {
+let ``Post with logging is OK``() = task {
     // Arrange
     let mutable retries = 0
     let logger = new TestLogger<string>()
@@ -293,6 +251,47 @@ let ``Get with logging request and response is OK``() = task {
 
     // Assert
     test <@ logger.Output.Contains json @>
+    test <@ Result.isOk result @>
+    test <@ retries' = 1 @>
+}
+
+let ``Post with disabled logging does not log``() = task {
+    // Arrange
+    let mutable retries = 0
+    let logger = new TestLogger<string>()
+    let json = """{ "value": 42 }"""
+
+    let stub =
+        Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
+        (task {
+            retries <- retries + 1
+            let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+            responseMessage.Content <- new PushStreamContent("")
+            return responseMessage
+        }))
+
+    let client = new HttpClient(new HttpMessageHandlerStub(stub))
+    let content () = new StringableContent(json) :> HttpContent
+
+    let ctx =
+        Context.defaultContext
+        |> Context.setHttpClient client
+        |> Context.setUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.addHeader ("api-key", "test-key")
+        |> Context.setLogger(logger)
+        |> Context.setLogLevel LogLevel.None
+
+    // Act
+    let request = req {
+        let! result = post content >=> log
+        return result
+    }
+
+    let! result = request |> runAsync ctx
+    let retries' = retries
+
+    // Assert
+    test <@ logger.Output = "" @>
     test <@ Result.isOk result @>
     test <@ retries' = 1 @>
 }

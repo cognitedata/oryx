@@ -114,10 +114,11 @@ let post content =
     POST
     >=> setUrl "http://test"
     >=> setResponseType JsonValue
-    >=> getContent content
+    >=> setContent content
     >=> fetch
     >=> withError errorHandler
     >=> json
+    >=> log
 
 let retryCount = 5
 let retry next ctx = retry shouldRetry 0<ms> retryCount next ctx
