@@ -1,9 +1,9 @@
 module Tests.Fetch
 
 open System
+open System.Net
 open System.Net.Http
 open System.Threading
-open System.Net
 open System.Threading.Tasks
 
 open Microsoft.Extensions.Logging
@@ -200,7 +200,7 @@ let ``Get with logging is OK``() = task {
 
     // Act
     let request = req {
-        let! result = get () >=> log "request"
+        let! result = get () >=> log
         return result
     }
 
@@ -245,7 +245,7 @@ let ``Post with logging is OK``() = task {
 
     // Act
     let request = req {
-        let! result = post content >=> log msg
+        let! result = post content >=> logWithMsg msg
         return result
     }
 
@@ -284,12 +284,12 @@ let ``Post with disabled logging does not log``() = task {
         |> Context.setHttpClient client
         |> Context.setUrlBuilder (fun _ -> "http://test.org/")
         |> Context.addHeader ("api-key", "test-key")
-        |> Context.setLogger(logger)
+        |> Context.setLogger logger
         |> Context.setLogLevel LogLevel.None
 
     // Act
     let request = req {
-        let! result = post content >=> log msg
+        let! result = post content >=> logWithMsg msg
         return result
     }
 

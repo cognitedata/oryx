@@ -118,7 +118,7 @@ let post content =
     >=> fetch
     >=> withError errorHandler
     >=> json
-    >=> log "post"
+    >=> log
 
 let retryCount = 5
 let retry next ctx = retry shouldRetry 0<ms> retryCount next ctx
