@@ -47,6 +47,8 @@ and HttpRequest = {
     Logger: ILogger option
     /// The LogLevel to log at
     LogLevel: LogLevel
+    /// Logging format string
+    LogFormat: string
     /// Optional Metrics for recording metrics.
     Metrics: IMetrics
     /// Extra info used to e.g build the URL. Clients are free to utilize this property for adding extra information to
@@ -69,6 +71,9 @@ module Context =
     /// Note that lazy content may not work with retry, logging etc where content may have been disposed.
     let lazyContent content = Some <| fun () -> content
 
+
+    let defaultLogFormat = "Oryx: {Message} {HttpMethod} {Uri} > \n{RequestContent}{ResponseContent}"
+
     /// Default context to use.
     let defaultRequest =
         let ua = sprintf "Oryx / v%d.%d.%d (Cognite)" version.Major version.Minor version.Build
@@ -83,6 +88,7 @@ module Context =
             CancellationToken = None
             Logger = None
             LogLevel = LogLevel.None
+            LogFormat = defaultLogFormat
             Metrics = EmptyMetrics ()
             Extra = Map.empty
         }
@@ -118,6 +124,9 @@ module Context =
 
     let setLogLevel (logLevel: LogLevel) (context: HttpContext) =
         { context with Request = { context.Request with LogLevel = logLevel } }
+
+    let setLogFormat (format: string) (context: HttpContext) =
+        { context with Request = { context.Request with LogFormat = format } }
 
     let setMetrics (metrics: IMetrics) (context: HttpContext) =
         { context with Request = { context.Request with Metrics = metrics } }

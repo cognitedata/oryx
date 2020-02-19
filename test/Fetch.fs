@@ -1,10 +1,12 @@
 module Tests.Fetch
 
 open System
+open System.Net
 open System.Net.Http
 open System.Threading
-open System.Net
 open System.Threading.Tasks
+
+open Microsoft.Extensions.Logging
 
 open FSharp.Control.Tasks.V2
 open Swensen.Unquote
@@ -13,7 +15,6 @@ open Xunit
 open Oryx
 
 open Tests.Common
-open Microsoft.Extensions.Logging
 
 [<Fact>]
 let ``Get with return expression is Ok``() = task {
@@ -213,18 +214,20 @@ let ``Get with logging is OK``() = task {
     test <@ metrics.Errors = 0L @>
 }
 
+[<Fact>]
 let ``Post with logging is OK``() = task {
     // Arrange
     let mutable retries = 0
     let logger = new TestLogger<string>()
-    let json = """{ "value": 42 }"""
+    let json = """{ "ping": 42 }"""
+    let msg = "custom message"
 
     let stub =
         Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
         (task {
             retries <- retries + 1
             let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-            responseMessage.Content <- new PushStreamContent("")
+            responseMessage.Content <- new PushStreamContent("""{ "pong": 42 }""")
             return responseMessage
         }))
 
@@ -242,7 +245,7 @@ let ``Post with logging is OK``() = task {
 
     // Act
     let request = req {
-        let! result = post content >=> log
+        let! result = post content >=> logWithMessage msg
         return result
     }
 
@@ -251,15 +254,18 @@ let ``Post with logging is OK``() = task {
 
     // Assert
     test <@ logger.Output.Contains json @>
+    test <@ logger.Output.Contains msg @>
     test <@ Result.isOk result @>
     test <@ retries' = 1 @>
 }
 
+[<Fact>]
 let ``Post with disabled logging does not log``() = task {
     // Arrange
     let mutable retries = 0
     let logger = new TestLogger<string>()
     let json = """{ "value": 42 }"""
+    let msg = "custom message"
 
     let stub =
         Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
@@ -278,12 +284,12 @@ let ``Post with disabled logging does not log``() = task {
         |> Context.setHttpClient client
         |> Context.setUrlBuilder (fun _ -> "http://test.org/")
         |> Context.addHeader ("api-key", "test-key")
-        |> Context.setLogger(logger)
+        |> Context.setLogger logger
         |> Context.setLogLevel LogLevel.None
 
     // Act
     let request = req {
-        let! result = post content >=> log
+        let! result = post content >=> logWithMessage msg
         return result
     }
 
