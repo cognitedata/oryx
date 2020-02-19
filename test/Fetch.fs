@@ -220,6 +220,7 @@ let ``Post with logging is OK``() = task {
     let mutable retries = 0
     let logger = new TestLogger<string>()
     let json = """{ "ping": 42 }"""
+    let msg = "custom message"
 
     let stub =
         Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
@@ -244,7 +245,7 @@ let ``Post with logging is OK``() = task {
 
     // Act
     let request = req {
-        let! result = post content >=> log "post"
+        let! result = post content >=> log msg
         return result
     }
 
@@ -253,6 +254,7 @@ let ``Post with logging is OK``() = task {
 
     // Assert
     test <@ logger.Output.Contains json @>
+    test <@ logger.Output.Contains msg @>
     test <@ Result.isOk result @>
     test <@ retries' = 1 @>
 }
@@ -263,6 +265,7 @@ let ``Post with disabled logging does not log``() = task {
     let mutable retries = 0
     let logger = new TestLogger<string>()
     let json = """{ "value": 42 }"""
+    let msg = "custom message"
 
     let stub =
         Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
@@ -286,7 +289,7 @@ let ``Post with disabled logging does not log``() = task {
 
     // Act
     let request = req {
-        let! result = post content >=> log "post"
+        let! result = post content >=> log msg
         return result
     }
 
