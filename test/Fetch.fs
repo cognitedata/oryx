@@ -6,6 +6,8 @@ open System.Threading
 open System.Net
 open System.Threading.Tasks
 
+open Microsoft.Extensions.Logging
+
 open FSharp.Control.Tasks.V2
 open Swensen.Unquote
 open Xunit
@@ -13,7 +15,6 @@ open Xunit
 open Oryx
 
 open Tests.Common
-open Microsoft.Extensions.Logging
 
 [<Fact>]
 let ``Get with return expression is Ok``() = task {
@@ -199,7 +200,7 @@ let ``Get with logging is OK``() = task {
 
     // Act
     let request = req {
-        let! result = get () >=> log
+        let! result = get () >=> log "request"
         return result
     }
 
@@ -213,18 +214,19 @@ let ``Get with logging is OK``() = task {
     test <@ metrics.Errors = 0L @>
 }
 
+[<Fact>]
 let ``Post with logging is OK``() = task {
     // Arrange
     let mutable retries = 0
     let logger = new TestLogger<string>()
-    let json = """{ "value": 42 }"""
+    let json = """{ "ping": 42 }"""
 
     let stub =
         Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
         (task {
             retries <- retries + 1
             let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-            responseMessage.Content <- new PushStreamContent("")
+            responseMessage.Content <- new PushStreamContent("""{ "pong": 42 }""")
             return responseMessage
         }))
 
@@ -242,7 +244,7 @@ let ``Post with logging is OK``() = task {
 
     // Act
     let request = req {
-        let! result = post content >=> log
+        let! result = post content >=> log "post"
         return result
     }
 
@@ -255,6 +257,7 @@ let ``Post with logging is OK``() = task {
     test <@ retries' = 1 @>
 }
 
+[<Fact>]
 let ``Post with disabled logging does not log``() = task {
     // Arrange
     let mutable retries = 0
@@ -283,7 +286,7 @@ let ``Post with disabled logging does not log``() = task {
 
     // Act
     let request = req {
-        let! result = post content >=> log
+        let! result = post content >=> log "post"
         return result
     }
 

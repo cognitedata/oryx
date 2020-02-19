@@ -7,7 +7,12 @@ open System.Net.Http
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2.ContextInsensitive
-open Microsoft.Extensions.Logging
+
+type HandlerError<'err> =
+    /// Request failed with some exception, e.g HttpClient throws an exception, or JSON decode error.
+    | Panic of exn
+    /// User defined error response.
+    | ResponseError of 'err
 
 type HttpFuncResult<'r, 'err> =  Task<Result<Context<'r>, HandlerError<'err>>>
 
@@ -67,12 +72,6 @@ module Handler =
     // A basic way to set the request URL. Use custom builders for more advanced usage.
     let setUrl<'r, 'err> (url: string) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         setUrlBuilder (fun _ -> url) next context
-
-    let setLogger (logger: ILogger) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
-        next { context with Request = { context.Request with Logger = Some logger } }
-
-    let setLogLevel (logLevel: LogLevel) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
-        next { context with Request = { context.Request with LogLevel = logLevel } }
 
     /// Http GET request. Also clears any content set in the context.
     let GET<'r, 'err> (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
@@ -145,49 +144,3 @@ module Handler =
         return! next { Request = context.Request; Response = Ok values }
     }
 
-    /// Catch handler for catching errors and then delegating to the error handler on what to do.
-    let catch (errorHandler: HandlerError<'err> -> NextFunc<'a, 'r, 'err>) (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> = task {
-        let! result = next ctx
-        match result with
-        | Ok ctx -> return Ok ctx
-        | Error err -> return! errorHandler err ctx
-    }
-
-    /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
-    let withError<'a, 'r, 'err> (errorHandler : HttpResponseMessage -> Task<HandlerError<'err>>) (next: NextFunc<HttpResponseMessage,'r, 'err>) (ctx: HttpContext) : HttpFuncResult<'r, 'err> =
-        task {
-            let response = ctx.Response
-            match response.IsSuccessStatusCode with
-            | true -> return! next ctx
-            | false ->
-                ctx.Request.Metrics.TraceFetchErrorInc 1L
-
-                let! err = errorHandler response
-                return err |> Error
-        }
-
-    /// Logger handler. Needs to be composed in the request after the fetch handler.
-    let log (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
-        let request = ctx.Request
-
-        match request.Logger, request.LogLevel with
-        | _, LogLevel.None -> ()
-        | Some logger, _ ->
-            let uri = request.Extra.TryFind "Url"
-            let content = ctx.Request.ContentBuilder |> Option.map (fun builder -> builder ())
-
-            match (uri, content) with
-            | Some (Url url), Some content ->
-                logger.Log (request.LogLevel, "> {Method} {Url}\n{Content}", request.Method, url, content)
-                content.Dispose ()
-            | Some (Url url), None ->
-                logger.Log (request.LogLevel, "> {Method} {Url}", request.Method, url)
-            | _, Some content ->
-                logger.Log (request.LogLevel, ">\n{Content}", content)
-                content.Dispose ()
-            | _, _ ->
-                logger.Log (request.LogLevel, ">")
-
-            logger.Log (request.LogLevel, "<\n{content}", ctx.Response)
-        | _ -> ()
-        next ctx
