@@ -72,7 +72,7 @@ module Context =
     let lazyContent content = Some <| fun () -> content
 
 
-    let defaultLogFormat = "Oryx: {Msg} {Method} {Uri} > \n{Content}{Response}"
+    let defaultLogFormat = "Oryx: {Message} {HttpMethod} {Uri} > \n{RequestContent}{ResponseContent}"
 
     /// Default context to use.
     let defaultRequest =

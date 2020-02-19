@@ -245,7 +245,7 @@ let ``Post with logging is OK``() = task {
 
     // Act
     let request = req {
-        let! result = post content >=> logWithMsg msg
+        let! result = post content >=> logWithMessage msg
         return result
     }
 
@@ -289,7 +289,7 @@ let ``Post with disabled logging does not log``() = task {
 
     // Act
     let request = req {
-        let! result = post content >=> logWithMsg msg
+        let! result = post content >=> logWithMessage msg
         return result
     }
 

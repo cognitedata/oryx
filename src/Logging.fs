@@ -21,7 +21,7 @@ module Logging =
     let private reqex = Regex(@"\{(.+?)\}", RegexOptions.Multiline)
 
     /// Logger handler with message. Needs to be composed in the request after the fetch handler.
-    let logWithMsg (msg: string) (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
+    let logWithMessage (msg: string) (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
         let request = ctx.Request
 
         match request.Logger, request.LogLevel with
@@ -37,8 +37,8 @@ module Logging =
                 |> Seq.cast
                 |> Seq.map (fun (matche: Match) ->
                     match matche.Groups.[1].Value with
-                    | "Method" -> box request.Method
-                    | "Content" ->
+                    | "HttpMethod" -> box request.Method
+                    | "RequestContent" ->
                         ctx.Request.ContentBuilder
                         |> Option.map (fun builder -> builder ())
                         |> Option.toObj :> _
@@ -50,8 +50,8 @@ module Logging =
                             match opt with
                             | Some (Number value) -> box value
                             | _ -> null)
-                    | "Response" -> ctx.Response :> _
-                    | "Msg" -> msg :> _
+                    | "ResponseContent" -> ctx.Response :> _
+                    | "Message" -> msg :> _
                     | _ -> String.Empty :> _
                 )
                 |> Array.ofSeq
@@ -61,4 +61,4 @@ module Logging =
 
     /// Logger handler. Needs to be composed in the request after the fetch handler.
     let log (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
-        logWithMsg String.Empty next ctx
+        logWithMessage String.Empty next ctx
