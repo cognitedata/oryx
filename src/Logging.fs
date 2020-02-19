@@ -11,26 +11,11 @@ open Microsoft.Extensions.Logging
 [<AutoOpen>]
 module Logging =
 
-    let convert (format: string) (values: Map<string, obj>) =
-        let matches = Regex.Matches(format, @"\{(.+?)\}")
-        let valueArray =
-            matches
-            |> Seq.cast
-            |> Seq.map (fun (matche: Match) ->
-                let name = matche.Groups.[1].Value
-                if values.ContainsKey name then values.[name]
-                else String.Empty :> _
-            )
-            |> Array.ofSeq
-
-        valueArray
-
     let setLogger (logger: ILogger) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with Logger = Some logger } }
 
     let setLogLevel (logLevel: LogLevel) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with LogLevel = logLevel } }
-
 
     // Pre-compiled
     let private reqex = Regex(@"\{(.+?)\}", RegexOptions.Multiline)
