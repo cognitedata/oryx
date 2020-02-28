@@ -315,7 +315,7 @@ You can also use a custom log format string by setting the log format using `set
 - `RequestContent` - The request content being sent. Must implement `ToString` to give meaningful output.
 - `Url` - The URL used for fetching.
 
-**Note:** Oryx will not not call `.ToString ()` but will hand it over to the `ILogger` for the actual string interpolation, given that the message will actually end up being logged.
+**Note:** Oryx will not call `.ToString ()` but will hand it over to the `ILogger` for the actual string interpolation, given that the message will actually end up being logged.
 
 There are to logging handlers. One without a message and one where you can supply a custom message that may be added to the logging output (see format string). The logging handlers do not alter the types of the pipeline and may be composed anywhere. But to give meaningful output they should be composed after fetching (`fetch`).
 
