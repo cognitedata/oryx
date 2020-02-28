@@ -23,7 +23,7 @@ module Error =
             match response.IsSuccessStatusCode with
             | true -> return! next ctx
             | false ->
-                ctx.Request.Metrics.TraceFetchErrorInc 1L
+                ctx.Request.Metrics.Counter Metric.FetchErrorInc Map.empty 1L
 
                 let! err = errorHandler response
                 return err |> Error

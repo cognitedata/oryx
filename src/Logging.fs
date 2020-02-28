@@ -3,7 +3,6 @@
 namespace Oryx
 
 open System
-open System.Collections.Generic
 open System.Net.Http
 open System.Text.RegularExpressions
 open Microsoft.Extensions.Logging
@@ -18,7 +17,7 @@ module Logging =
         next { context with Request = { context.Request with LogLevel = logLevel } }
 
     // Pre-compiled
-    let private reqex = Regex(@"\{(.+?)\}", RegexOptions.Multiline)
+    let private reqex = Regex(@"\{(.+?)\}", RegexOptions.Multiline ||| RegexOptions.Compiled)
 
     /// Logger handler with message. Needs to be composed in the request after the fetch handler.
     let logWithMessage (msg: string) (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
@@ -52,7 +51,12 @@ module Logging =
                             | _ -> null)
                     | "ResponseContent" -> ctx.Response :> _
                     | "Message" -> msg :> _
-                    | _ -> String.Empty :> _
+                    | key ->
+                        // Look for the key in the extra info. This enables custom HTTP handlers to add custom
+                        // placeholders to the format string.
+                        match ctx.Request.Extra.TryFind key with
+                        | Some value -> value :> _
+                        | _ -> String.Empty :> _
                 )
                 |> Array.ofSeq
             logger.Log (request.LogLevel, format, valueArray)

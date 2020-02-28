@@ -121,7 +121,7 @@ module Handler =
                 return! next { Request = ctx.Request; Response = a }
             with
             | ex ->
-                ctx.Request.Metrics.TraceDecodeErrorInc 1L
+                ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
                 return Error (Panic ex)
         }
 
@@ -133,7 +133,7 @@ module Handler =
                 return! next { Request = ctx.Request; Response = a }
             with
             | ex ->
-                ctx.Request.Metrics.TraceDecodeErrorInc 1L
+                ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
                 return Error (Panic ex)
         }
 

@@ -34,7 +34,7 @@ module Retry =
         | Error err ->
             if shouldRetry err && maxRetries > 0 then
                 do! int initialDelay |> Async.Sleep
-                ctx.Request.Metrics.TraceFetchRetryInc 1L
+                ctx.Request.Metrics.Counter Metric.FetchRetryInc Map.empty 1L
                 return! retry shouldRetry nextDelay (maxRetries - 1) next ctx
             else
                 return result

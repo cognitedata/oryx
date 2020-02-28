@@ -1,10 +1,12 @@
 module Tests.Common
 
 open System
+open System.Collections.Generic
 open System.IO
 open System.Net.Http
 open System.Net
 open System.Net.Http.Headers
+open System.Text
 open System.Threading
 open System.Threading.Tasks
 
@@ -13,7 +15,6 @@ open FSharp.Control.Tasks.V2
 open Oryx
 open Oryx.Retry
 open Microsoft.Extensions.Logging
-open System.Text
 
 type StringableContent (content: string) =
     inherit StringContent (content)
@@ -148,17 +149,16 @@ type TestMetrics () =
     member val DecodeErrors = 0L with get, set
 
     interface IMetrics with
-        member this.TraceFetchInc inc =
-            this.Fetches <- this.Fetches + inc
+        member this.Counter (metric: string) (labels: IDictionary<string, string>) (increase: int64) =
+            match metric with
+            | Metric.FetchInc -> this.Fetches <- this.Fetches + increase
+            | Metric.FetchErrorInc -> this.Errors <- this.Errors + increase
+            | Metric.FetchRetryInc -> this.Retries <- this.Retries + increase
+            | Metric.DecodeErrorInc -> this.DecodeErrors <- this.DecodeErrors + increase
+            | _ -> ()
 
-        member this.TraceFetchErrorInc inc =
-            this.Errors <- this.Errors + inc
+        member this.Gauge (metric: string) (labels: IDictionary<string, string>) (update: float) =
+            match metric with
+            | Metric.FetchLatencyUpdate -> this.Latency <- int64 update
+            | _ -> ()
 
-        member this.TraceFetchRetryInc inc =
-            this.Retries <- this.Retries + inc
-
-        member this.TraceFetchLatencyUpdate msecs =
-            this.Latency <- msecs
-
-        member this.TraceDecodeErrorInc inc =
-            this.DecodeErrors <- this.DecodeErrors + inc
