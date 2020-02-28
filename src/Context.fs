@@ -71,8 +71,7 @@ module Context =
     /// Note that lazy content may not work with retry, logging etc where content may have been disposed.
     let lazyContent content = Some <| fun () -> content
 
-
-    let defaultLogFormat = "Oryx: {Message} {HttpMethod} {Uri} > \n{RequestContent}{ResponseContent}"
+    let defaultLogFormat = "Oryx: {Message} {HttpMethod} {Uri}\n→ {RequestContent}\n← {ResponseContent}"
 
     /// Default context to use.
     let defaultRequest =
@@ -93,8 +92,7 @@ module Context =
             Extra = Map.empty
         }
 
-    let defaultResult =
-        new HttpResponseMessage (HttpStatusCode.NotFound)
+    let defaultResult = new HttpResponseMessage (HttpStatusCode.NotFound)
 
     let defaultContext : Context<HttpResponseMessage> = {
         Request = defaultRequest
