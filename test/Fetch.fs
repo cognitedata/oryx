@@ -35,7 +35,7 @@ let ``Get with return expression is Ok``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
+        |> Context.withHttpClient client
         |> Context.withUrlBuilder (fun _ -> "http://test.org/")
         |> Context.withHeader ("api-key", "test-key")
 
@@ -73,7 +73,7 @@ let ``Post url encoded with return expression is Ok``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
+        |> Context.withHttpClient client
         |> Context.withUrlBuilder (fun _ -> "http://test.org/")
         |> Context.withHeader ("api-key", "test-key")
 
@@ -112,7 +112,7 @@ let ``Fetch with retry is Ok``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
+        |> Context.withHttpClient client
         |> Context.withUrlBuilder (fun _ -> "http://test.org/")
         |> Context.withHeader ("api-key", "test-key")
         |> Context.withMetrics metrics
@@ -151,7 +151,7 @@ let ``Fetch with retry on internal error will retry``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
+        |> Context.withHttpClient client
         |> Context.withUrlBuilder (fun _ -> "http://test.org/")
         |> Context.withHeader ("api-key", "test-key")
         |> Context.withMetrics metrics
@@ -191,7 +191,7 @@ let ``Get with logging is OK``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
+        |> Context.withHttpClient client
         |> Context.withUrlBuilder (fun _ -> "http://test.org/")
         |> Context.withHeader ("api-key", "test-key")
         |> Context.withMetrics metrics
@@ -236,7 +236,7 @@ let ``Post with logging is OK``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
+        |> Context.withHttpClient client
         |> Context.withUrlBuilder (fun _ -> "http://test.org/")
         |> Context.withHeader ("api-key", "test-key")
         |> Context.withLogger(logger)
@@ -281,7 +281,7 @@ let ``Post with disabled logging does not log``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
+        |> Context.withHttpClient client
         |> Context.withUrlBuilder (fun _ -> "http://test.org/")
         |> Context.withHeader ("api-key", "test-key")
         |> Context.withLogger logger

@@ -32,7 +32,7 @@ let ``Adding a bearer token to a context creates a context with that token`` tok
 [<Property>]
 let ``Adding http client creates a context with that http client`` () =
     let client = new HttpClient()
-    let ctx = Context.defaultContext |> Context.setHttpClient client
+    let ctx = Context.defaultContext |> Context.withHttpClient client
     ctx.Request.HttpClient () = client
 
 [<Property>]

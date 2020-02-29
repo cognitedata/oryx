@@ -66,11 +66,7 @@ module ClassicHandler =
         withUrlBuilder (fun _ -> url) context
 
     let fetch<'err> (ctx: HttpContext) : HttpFuncResultClassic<HttpResponseMessage, 'err> =
-        let client =
-            match ctx.Request.HttpClient with
-            | Some client -> client
-            | None -> failwith "Must set httpClient"
-
+        let client = ctx.Request.HttpClient ()
         use source = new CancellationTokenSource()
         let cancellationToken =
             match ctx.Request.CancellationToken with

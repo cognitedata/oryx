@@ -121,7 +121,7 @@ module Context =
         { context with Request = { context.Request with Headers = header :: context.Request.Headers  } }
 
     /// Set the HTTP client to use for the requests.
-    let setHttpClient (client: HttpClient) (context: HttpContext) =
+    let withHttpClient (client: HttpClient) (context: HttpContext) =
         { context with Request = { context.Request with HttpClient = (fun () -> client) } }
 
     /// Set the HTTP client factory to use for the requests.

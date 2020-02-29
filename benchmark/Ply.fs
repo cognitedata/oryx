@@ -67,15 +67,11 @@ module Handler =
             return Ok { context with Request = { context.Request with UrlBuilder = builder } }
         }
 
-    let setUrl<'r, 'err> (url: string) (context: HttpContext) =
+    let withUrl<'r, 'err> (url: string) (context: HttpContext) =
         withUrlBuilder (fun _ -> url) context
 
     let fetch<'err> (ctx: HttpContext) : HttpFuncResultPly<HttpResponseMessage, 'err> =
-        let client =
-            match ctx.Request.HttpClient with
-            | Some client -> client
-            | None -> failwith "Must set httpClient"
-
+        let client = ctx.Request.HttpClient ()
         use source = new CancellationTokenSource()
         let cancellationToken =
             match ctx.Request.CancellationToken with
@@ -118,7 +114,7 @@ module Handler =
 
     let get () =
         GET
-        >=> setUrl "http://test"
+        >=> withUrl "http://test"
         >=> fetch
         >=> withError decodeError
         >=> json decoder

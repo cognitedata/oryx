@@ -42,7 +42,7 @@ type JsonBenchmark () =
 
         ctx <-
             Context.defaultContext
-            |> Context.setHttpClient client
+            |> Context.withHttpClient client
             |> Context.withUrlBuilder (fun _ -> "http://test.org/")
             |> Context.withHeader ("api-key", "test-key")
 
