@@ -103,7 +103,7 @@ let json (next: NextFunc<string, 'c, 'err>) (ctx: Context<HttpResponseMessage>) 
 
 let get () =
     GET
-    >=> withUrl "http://test"
+    >=> withUrl "http://test.org"
     >=> withQuery [ struct ("debug", "true") ]
     >=> fetch
     >=> withError errorHandler
@@ -111,7 +111,6 @@ let get () =
 
 let post content =
     POST
-    >=> withUrl "http://test"
     >=> withResponseType JsonValue
     >=> withContent content
     >=> fetch
