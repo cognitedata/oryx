@@ -208,6 +208,7 @@ let ``Get with logging is OK``() = task {
 
     // Assert
     test <@ logger.Output.Contains json @>
+    test <@ logger.Output.Contains "http://test.org" @>
     test <@ Result.isOk result @>
     test <@ metrics.Retries = 0L @>
     test <@ metrics.Fetches = 1L @>
@@ -237,7 +238,7 @@ let ``Post with logging is OK``() = task {
     let ctx =
         Context.defaultContext
         |> Context.withHttpClientFactory (fun () -> client)
-        |> Context.withUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.withUrlBuilder (fun _ -> "http://testing.org/")
         |> Context.withHeader ("api-key", "test-key")
         |> Context.withLogger(logger)
         |> Context.withLogLevel LogLevel.Debug
@@ -255,6 +256,7 @@ let ``Post with logging is OK``() = task {
     // Assert
     test <@ logger.Output.Contains json @>
     test <@ logger.Output.Contains msg @>
+    test <@ logger.Output.Contains "http://testing.org" @>
     test <@ Result.isOk result @>
     test <@ retries' = 1 @>
 }

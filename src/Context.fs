@@ -75,7 +75,7 @@ module Context =
         let version = Assembly.GetExecutingAssembly().GetName().Version
         {| Major=version.Major; Minor=version.Minor; Build=version.Build |}
 
-    let defaultLogFormat = "Oryx: {Message} {HttpMethod} {Uri}\n→ {RequestContent}\n← {ResponseContent}"
+    let defaultLogFormat = "Oryx: {Message} {HttpMethod} {Url}\n→ {RequestContent}\n← {ResponseContent}"
 
     /// Default context to use.
     let defaultRequest =
