@@ -75,9 +75,6 @@ module Context =
         let version = Assembly.GetExecutingAssembly().GetName().Version
         {| Major=version.Major; Minor=version.Minor; Build=version.Build |}
 
-    /// Note that lazy content may not work with retry, logging etc where content may have been disposed.
-    let lazyContent content = Some <| fun () -> content
-
     let defaultLogFormat = "Oryx: {Message} {HttpMethod} {Uri}\n→ {RequestContent}\n← {ResponseContent}"
 
     /// Default context to use.
