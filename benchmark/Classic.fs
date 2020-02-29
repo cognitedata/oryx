@@ -59,11 +59,11 @@ module ClassicHandler =
                 return err |> Error
         }
 
-    let setUrlBuilder<'r, 'err> (builder: UrlBuilder) (context: HttpContext) =
+    let withUrlBuilder<'r, 'err> (builder: UrlBuilder) (context: HttpContext) =
         Ok { context with Request = { context.Request with UrlBuilder = builder } } |> Task.FromResult
 
     let setUrl<'r, 'err> (url: string) (context: HttpContext) =
-        setUrlBuilder (fun _ -> url) context
+        withUrlBuilder (fun _ -> url) context
 
     let fetch<'err> (ctx: HttpContext) : HttpFuncResultClassic<HttpResponseMessage, 'err> =
         let client =

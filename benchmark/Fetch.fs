@@ -47,8 +47,8 @@ type FetchBenchmark () =
         ctx <-
             Context.defaultContext
             |> Context.setHttpClient client
-            |> Context.setUrlBuilder (fun _ -> "http://test.org/")
-            |> Context.addHeader ("api-key", "test-key")
+            |> Context.withUrlBuilder (fun _ -> "http://test.org/")
+            |> Context.withHeader ("api-key", "test-key")
 
 
     [<Benchmark(Description = "Oryx", Baseline = true)>]

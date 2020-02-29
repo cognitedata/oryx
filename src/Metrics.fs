@@ -20,3 +20,10 @@ type EmptyMetrics () =
     interface IMetrics with
         member _.Counter _ _ _ = ()
         member _.Gauge _ _ _ = ()
+
+
+type Update<'a> =
+    | Set of 'a
+    | SetNull
+    | Add of 'a
+    | Remove of 'a

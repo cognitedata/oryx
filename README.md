@@ -295,18 +295,18 @@ let runAsync (handler: HttpHandler<'a,'r,'r, 'err>) (ctx : Context<'a>) : Task<R
 Oryx supports logging using the logging handlers. To setup for logging you first need to enable logging in the context by both setting a logger of type `ILogger` ([Microsoft.Extensions.Logging](https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.ilogger?view=dotnet-plat-ext-3.1)) and the logging level to something higher than `LogLevel.None`.
 
 ```fs
-val setLogger : (logger: ILogger) -> (context: HttpContext) -> (context: HttpContext)
+val withLogger : (logger: ILogger) -> (context: HttpContext) -> (context: HttpContext)
 
-val setLogLevel : (logLevel: LogLevel) -> (context: HttpContext) -> (context: HttpContext)
+val withLogLevel : (logLevel: LogLevel) -> (context: HttpContext) -> (context: HttpContext)
 
-val setLogFormat (format: string) (context: HttpContext) -> (context: HttpContext)
+val withLogFormat (format: string) (context: HttpContext) -> (context: HttpContext)
 ```
 
 The default format string is:
 
 `"Oryx: {Message} {HttpMethod} {Uri}\n{RequestContent}\n{ResponseContent}"`
 
-You can also use a custom log format string by setting the log format using `setLogFormat`. The available place holders you may use are:
+You can also use a custom log format string by setting the log format using `withLogFormat`. The available place holders you may use are:
 
 - `Elapsed` - The elapsed request time for `fetch` in milliseconds.
 - `HttpMethod` - The HTTP method used, i.e `PUT`, `GET`, `POST`, `DELETE` or `PATCH`.

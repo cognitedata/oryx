@@ -62,13 +62,13 @@ module Handler =
                 return err |> Error
         }
 
-    let setUrlBuilder<'r, 'err> (builder: UrlBuilder) (context: HttpContext) =
+    let withUrlBuilder<'r, 'err> (builder: UrlBuilder) (context: HttpContext) =
         uply {
             return Ok { context with Request = { context.Request with UrlBuilder = builder } }
         }
 
     let setUrl<'r, 'err> (url: string) (context: HttpContext) =
-        setUrlBuilder (fun _ -> url) context
+        withUrlBuilder (fun _ -> url) context
 
     let fetch<'err> (ctx: HttpContext) : HttpFuncResultPly<HttpResponseMessage, 'err> =
         let client =

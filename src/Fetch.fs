@@ -52,10 +52,7 @@ module Fetch =
 
     let fetch<'r, 'err> (next: NextFunc<HttpResponseMessage, 'r, 'err>) (ctx: HttpContext) : HttpFuncResult<'r, 'err> =
         let timer = Stopwatch ()
-        let client =
-            match ctx.Request.HttpClient with
-            | Some client -> client
-            | None -> failwith "Must set httpClient"
+        let client = ctx.Request.HttpClient ()
 
         use source = new CancellationTokenSource()
         let cancellationToken =
