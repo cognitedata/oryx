@@ -106,9 +106,9 @@ This enables you to compose your web requests and decode the response, e.g as we
         let url = Url +/ "list"
 
         POST
-        >=> setVersion V10
-        >=> setResource url
-        >=> setContent (() -> new JsonPushStreamContent<AssetQuery>(query, jsonOptions))
+        >=> withVersion V10
+        >=> withResource url
+        >=> withContent (() -> new JsonPushStreamContent<AssetQuery>(query, jsonOptions))
         >=> fetch
         >=> withError decodeError
         >=> json jsonOptions
@@ -348,14 +348,14 @@ Labels are currently not set but are added for future use, e.g setting the error
 It's easy to extend Oryx with your own HTTP handlers.
 
 ```fs
-let setResource (resource: string) (next: NextFunc<_,_>) (context: HttpContext) =
+let withResource (resource: string) (next: NextFunc<_,_>) (context: HttpContext) =
     next { context with Request = { context.Request with Extra = context.Request.Extra.Add("resource", String resource) } }
 
-let setVersion (version: ApiVersion) (next: NextFunc<_,_>) (context: HttpContext) =
+let withVersion (version: ApiVersion) (next: NextFunc<_,_>) (context: HttpContext) =
     next { context with Request = { context.Request with Extra = context.Request.Extra.Add("apiVersion", String (version.ToString ())) } }
 ```
 
-The handlers above will add custom values to the context that may be used by the supplied URL builder.
+The handlers above will add custom values to the context that may be used by the supplied URL builder. Note that anything added to the `Extra` property bag is also available as place-holders in the logging format string.
 
 ```fs
 let urlBuilder (request: HttpRequest) : string =

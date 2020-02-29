@@ -51,26 +51,26 @@ module Handler =
 
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
-    let addQuery (query: struct (string * string) seq) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withQuery (query: struct (string * string) seq) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with Query = query } }
 
     /// Add content builder to context. These content will be added to the HTTP body of
     /// requests that uses this context.
-    let setContent (builder: unit -> HttpContent) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withContent (builder: unit -> HttpContent) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with ContentBuilder = Some builder } }
 
-    let setResponseType (respType: ResponseType) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withResponseType (respType: ResponseType) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with ResponseType = respType }}
 
     /// Set the method to be used for requests using this context.
-    let setMethod<'r, 'err> (method: HttpMethod) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withMethod<'r, 'err> (method: HttpMethod) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with Method = method } }
 
     let withUrlBuilder<'r, 'err> (builder: UrlBuilder) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with UrlBuilder = builder } }
 
     // A basic way to set the request URL. Use custom builders for more advanced usage.
-    let setUrl<'r, 'err> (url: string) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withUrl<'r, 'err> (url: string) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         withUrlBuilder (fun _ -> url) next context
 
     /// Http GET request. Also clears any content set in the context.
@@ -78,9 +78,9 @@ module Handler =
         next { context with Request = { context.Request with Method = HttpMethod.Get; ContentBuilder = None } }
 
     /// Http POST request.
-    let POST<'r, 'err> = setMethod<'r, 'err> HttpMethod.Post
+    let POST<'r, 'err> = withMethod<'r, 'err> HttpMethod.Post
     /// Http DELETE request.
-    let DELETE<'r, 'err> = setMethod<'r, 'err> HttpMethod.Delete
+    let DELETE<'r, 'err> = withMethod<'r, 'err> HttpMethod.Delete
 
     /// Run list of HTTP handlers concurrently.
     let concurrent (handlers : HttpHandler<'a, 'b, 'b, 'err> seq) (next: NextFunc<'b list, 'r, 'err>) (ctx: Context<'a>) : HttpFuncResult<'r, 'err> = task {

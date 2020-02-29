@@ -78,7 +78,6 @@ let apiError msg (next: NextFunc<'b, 'c, 'err>) (_: Context<'a>) : HttpFuncResul
 let error msg (next: NextFunc<'b, 'c, 'err>) (_: Context<'a>) : HttpFuncResult<'c, TestError> =
    TestException msg |> Panic |> Error |> Task.FromResult
 
-
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
 let badRequestHandler<'a, 'b> (response: 'b) (error: HandlerError<TestError>) (ctx : Context<'a>) = task {
     match error with
@@ -102,20 +101,19 @@ let errorHandler (response : HttpResponseMessage) = task {
 let json (next: NextFunc<string, 'c, 'err>) (ctx: Context<HttpResponseMessage>) : HttpFuncResult<'c, 'err> =
     parseAsync (fun stream -> task { return! ctx.Response.Content.ReadAsStringAsync () }) next ctx
 
-
 let get () =
     GET
-    >=> setUrl "http://test"
-    >=> addQuery [ struct ("debug", "true") ]
+    >=> withUrl "http://test"
+    >=> withQuery [ struct ("debug", "true") ]
     >=> fetch
     >=> withError errorHandler
     >=> json
 
 let post content =
     POST
-    >=> setUrl "http://test"
-    >=> setResponseType JsonValue
-    >=> setContent content
+    >=> withUrl "http://test"
+    >=> withResponseType JsonValue
+    >=> withContent content
     >=> fetch
     >=> withError errorHandler
     >=> json

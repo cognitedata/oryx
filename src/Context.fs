@@ -23,6 +23,13 @@ type Value =
     | Number of int64
     | Url of Uri
 
+    // Give proper output for logging
+    override x.ToString () =
+        match x with
+        | String str -> str
+        | Number num -> num.ToString ()
+        | Url uri -> uri.ToString ()
+
 type PropertyBag = Map<string, Value>
 type UrlBuilder = HttpRequest -> string
 
