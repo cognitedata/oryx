@@ -35,9 +35,9 @@ let ``Get with return expression is Ok``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
-        |> Context.setUrlBuilder (fun _ -> "http://test.org/")
-        |> Context.addHeader ("api-key", "test-key")
+        |> Context.withHttpClient client
+        |> Context.withUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.withHeader ("api-key", "test-key")
 
     // Act
     let request = req {
@@ -73,9 +73,9 @@ let ``Post url encoded with return expression is Ok``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
-        |> Context.setUrlBuilder (fun _ -> "http://test.org/")
-        |> Context.addHeader ("api-key", "test-key")
+        |> Context.withHttpClient client
+        |> Context.withUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.withHeader ("api-key", "test-key")
 
     let query = Seq.singleton ("foo", "bar")
     let content = FormUrlEncodedContent.FromTuples query
@@ -112,10 +112,10 @@ let ``Fetch with retry is Ok``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
-        |> Context.setUrlBuilder (fun _ -> "http://test.org/")
-        |> Context.addHeader ("api-key", "test-key")
-        |> Context.setMetrics metrics
+        |> Context.withHttpClient client
+        |> Context.withUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.withHeader ("api-key", "test-key")
+        |> Context.withMetrics metrics
 
     // Act
     let request =
@@ -151,10 +151,10 @@ let ``Fetch with retry on internal error will retry``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
-        |> Context.setUrlBuilder (fun _ -> "http://test.org/")
-        |> Context.addHeader ("api-key", "test-key")
-        |> Context.setMetrics metrics
+        |> Context.withHttpClient client
+        |> Context.withUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.withHeader ("api-key", "test-key")
+        |> Context.withMetrics metrics
 
     // Act
     let request =
@@ -191,12 +191,12 @@ let ``Get with logging is OK``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
-        |> Context.setUrlBuilder (fun _ -> "http://test.org/")
-        |> Context.addHeader ("api-key", "test-key")
-        |> Context.setMetrics metrics
-        |> Context.setLogger logger
-        |> Context.setLogLevel LogLevel.Debug
+        |> Context.withHttpClient client
+        |> Context.withUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.withHeader ("api-key", "test-key")
+        |> Context.withMetrics metrics
+        |> Context.withLogger logger
+        |> Context.withLogLevel LogLevel.Debug
 
     // Act
     let request = req {
@@ -236,11 +236,11 @@ let ``Post with logging is OK``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
-        |> Context.setUrlBuilder (fun _ -> "http://test.org/")
-        |> Context.addHeader ("api-key", "test-key")
-        |> Context.setLogger(logger)
-        |> Context.setLogLevel LogLevel.Debug
+        |> Context.withHttpClientFactory (fun () -> client)
+        |> Context.withUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.withHeader ("api-key", "test-key")
+        |> Context.withLogger(logger)
+        |> Context.withLogLevel LogLevel.Debug
 
 
     // Act
@@ -281,11 +281,11 @@ let ``Post with disabled logging does not log``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.setHttpClient client
-        |> Context.setUrlBuilder (fun _ -> "http://test.org/")
-        |> Context.addHeader ("api-key", "test-key")
-        |> Context.setLogger logger
-        |> Context.setLogLevel LogLevel.None
+        |> Context.withHttpClient client
+        |> Context.withUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.withHeader ("api-key", "test-key")
+        |> Context.withLogger logger
+        |> Context.withLogLevel LogLevel.None
 
     // Act
     let request = req {

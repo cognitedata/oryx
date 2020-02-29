@@ -64,7 +64,7 @@ let noop (next: NextFunc<int, int, 'err>) (ctx: Context<'a>) : HttpFuncResult<in
 
 let get () =
     GET
-    >=> setUrl "http://test"
+    >=> withUrl "http://test"
     >=> fetch
     >=> withError decodeError
     >=> json decoder
@@ -74,7 +74,7 @@ let get () =
 let getList () =
 
     GET
-    >=> setUrl "http://test"
+    >=> withUrl "http://test"
     >=> fetch
     >=> withError decodeError
     >=> json listDecoder
@@ -126,7 +126,7 @@ let jsonReader<'a, 'r, 'err> (reader: Stream -> Task<Result<'a, string>>) (next:
 
 let getJson (reader: Stream -> Task<Result<TestType seq, string>>) : HttpHandler<HttpResponseMessage, TestType seq, 'b, TestError> =
     GET
-    >=> setUrl "http://test"
+    >=> withUrl "http://test"
     >=> fetch
     >=> withError decodeError
     >=> jsonReader reader

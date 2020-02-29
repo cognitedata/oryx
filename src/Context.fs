@@ -23,12 +23,19 @@ type Value =
     | Number of int64
     | Url of Uri
 
+    // Give proper output for logging
+    override x.ToString () =
+        match x with
+        | String str -> str
+        | Number num -> num.ToString ()
+        | Url uri -> uri.ToString ()
+
 type PropertyBag = Map<string, Value>
 type UrlBuilder = HttpRequest -> string
 
 and HttpRequest = {
     /// HTTP client to use for sending the request.
-    HttpClient: HttpClient option
+    HttpClient: unit -> HttpClient
     /// HTTP method to be used.
     Method: HttpMethod
     /// Getter for content to be sent as body of the request. We use a getter so content may be re-created for retries.
@@ -68,16 +75,13 @@ module Context =
         let version = Assembly.GetExecutingAssembly().GetName().Version
         {| Major=version.Major; Minor=version.Minor; Build=version.Build |}
 
-    /// Note that lazy content may not work with retry, logging etc where content may have been disposed.
-    let lazyContent content = Some <| fun () -> content
-
     let defaultLogFormat = "Oryx: {Message} {HttpMethod} {Uri}\n→ {RequestContent}\n← {ResponseContent}"
 
     /// Default context to use.
     let defaultRequest =
         let ua = sprintf "Oryx / v%d.%d.%d (Cognite)" version.Major version.Minor version.Build
         {
-            HttpClient = None
+            HttpClient = (fun () -> failwith "Must set HttpClient")
             Method = HttpMethod.Get
             ContentBuilder = None
             Query = List.empty
@@ -94,37 +98,53 @@ module Context =
 
     let defaultResult = new HttpResponseMessage (HttpStatusCode.NotFound)
 
+    /// The default context.
     let defaultContext : Context<HttpResponseMessage> = {
         Request = defaultRequest
         Response = defaultResult
     }
 
     /// Add HTTP header to context.
-    let addHeader (header: string*string) (context: HttpContext) =
+    let withHeader (header: string*string) (context: HttpContext) =
         { context with Request = { context.Request with Headers = header :: context.Request.Headers  } }
 
+    /// Add a list of headers to the context.
+    let withHeaders (headers: (string*string) list) (context: HttpContext) =
+        { context with Request = { context.Request with Headers = List.append headers context.Request.Headers } }
+
     /// Helper for setting Bearer token as Authorization header.
-    let setToken (token: string) (context: HttpContext) =
+    let withBearerToken (token: string) (context: HttpContext) =
         let header = ("Authorization", sprintf "Bearer %s" token)
         { context with Request = { context.Request with Headers = header :: context.Request.Headers  } }
 
-    let setHttpClient (client: HttpClient) (context: HttpContext) =
-        { context with Request = { context.Request with HttpClient = Some client } }
+    /// Set the HTTP client to use for the requests.
+    let withHttpClient (client: HttpClient) (context: HttpContext) =
+        { context with Request = { context.Request with HttpClient = (fun () -> client) } }
 
-    let setUrlBuilder (builder: HttpRequest -> string) (context: HttpContext) =
+    /// Set the HTTP client factory to use for the requests.
+    let withHttpClientFactory (factory: unit -> HttpClient) (context: HttpContext) =
+        { context with Request = { context.Request with HttpClient = factory } }
+
+    /// Set the URL builder to use.
+    let withUrlBuilder (builder: HttpRequest -> string) (context: HttpContext) =
         { context with Request = { context.Request with UrlBuilder = builder } }
 
-    let setCancellationToken (token: CancellationToken) (context: HttpContext) =
+    /// Set a cancellation token to use for the requests.
+    let withCancellationToken (token: CancellationToken) (context: HttpContext) =
         { context with Request = { context.Request with CancellationToken = Some token } }
 
-    let setLogger (logger: ILogger) (context: HttpContext) =
+    /// Set the logger (ILogger) to use.
+    let withLogger (logger: ILogger) (context: HttpContext) =
         { context with Request = { context.Request with Logger = Some logger } }
 
-    let setLogLevel (logLevel: LogLevel) (context: HttpContext) =
+    /// Set the log level to use (default is LogLevel.None).
+    let withLogLevel (logLevel: LogLevel) (context: HttpContext) =
         { context with Request = { context.Request with LogLevel = logLevel } }
 
-    let setLogFormat (format: string) (context: HttpContext) =
+    /// Set the log format to use.
+    let withLogFormat (format: string) (context: HttpContext) =
         { context with Request = { context.Request with LogFormat = format } }
 
-    let setMetrics (metrics: IMetrics) (context: HttpContext) =
+    /// Set the metrics (IMetrics) to use.
+    let withMetrics (metrics: IMetrics) (context: HttpContext) =
         { context with Request = { context.Request with Metrics = metrics } }
