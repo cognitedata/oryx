@@ -50,6 +50,8 @@ module Fetch =
         | None -> ()
         request
 
+    /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{RequestContent}` and `{Elapsed}`
+    /// to the log format.
     let fetch<'r, 'err> (next: NextFunc<HttpResponseMessage, 'r, 'err>) (ctx: HttpContext) : HttpFuncResult<'r, 'err> =
         let timer = Stopwatch ()
         let client = ctx.Request.HttpClient ()
@@ -70,8 +72,8 @@ module Fetch =
                 let! response = client.SendAsync (request, cancellationToken)
                 timer.Stop ()
                 ctx.Request.Metrics.Gauge Metric.FetchLatencyUpdate Map.empty (float timer.ElapsedMilliseconds)
-
-                let! result = next { ctx with Response = response; Request = { ctx.Request with Extra = ctx.Request.Extra.Add("Url", Url request.RequestUri) } }
+                let extra = ctx.Request.Extra.Add("Url", Url request.RequestUri).Add("Elapsed", Number timer.ElapsedMilliseconds)
+                let! result = next { ctx with Response = response; Request = { ctx.Request with Extra = extra }}
                 response.Dispose ()
                 return result
             with

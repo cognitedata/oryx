@@ -236,7 +236,7 @@ let ``Post with logging is OK``() = task {
 
     let ctx =
         Context.defaultContext
-        |> Context.withHttpClient client
+        |> Context.withHttpClientFactory (fun () -> client)
         |> Context.withUrlBuilder (fun _ -> "http://test.org/")
         |> Context.withHeader ("api-key", "test-key")
         |> Context.withLogger(logger)

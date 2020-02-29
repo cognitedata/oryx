@@ -41,18 +41,10 @@ module Logging =
                         ctx.Request.ContentBuilder
                         |> Option.map (fun builder -> builder ())
                         |> Option.toObj :> _
-                    | "Url" ->
-                        request.Extra.TryFind "Url"
-                        |> Option.map box |> Option.toObj
-                    | "Elapsed" ->
-                        ctx.Request.Extra.TryFind "Elapsed" |> (fun opt ->
-                            match opt with
-                            | Some (Number value) -> box value
-                            | _ -> null)
                     | "ResponseContent" -> ctx.Response :> _
                     | "Message" -> msg :> _
                     | key ->
-                        // Look for the key in the extra info. This enables custom HTTP handlers to add custom
+                        // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
                         // placeholders to the format string.
                         match ctx.Request.Extra.TryFind key with
                         | Some value -> value :> _

@@ -36,6 +36,12 @@ let ``Adding http client creates a context with that http client`` () =
     ctx.Request.HttpClient () = client
 
 [<Property>]
+let ``Adding http client factory creates a context with that http client`` () =
+    let client = new HttpClient()
+    let ctx = Context.defaultContext |> Context.withHttpClientFactory (fun () -> client)
+    ctx.Request.HttpClient () = client
+
+[<Property>]
 let ``Adding url builder creates a context with that url builder`` () =
     let urlBuilder = fun (req: HttpRequest) -> "test"
     let ctx = Context.defaultContext |> Context.withUrlBuilder urlBuilder
