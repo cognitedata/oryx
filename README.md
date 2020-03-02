@@ -16,6 +16,22 @@ Oryx is heavily inspired by the [Giraffe](https://github.com/giraffe-fsharp/Gira
 ideas to the client making the web requests. You can think of Oryx as the client equivalent of Giraffe, and you could
 envision the HTTP request processing pipeline starting at the client and going all the way to the server and back again.
 
+## Installation
+
+CogniteSdk is available as a [NuGet package](https://www.nuget.org/packages/Oryx/). To install:
+
+Using Package Manager:
+```sh
+Install-Package Oryx -IncludePrerelease
+```
+
+Using .NET CLI:
+```sh
+dotnet add package Oryx -v 1.0.0-beta-001
+```
+
+Or [directly in Visual Studio](https://docs.microsoft.com/en-us/nuget/quickstart/install-and-use-a-package-in-visual-studio).
+
 ## Fundamentals
 
 The main building blocks in Oryx is the `Context` and the `HttpHandler`. The Context contains all the state needed for
