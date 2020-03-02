@@ -440,7 +440,20 @@ Labels are currently not set but are added for future use, e.g setting the error
 
 ## Extending Oryx
 
-It's easy to extend Oryx with your own context builders and HTTP handlers. Everything is functions so you
+It's easy to extend Oryx with your own context builders and HTTP handlers. Everything is functions so you can easily add your own context builders and HTTP handlers.
+
+### Custom Context Builders
+
+Custom context builders are just a function that takes a `Context` and returns a `Context`:
+
+```fs
+let withAppId (appId: string) (context: HttpContext) =
+    { context with Request = { context.Request with Headers =  ("x-cdp-app", appId) :: context.Request.Headers; Extra = context.Request.Extra.Add("hasAppId", String "true") } }
+```
+
+### Custom HTTP Handlers
+
+Custom HTTP handlers may e.g populate the context, make asynchronous web requests and parse response content. HTTP handlers are functions that takes a `NextFunc<_,_>`, and a `Context` and returns a new `Context` wrapped in a `Result` and a `Task`, i.e a `HttpFuncResult`. Examples:
 
 ```fs
 let withResource (resource: string) (next: NextFunc<_,_>) (context: HttpContext) =
