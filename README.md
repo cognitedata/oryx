@@ -62,7 +62,7 @@ continue the request by passing on a new context to the "next" handler.
    returning. Here you have the option to eliding the await by just synchronously return (`return`) the `Task` returned by the
    `next` function.
 2. Return an `Error`result to short circuit the processing and fail the request.
-3. It is technically possible to also return `Ok` to short circuit the processing, but this is not something you would normally would do.
+3. It is technically possible to also return `Ok` to short circuit the processing, but this is not something you would normally do.
 
 ## Context Builders
 
