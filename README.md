@@ -18,7 +18,7 @@ envision the HTTP request processing pipeline starting at the client and going a
 
 ## Installation
 
-CogniteSdk is available as a [NuGet package](https://www.nuget.org/packages/Oryx/). To install:
+Oryx is available as a [NuGet package](https://www.nuget.org/packages/Oryx/). To install:
 
 Using Package Manager:
 ```sh
