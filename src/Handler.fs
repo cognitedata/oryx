@@ -79,8 +79,12 @@ module Handler =
 
     /// Http POST request.
     let POST<'r, 'err> = withMethod<'r, 'err> HttpMethod.Post
+    /// Http PUT request.
+    let PUT<'r, 'err> = withMethod<'r, 'err> HttpMethod.Put
     /// Http DELETE request.
     let DELETE<'r, 'err> = withMethod<'r, 'err> HttpMethod.Delete
+    /// Http Options request.
+    let OPTIONS<'r, 'err> = withMethod<'r, 'err> HttpMethod.Options
 
     /// Run list of HTTP handlers concurrently.
     let concurrent (handlers : HttpHandler<'a, 'b, 'b, 'err> seq) (next: NextFunc<'b list, 'r, 'err>) (ctx: Context<'a>) : HttpFuncResult<'r, 'err> = task {
