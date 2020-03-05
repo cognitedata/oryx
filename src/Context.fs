@@ -62,9 +62,9 @@ and HttpRequest = {
     Items: Map<string, Value>
 }
 
-type Context<'a> = {
+type Context<'T> = {
     Request: HttpRequest
-    Response: 'a
+    Response: 'T
 }
 
 type HttpContext = Context<HttpResponseMessage>

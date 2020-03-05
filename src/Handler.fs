@@ -8,73 +8,73 @@ open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2.ContextInsensitive
 
-type HandlerError<'err> =
+type HandlerError<'TError> =
     /// Request failed with some exception, e.g HttpClient throws an exception, or JSON decode error.
     | Panic of exn
     /// User defined error response.
-    | ResponseError of 'err
+    | ResponseError of 'TError
 
-type HttpFuncResult<'r, 'err> =  Task<Result<Context<'r>, HandlerError<'err>>>
+type HttpFuncResult<'TResult, 'TError> =  Task<Result<Context<'TResult>, HandlerError<'TError>>>
 
-type HttpFunc<'a, 'r, 'err> = Context<'a> -> HttpFuncResult<'r, 'err>
+type HttpFunc<'T, 'TResult, 'TError> = Context<'T> -> HttpFuncResult<'TResult, 'TError>
 
-type NextFunc<'a, 'r, 'err> = HttpFunc<'a, 'r, 'err>
+type NextFunc<'T, 'TResult, 'TError> = HttpFunc<'T, 'TResult, 'TError>
 
-type HttpHandler<'a, 'b, 'r, 'err> = NextFunc<'b, 'r, 'err> -> Context<'a> -> HttpFuncResult<'r, 'err>
+type HttpHandler<'T, 'T2, 'TResult, 'TError> = NextFunc<'T2, 'TResult, 'TError> -> Context<'T> -> HttpFuncResult<'TResult, 'TError>
 
-type HttpHandler<'a, 'r, 'err> = HttpHandler<'a, 'a, 'r, 'err>
+type HttpHandler<'T, 'TResult, 'TError> = HttpHandler<'T, 'T, 'TResult, 'TError>
 
-type HttpHandler<'r, 'err> = HttpHandler<HttpResponseMessage, 'r, 'err>
+type HttpHandler<'T, 'TError> = HttpHandler<HttpResponseMessage, 'T, 'TError>
 
-type HttpHandler<'err> = HttpHandler<HttpResponseMessage, 'err>
+type HttpHandler<'TError> = HttpHandler<HttpResponseMessage, 'TError>
 
 [<AutoOpen>]
 module Handler =
     /// A next continuation that produces an Ok async result. Used to end the processing pipeline.
-    let finishEarly<'a, 'err> : HttpFunc<'a, 'a, 'err> = Ok >> Task.FromResult
+    let finishEarly<'T, 'TError> : HttpFunc<'T, 'T, 'TError> = Ok >> Task.FromResult
 
     /// Run the HTTP handler in the given context.
-    let runAsync (ctx : Context<'a>) (handler: HttpHandler<'a,'r,'r, 'err>) : Task<Result<'r, HandlerError<'err>>> =
+    let runAsync (ctx : Context<'T>) (handler: HttpHandler<'T,'TResult,'TResult, 'TError>) : Task<Result<'TResult, HandlerError<'TError>>> =
         task {
             let! result = handler finishEarly ctx
             match result with
             | Ok a -> return Ok a.Response
             | Error err -> return Error err
         }
-    let map (mapper: 'a -> 'b) (next : NextFunc<'b,'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
+    let map (mapper: 'T1 -> 'T2) (next : NextFunc<'T2,'TResult, 'TError>) (ctx : Context<'T1>) : HttpFuncResult<'TResult, 'TError> =
         next { Request = ctx.Request; Response = (mapper ctx.Response) }
 
-    let inline compose (first : HttpHandler<'a, 'b, 'r, 'err>) (second : HttpHandler<'b, 'c, 'r, 'err>) : HttpHandler<'a,'c,'r, 'err> =
+    let inline compose (first : HttpHandler<'T1, 'T2, 'TResult, 'TError>) (second : HttpHandler<'T2, 'T3, 'TResult, 'TError>) : HttpHandler<'T1,'T3,'TResult, 'TError> =
         second >> first
 
     let (>=>) = compose
 
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
-    let withQuery (query: seq<struct (string * string)>) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withQuery (query: seq<struct (string * string)>) (next: NextFunc<HttpResponseMessage,'TResult, 'TError>) (context: HttpContext) =
         next { context with Request = { context.Request with Query = query } }
 
     /// Add content builder to context. These content will be added to the HTTP body of
     /// requests that uses this context.
-    let withContent (builder: unit -> HttpContent) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withContent<'T, 'TError> (builder: unit -> HttpContent) (next: NextFunc<HttpResponseMessage,'T, 'TError>) (context: HttpContext) =
         next { context with Request = { context.Request with ContentBuilder = Some builder } }
 
-    let withResponseType (respType: ResponseType) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withResponseType<'T, 'TError> (respType: ResponseType) (next: NextFunc<HttpResponseMessage,'T, 'TError>) (context: HttpContext) =
         next { context with Request = { context.Request with ResponseType = respType }}
 
     /// Set the method to be used for requests using this context.
-    let withMethod<'r, 'err> (method: HttpMethod) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withMethod<'T, 'TError> (method: HttpMethod) (next: NextFunc<HttpResponseMessage,'T, 'TError>) (context: HttpContext) =
         next { context with Request = { context.Request with Method = method } }
 
-    let withUrlBuilder<'r, 'err> (builder: UrlBuilder) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withUrlBuilder<'T, 'TError> (builder: UrlBuilder) (next: NextFunc<HttpResponseMessage,'T, 'TError>) (context: HttpContext) =
         next { context with Request = { context.Request with UrlBuilder = builder } }
 
     // A basic way to set the request URL. Use custom builders for more advanced usage.
-    let withUrl<'r, 'err> (url: string) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withUrl<'T, 'TError> (url: string) (next: NextFunc<HttpResponseMessage, 'T, 'TError>) (context: HttpContext) =
         withUrlBuilder (fun _ -> url) next context
 
     /// Http GET request. Also clears any content set in the context.
-    let GET<'r, 'err> (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let GET<'T, 'TError> (next: NextFunc<HttpResponseMessage, 'T, 'TError>) (context: HttpContext) =
         next { context with Request = { context.Request with Method = HttpMethod.Get; ContentBuilder = None } }
 
     /// Http POST request.

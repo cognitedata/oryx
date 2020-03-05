@@ -10,7 +10,7 @@ type RequestBuilder () =
         fun next _ ->
             next Context.defaultContext
 
-    member _.Return (res: 'a) : HttpHandler<HttpResponseMessage, 'a, _, 'err> =
+    member _.Return (res: 'T) : HttpHandler<HttpResponseMessage, 'T, _, 'TError> =
         fun next _ ->
             next { Request = Context.defaultRequest; Response = res }
 
@@ -18,11 +18,11 @@ type RequestBuilder () =
         fun next _ ->
             next { Request = req; Response = Context.defaultResult }
 
-    member _.ReturnFrom (req : HttpHandler<'a, 'b, 'r, 'err>) : HttpHandler<'a, 'b, 'r, 'err> = req
+    member _.ReturnFrom (req : HttpHandler<'T, 'TNext, 'TResult, 'TError>) : HttpHandler<'T, 'TNext, 'TResult, 'TError> = req
 
     member _.Delay (fn) = fn ()
 
-    member _.For(source:'a seq, func: 'a -> HttpHandler<'a, 'b, 'b, 'err>) : HttpHandler<'a, 'b list, 'r, 'err> =
+    member _.For(source:'T seq, func: 'T -> HttpHandler<'T, 'TNext, 'TNext, 'TError>) : HttpHandler<'T, 'TNext list, 'TResult, 'TError> =
         source
         |> Seq.map func
         |> sequential

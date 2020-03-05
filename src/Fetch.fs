@@ -52,7 +52,7 @@ module Fetch =
 
     /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{RequestContent}` and `{Elapsed}`
     /// to the log format.
-    let fetch<'r, 'err> (next: NextFunc<HttpResponseMessage, 'r, 'err>) (ctx: HttpContext) : HttpFuncResult<'r, 'err> =
+    let fetch<'TResult, 'TError> (next: NextFunc<HttpResponseMessage, 'TResult, 'TError>) (ctx: HttpContext) : HttpFuncResult<'TResult, 'TError> =
         let timer = Stopwatch ()
         let client = ctx.Request.HttpClient ()
 

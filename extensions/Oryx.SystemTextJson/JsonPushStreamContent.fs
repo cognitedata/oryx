@@ -11,20 +11,20 @@ open FSharp.Control.Tasks.V2.ContextInsensitive
 open System.Text.Json
 
 /// HttpContent implementation to push content directly to the output stream.
-type JsonPushStreamContent<'a> (content : 'a, options : JsonSerializerOptions) =
+type JsonPushStreamContent<'T> (content : 'T, options : JsonSerializerOptions) =
     inherit HttpContent ()
     let _content = content
     let _options = options
     do
         base.Headers.ContentType <- MediaTypeHeaderValue "application/json"
 
-    new (content : 'a) =
+    new (content : 'T) =
         let options = JsonSerializerOptions()
-        new JsonPushStreamContent<'a>(content, options)
+        new JsonPushStreamContent<'T>(content, options)
 
     override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
         task {
-            do! JsonSerializer.SerializeAsync<'a>(stream, _content, _options)
+            do! JsonSerializer.SerializeAsync<'T>(stream, _content, _options)
             do! stream.FlushAsync()
         } :> _
 
