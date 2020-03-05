@@ -16,7 +16,7 @@ module Encode =
     let inline int53 (value : int64) : JsonValue = JValue(value) :> JsonValue
 
     /// Encode int64 seq to Json number array.
-    let inline int53seq (items: int64 seq) = Seq.map int53 items |> Encode.seq
+    let inline int53seq (items: seq<int64>) = Seq.map int53 items |> Encode.seq
 
     /// Encode int64 list to Json number array.
     let inline int53list (items: int64 list) = List.map int53 items |> Encode.list

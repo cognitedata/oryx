@@ -7,6 +7,25 @@ open System.Net.Http
 open System.Text.RegularExpressions
 open Microsoft.Extensions.Logging
 
+module PlaceHolder =
+    [<Literal>]
+    let HttpMethod = "HttpMethod"
+
+    [<Literal>]
+    let RequestContent = "RequestContent"
+
+    [<Literal>]
+    let ResponseContent = "ResponseContent"
+
+    [<Literal>]
+    let Message = "Message"
+
+    [<Literal>]
+    let Url = "Url"
+
+    [<Literal>]
+    let Elapsed = "Elapsed"
+
 [<AutoOpen>]
 module Logging =
 
@@ -36,17 +55,17 @@ module Logging =
                 |> Seq.cast
                 |> Seq.map (fun (matche: Match) ->
                     match matche.Groups.[1].Value with
-                    | "HttpMethod" -> box request.Method
-                    | "RequestContent" ->
+                    | PlaceHolder.HttpMethod -> box request.Method
+                    | PlaceHolder.RequestContent ->
                         ctx.Request.ContentBuilder
                         |> Option.map (fun builder -> builder ())
                         |> Option.toObj :> _
-                    | "ResponseContent" -> ctx.Response :> _
-                    | "Message" -> msg :> _
+                    | PlaceHolder.ResponseContent -> ctx.Response :> _
+                    | PlaceHolder.Message -> msg :> _
                     | key ->
                         // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
                         // placeholders to the format string.
-                        match ctx.Request.Extra.TryFind key with
+                        match ctx.Request.Items.TryFind key with
                         | Some value -> value :> _
                         | _ -> String.Empty :> _
                 )
