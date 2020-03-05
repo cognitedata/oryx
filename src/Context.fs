@@ -30,7 +30,6 @@ type Value =
         | Number num -> num.ToString ()
         | Url uri -> uri.ToString ()
 
-type PropertyBag = Map<string, Value>
 type UrlBuilder = HttpRequest -> string
 
 and HttpRequest = {
@@ -41,7 +40,7 @@ and HttpRequest = {
     /// Getter for content to be sent as body of the request. We use a getter so content may be re-created for retries.
     ContentBuilder: (unit -> HttpContent) option
     /// Query parameters
-    Query: struct (string * string) seq
+    Query: seq<struct (string * string)>
     /// Responsetype. JSON or Protobuf
     ResponseType: ResponseType
     /// List of headers to be sent
@@ -58,9 +57,9 @@ and HttpRequest = {
     LogFormat: string
     /// Optional Metrics for recording metrics.
     Metrics: IMetrics
-    /// Extra info used to e.g build the URL. Clients are free to utilize this property for adding extra information to
+    /// Extra state used to e.g build the URL. Clients are free to utilize this property for adding extra information to
     /// the context.
-    Extra: PropertyBag
+    Items: Map<string, Value>
 }
 
 type Context<'a> = {
@@ -93,7 +92,7 @@ module Context =
             LogLevel = LogLevel.None
             LogFormat = defaultLogFormat
             Metrics = EmptyMetrics ()
-            Extra = Map.empty
+            Items = Map.empty
         }
 
     let defaultResult = new HttpResponseMessage (HttpStatusCode.NotFound)

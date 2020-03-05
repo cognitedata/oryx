@@ -4,7 +4,7 @@ open System.Net.Http
 
 module Chunk =
 
-    let chunk<'a, 'b, 'r, 'err> (chunkSize: int) (maxConcurrency: int) (handler: 'a seq -> HttpHandler<HttpResponseMessage, 'b seq, 'b seq, 'err>) (items: 'a seq) : HttpHandler<HttpResponseMessage, 'b seq, 'r, 'err> =
+    let chunk<'a, 'b, 'r, 'err> (chunkSize: int) (maxConcurrency: int) (handler: seq<'a> -> HttpHandler<HttpResponseMessage, seq<'b>, seq<'b>, 'err>) (items: seq<'a>) : HttpHandler<HttpResponseMessage, seq<'b>, 'r, 'err> =
         items
         |> Seq.chunkBySize chunkSize
         |> Seq.chunkBySize maxConcurrency

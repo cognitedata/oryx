@@ -51,7 +51,7 @@ module Handler =
 
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
-    let withQuery (query: struct (string * string) seq) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withQuery (query: seq<struct (string * string)>) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
         next { context with Request = { context.Request with Query = query } }
 
     /// Add content builder to context. These content will be added to the HTTP body of
@@ -87,7 +87,7 @@ module Handler =
     let OPTIONS<'r, 'err> = withMethod<'r, 'err> HttpMethod.Options
 
     /// Run list of HTTP handlers concurrently.
-    let concurrent (handlers : HttpHandler<'a, 'b, 'b, 'err> seq) (next: NextFunc<'b list, 'r, 'err>) (ctx: Context<'a>) : HttpFuncResult<'r, 'err> = task {
+    let concurrent (handlers : seq<HttpHandler<'a, 'b, 'b, 'err>>) (next: NextFunc<'b list, 'r, 'err>) (ctx: Context<'a>) : HttpFuncResult<'r, 'err> = task {
         let! res =
             handlers
             |> Seq.map (fun handler -> handler finishEarly ctx)

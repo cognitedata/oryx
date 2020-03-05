@@ -32,6 +32,50 @@ dotnet add package Oryx -v 1.0.0-beta-001
 
 Or [directly in Visual Studio](https://docs.microsoft.com/en-us/nuget/quickstart/install-and-use-a-package-in-visual-studio).
 
+## Getting Started
+
+```fs
+open System.Net.Http
+open System.Text.Json
+
+open FSharp.Control.Tasks.V2.ContextInsensitive
+
+open Oryx
+open Oryx.SystemTextJson.ResponseReader
+
+[<Literal>]
+let Url = "https://en.wikipedia.org/w/api.php"
+
+let options = JsonSerializerOptions()
+
+let query term = [
+    struct ("action", "opensearch")
+    struct ("search", term)
+]
+
+let request term =
+    GET
+    >=> withUrl Url
+    >=> withQuery (query term)
+    >=> fetch
+    >=> json options
+
+let asyncMain argv = task {
+    use client = new HttpClient ()
+    let ctx =
+        Context.defaultContext
+        |> Context.withHttpClient client
+
+    let! result = request "F#" |> runAsync ctx
+    printfn "Result: %A" result
+}
+
+[<EntryPoint>]
+let main argv =
+    asyncMain().GetAwaiter().GetResult()
+    0 // return an integer exit code
+```
+
 ## Fundamentals
 
 The main building blocks in Oryx is the `Context` and the `HttpHandler`. The Context contains all the state needed for
@@ -153,14 +197,14 @@ let (>=>) a b = compose a b
 The `compose` function is the magic that sews it all together and explains how we curry the `HttpHandler` to generate a new `NextFunc` that we give to next `HttpHandler`.
 
 ```fs
-    let compose (first : HttpHandler<'a, 'b, 'r, 'err>) (second : HttpHandler<'b, 'c, 'r, 'err>) : HttpHandler<'a,'c,'r, 'err> =
-        fun (next: NextFunc<'c, 'r, 'err>) ->
-            let func =
-                next
-                |> second
-                |> first
+let compose (first : HttpHandler<'a, 'b, 'r, 'err>) (second : HttpHandler<'b, 'c, 'r, 'err>) : HttpHandler<'a,'c,'r, 'err> =
+    fun (next: NextFunc<'c, 'r, 'err>) ->
+        let func =
+            next
+            |> second
+            |> first
 
-            func
+        func
 ```
 One really amazing thing with Oryx is that we can simplify this complex function using [η-conversion](https://wiki.haskell.org/Eta_conversion). Thus dropping both `ctx` and `next`, making composition into a basic functional compose that we alias using the fish operator (`>=>`):
 
@@ -464,7 +508,7 @@ Custom context builders are just a function that takes a `Context` and returns a
 
 ```fs
 let withAppId (appId: string) (context: HttpContext) =
-    { context with Request = { context.Request with Headers =  ("x-cdp-app", appId) :: context.Request.Headers; Extra = context.Request.Extra.Add("hasAppId", String "true") } }
+    { context with Request = { context.Request with Headers =  ("x-cdp-app", appId) :: context.Request.Headers; Items = context.Request.Items.Add("hasAppId", String "true") } }
 ```
 
 ### Custom HTTP Handlers
@@ -473,17 +517,17 @@ Custom HTTP handlers may e.g populate the context, make asynchronous web request
 
 ```fs
 let withResource (resource: string) (next: NextFunc<_,_>) (context: HttpContext) =
-    next { context with Request = { context.Request with Extra = context.Request.Extra.Add("resource", String resource) } }
+    next { context with Request = { context.Request with Items = context.Request.Items.Add("resource", String resource) } }
 
 let withVersion (version: ApiVersion) (next: NextFunc<_,_>) (context: HttpContext) =
-    next { context with Request = { context.Request with Extra = context.Request.Extra.Add("apiVersion", String (version.ToString ())) } }
+    next { context with Request = { context.Request with Items = context.Request.Items.Add("apiVersion", String (version.ToString ())) } }
 ```
 
-The handlers above will add custom values to the context that may be used by the supplied URL builder. Note that anything added to the `Extra` property bag is also available as place-holders in the logging format string.
+The handlers above will add custom values to the context that may be used by the supplied URL builder. Note that anything added to the `Items` map is also available as place-holders in the logging format string.
 
 ```fs
 let urlBuilder (request: HttpRequest) : string =
-    let extra = request.Extra
+    let items = request.Items
     ...
 ```
 
@@ -518,7 +562,7 @@ type HttpHandler<'r> = HttpHandler<HttpResponseMessage, 'r, ResponseException>
 type HttpHandler = HttpHandler<HttpResponseMessage, ResponseException>
 ```
 
-## Using Together with Giraffe
+## Using Oryx with Giraffe
 
 You can use Oryx within your Giraffe server if you need to make HTTP requests to other services. But then you must be careful about the order when opening namespaces so you know if you use the `>=>` operator from Oryx or Giraffe. Usually this will not be a problem since the Giraffe `>=>` will be used within your e.g `WebApp.fs` or `Server.fs`, while the Oryx `>=>` will be used within the controller handler function itself e.g `Controllers/Index.fs`. Thus just make sure you open Oryx after Giraffe in the controller files.
 
