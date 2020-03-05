@@ -12,6 +12,6 @@ module ResponseReader =
     /// </summary>
     /// <param name="options">JSON serializer options to use. </param>
     /// <returns>Decoded context.</returns>
-    let json<'a, 'r, 'err> (options: JsonSerializerOptions) : HttpHandler<HttpResponseMessage, 'a, 'r, 'err> =
+    let json<'T, 'TResult, 'TError> (options: JsonSerializerOptions) : HttpHandler<HttpResponseMessage, 'T, 'TResult, 'TError> =
         let parser stream = (JsonSerializer.DeserializeAsync<'a>(stream, options)).AsTask()
         parseAsync parser

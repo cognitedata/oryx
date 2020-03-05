@@ -9,7 +9,7 @@ open FSharp.Control.Tasks.V2.ContextInsensitive
 [<AutoOpen>]
 module Error =
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
-    let catch (errorHandler: HandlerError<'err> -> NextFunc<'a, 'r, 'err>) (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> = task {
+    let catch (errorHandler: HandlerError<'TError> -> NextFunc<'T, 'TResult, 'TError>) (next: HttpFunc<'T, 'TResult, 'TError>) (ctx : Context<'T>) : HttpFuncResult<'TResult, 'TError> = task {
         let! result = next ctx
         match result with
         | Ok ctx -> return Ok ctx
@@ -17,7 +17,7 @@ module Error =
     }
 
     /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
-    let withError<'a, 'r, 'err> (errorHandler : HttpResponseMessage -> Task<HandlerError<'err>>) (next: NextFunc<HttpResponseMessage,'r, 'err>) (ctx: HttpContext) : HttpFuncResult<'r, 'err> =
+    let withError<'T, 'TResult, 'TError> (errorHandler : HttpResponseMessage -> Task<HandlerError<'TError>>) (next: NextFunc<HttpResponseMessage,'TResult, 'TError>) (ctx: HttpContext) : HttpFuncResult<'TResult, 'TError> =
         task {
             let response = ctx.Response
             match response.IsSuccessStatusCode with

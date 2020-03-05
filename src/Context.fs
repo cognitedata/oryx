@@ -63,9 +63,9 @@ and HttpRequest = {
     Extra: PropertyBag
 }
 
-type Context<'a> = {
+type Context<'T> = {
     Request: HttpRequest
-    Response: 'a
+    Response: 'T
 }
 
 type HttpContext = Context<HttpResponseMessage>

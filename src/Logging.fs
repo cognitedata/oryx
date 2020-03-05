@@ -10,17 +10,17 @@ open Microsoft.Extensions.Logging
 [<AutoOpen>]
 module Logging =
 
-    let withLogger (logger: ILogger) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withLogger (logger: ILogger) (next: NextFunc<HttpResponseMessage,'T, 'TError>) (context: HttpContext) =
         next { context with Request = { context.Request with Logger = Some logger } }
 
-    let withLogLevel (logLevel: LogLevel) (next: NextFunc<HttpResponseMessage,'r, 'err>) (context: HttpContext) =
+    let withLogLevel (logLevel: LogLevel) (next: NextFunc<HttpResponseMessage,'T, 'TError>) (context: HttpContext) =
         next { context with Request = { context.Request with LogLevel = logLevel } }
 
     // Pre-compiled
     let private reqex = Regex(@"\{(.+?)\}", RegexOptions.Multiline ||| RegexOptions.Compiled)
 
     /// Logger handler with message. Needs to be composed in the request after the fetch handler.
-    let logWithMessage (msg: string) (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
+    let logWithMessage (msg: string) (next: HttpFunc<'T, 'TResult, 'TError>) (ctx : Context<'T>) : HttpFuncResult<'TResult, 'TError> =
         let request = ctx.Request
 
         match request.Logger, request.LogLevel with
@@ -56,5 +56,5 @@ module Logging =
         next ctx
 
     /// Logger handler. Needs to be composed in the request after the fetch handler.
-    let log (next: HttpFunc<'a, 'r, 'err>) (ctx : Context<'a>) : HttpFuncResult<'r, 'err> =
+    let log (next: HttpFunc<'T, 'TResult, 'TError>) (ctx : Context<'T>) : HttpFuncResult<'TResult, 'TError> =
         logWithMessage String.Empty next ctx
