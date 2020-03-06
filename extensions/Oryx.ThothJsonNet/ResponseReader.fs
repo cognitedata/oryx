@@ -15,7 +15,7 @@ module ResponseReader =
     /// <param name="next">The next handler to use.</param>
     /// <param name="context">HttpContext.</param>
     /// <returns>Decoded context.</returns>
-    let json<'a, 'r, 'err> (decoder : Decoder<'a>) (next: HttpFunc<'a,'r, 'err>) (context: HttpContext) : HttpFuncResult<'r, 'err> =
+    let json<'T, 'TResult, 'TError> (decoder : Decoder<'T>) (next: HttpFunc<'T,'TResult, 'TError>) (context: HttpContext) : HttpFuncResult<'TResult, 'TError> =
         task {
             let response = context.Response
             let! stream = response.Content.ReadAsStreamAsync ()
