@@ -27,7 +27,7 @@ Install-Package Oryx -IncludePrerelease
 
 Using .NET CLI:
 ```sh
-dotnet add package Oryx -v 1.0.0-beta-001
+dotnet add package Oryx -v 1.0.0-beta-002
 ```
 
 Or [directly in Visual Studio](https://docs.microsoft.com/en-us/nuget/quickstart/install-and-use-a-package-in-visual-studio).
