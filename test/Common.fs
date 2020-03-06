@@ -57,10 +57,10 @@ type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationTok
             return! sendAsync.Invoke(request, cancellationToken)
         }
 
-let unit (value: 'a) (next: NextFunc<'a, 'r, 'err>) (context: HttpContext) : HttpFuncResult<'r, 'err> =
+let unit (value: 'a) (next: HttpFunc<'a, 'r, 'err>) (context: HttpContext) : HttpFuncResult<'r, 'err> =
     next { Request=context.Request; Response = value }
 
-let add (a: int) (b: int) (next: NextFunc<int, 'b, 'err>) (context: HttpContext) : HttpFuncResult<'b, 'err>  =
+let add (a: int) (b: int) (next: HttpFunc<int, 'b, 'err>) (context: HttpContext) : HttpFuncResult<'b, 'err>  =
     unit (a + b) next context
 
 exception TestException of string
@@ -72,10 +72,10 @@ type TestError = {
     Message : string
 }
 
-let apiError msg (next: NextFunc<'b, 'c, 'err>) (_: Context<'a>) : HttpFuncResult<'c, TestError> =
+let apiError msg (next: HttpFunc<'b, 'c, 'err>) (_: Context<'a>) : HttpFuncResult<'c, TestError> =
     { Code = 400; Message = msg } |> ResponseError |> Error |> Task.FromResult
 
-let error msg (next: NextFunc<'b, 'c, 'err>) (_: Context<'a>) : HttpFuncResult<'c, TestError> =
+let error msg (next: HttpFunc<'b, 'c, 'err>) (_: Context<'a>) : HttpFuncResult<'c, TestError> =
    TestException msg |> Panic |> Error |> Task.FromResult
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
@@ -98,7 +98,7 @@ let errorHandler (response : HttpResponseMessage) = task {
     return { Code = int response.StatusCode; Message = "Got error" } |> ResponseError
 }
 
-let json (next: NextFunc<string, 'c, 'err>) (ctx: Context<HttpResponseMessage>) : HttpFuncResult<'c, 'err> =
+let json (next: HttpFunc<string, 'c, 'err>) (ctx: Context<HttpResponseMessage>) : HttpFuncResult<'c, 'err> =
     parseAsync (fun stream -> task { return! ctx.Response.Content.ReadAsStringAsync () }) next ctx
 
 let get () =

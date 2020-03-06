@@ -29,10 +29,10 @@ module PlaceHolder =
 [<AutoOpen>]
 module Logging =
 
-    let withLogger (logger: ILogger) (next: NextFunc<HttpResponseMessage,'T, 'TError>) (context: HttpContext) =
+    let withLogger (logger: ILogger) (next: HttpFunc<HttpResponseMessage,'T, 'TError>) (context: HttpContext) =
         next { context with Request = { context.Request with Logger = Some logger } }
 
-    let withLogLevel (logLevel: LogLevel) (next: NextFunc<HttpResponseMessage,'T, 'TError>) (context: HttpContext) =
+    let withLogLevel (logLevel: LogLevel) (next: HttpFunc<HttpResponseMessage,'T, 'TError>) (context: HttpContext) =
         next { context with Request = { context.Request with LogLevel = logLevel } }
 
     // Pre-compiled

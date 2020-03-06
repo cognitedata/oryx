@@ -56,7 +56,7 @@ let decoder : Decoder<TestType> =
     })
 let listDecoder = Decode.list decoder
 
-let noop (next: NextFunc<int, int, 'err>) (ctx: Context<'a>) : HttpFuncResult<int, 'err> =
+let noop (next: HttpFunc<int, int, 'err>) (ctx: Context<'a>) : HttpFuncResult<int, 'err> =
     task {
         let ctx' = { Request = ctx.Request; Response = 42 }
         return! next ctx'
@@ -112,7 +112,7 @@ let readNewtonsoft<'a> (stream: IO.Stream) =
         | e -> return Error (e.ToString())
     }
 
-let jsonReader<'a, 'r, 'err> (reader: Stream -> Task<Result<'a, string>>) (next: NextFunc<'a,'r, 'err>) (context: HttpContext) : HttpFuncResult<'r, 'err> =
+let jsonReader<'a, 'r, 'err> (reader: Stream -> Task<Result<'a, string>>) (next: HttpFunc<'a,'r, 'err>) (context: HttpContext) : HttpFuncResult<'r, 'err> =
     task {
         use! stream = context.Response.Content.ReadAsStreamAsync ()
         let! ret = reader stream

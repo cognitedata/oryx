@@ -27,9 +27,9 @@ type RequestBuilder () =
         |> Seq.map func
         |> sequential
 
-    member _.Bind(source: HttpHandler<'a, 'b, 'r, 'err>, fn: 'b -> HttpHandler<'a, 'c, 'r, 'err>) : HttpHandler<'a, 'c, 'r, 'err> =
+    member _.Bind(source: HttpHandler<'T, 'T2, 'TResult, 'TError>, fn: 'T2 -> HttpHandler<'T, 'T3, 'TResult, 'TError>) : HttpHandler<'T, 'T3, 'TResult, 'TError> =
         fun next ctx ->
-            let next' (cb : Context<'b>) =
+            let next' (cb : Context<'T2>) =
                 fn cb.Response next ctx // Run function in given context
 
             source next' ctx // Run source is given context
