@@ -13,19 +13,19 @@ open Oryx.Context
 open Common
 open System.Threading
 
-type HttpFuncResultClassic<'r, 'err> =  Task<Result<Context<'r>, HandlerError<'err>>>
+type HttpFuncResultClassic<'TResult, 'TError> =  Task<Result<Context<'TResult>, HandlerError<'TError>>>
 
-type HttpFuncClassic<'a, 'r, 'err> = Context<'a> -> HttpFuncResultClassic<'r, 'err>
+type HttpFuncClassic<'T, 'TResult, 'TError> = Context<'T> -> HttpFuncResultClassic<'TResult, 'TError>
 
-type HttpHandlerClassic<'a, 'r, 'err> = Context<'a> -> HttpFuncResultClassic<'r, 'err>
+type HttpHandlerClassic<'T, 'TResult, 'TError> = Context<'T> -> HttpFuncResultClassic<'TResult, 'TError>
 
-type HttpHandlerClassic<'r, 'err> = HttpHandlerClassic<HttpResponseMessage, 'r, 'err>
+type HttpHandlerClassic<'TResult, 'TError> = HttpHandlerClassic<HttpResponseMessage, 'TResult, 'TError>
 
-type HttpHandlerClassic<'err> = HttpHandlerClassic<HttpResponseMessage, 'err>
+type HttpHandlerClassic<'TError> = HttpHandlerClassic<HttpResponseMessage, 'TError>
 
 module ClassicHandler =
     /// Run the HTTP handler in the given context.
-    let runAsync (handler: HttpHandlerClassic<'a,'r,'err>) (ctx : Context<'a>) : Task<Result<'r, HandlerError<'err>>> =
+    let runAsync (handler: HttpHandlerClassic<'T,'TResult,'TError>) (ctx : Context<'T>) : Task<Result<'TResult, HandlerError<'TError>>> =
         task {
             let! result = handler ctx
             match result with
@@ -33,11 +33,11 @@ module ClassicHandler =
             | Error err -> return Error err
         }
 
-    let map (mapper: 'a -> 'b) (ctx : Context<'a>) : HttpFuncResultClassic<'b, 'err> =
+    let map (mapper: 'T1 -> 'T2) (ctx : Context<'T1>) : HttpFuncResultClassic<'T2, 'TError> =
         Ok { Request = ctx.Request; Response = (mapper ctx.Response) } |> Task.FromResult
 
-    let inline compose (first : HttpHandlerClassic<'a, 'b, 'err>) (second : HttpHandlerClassic<'b, 'r, 'err>) : HttpHandlerClassic<'a, 'r, 'err> =
-        fun (ctx : Context<'a>) -> task {
+    let inline compose (first : HttpHandlerClassic<'T, 'TNext, 'TError>) (second : HttpHandlerClassic<'TNext, 'TResult, 'TError>) : HttpHandlerClassic<'T, 'TResult, 'TError> =
+        fun (ctx : Context<'T>) -> task {
             let! result = first ctx
             match result with
             | Ok ctx' -> return! second ctx'
@@ -46,10 +46,10 @@ module ClassicHandler =
 
     let (>=>) = compose
 
-    let GET<'r, 'err> (context: HttpContext) =
+    let GET<'TResult, 'TError> (context: HttpContext) =
         Ok { context with Request = { context.Request with Method = HttpMethod.Get; ContentBuilder = None } } |> Task.FromResult
 
-    let withError<'err> (errorHandler : HttpResponseMessage -> Task<HandlerError<'err>>) (context: HttpContext) : HttpFuncResultClassic<HttpResponseMessage, 'err> =
+    let withError<'TError> (errorHandler : HttpResponseMessage -> Task<HandlerError<'TError>>) (context: HttpContext) : HttpFuncResultClassic<HttpResponseMessage, 'TError> =
         task {
             let response = context.Response
             match response.IsSuccessStatusCode with
@@ -59,13 +59,13 @@ module ClassicHandler =
                 return err |> Error
         }
 
-    let withUrlBuilder<'r, 'err> (builder: UrlBuilder) (context: HttpContext) =
+    let withUrlBuilder<'TResult, 'TError> (builder: UrlBuilder) (context: HttpContext) =
         Ok { context with Request = { context.Request with UrlBuilder = builder } } |> Task.FromResult
 
-    let setUrl<'r, 'err> (url: string) (context: HttpContext) =
+    let setUrl<'TResult, 'TError> (url: string) (context: HttpContext) =
         withUrlBuilder (fun _ -> url) context
 
-    let fetch<'err> (ctx: HttpContext) : HttpFuncResultClassic<HttpResponseMessage, 'err> =
+    let fetch<'TError> (ctx: HttpContext) : HttpFuncResultClassic<HttpResponseMessage, 'TError> =
         let client = ctx.Request.HttpClient ()
         use source = new CancellationTokenSource()
         let cancellationToken =
@@ -82,7 +82,7 @@ module ClassicHandler =
             | ex -> return Panic ex |> Error
         }
 
-    let json<'a, 'err> (decoder : Decoder<'a>) (context: HttpContext) : HttpFuncResultClassic<'a, 'err> =
+    let json<'T, 'TError> (decoder : Decoder<'T>) (context: HttpContext) : HttpFuncResultClassic<'T, 'TError> =
         task {
             use response = context.Response
             let! stream = response.Content.ReadAsStreamAsync ()
@@ -101,7 +101,7 @@ module ClassicHandler =
             Value = get.Required.Field "value" Decode.int
         })
 
-    let noop (ctx: Context<'a>) : HttpFuncResultClassic<int, 'err> =
+    let noop (ctx: Context<'T>) : HttpFuncResultClassic<int, 'TError> =
         let ctx' = { Request = ctx.Request; Response = 42 }
         Ok ctx' |> Task.FromResult
 
@@ -115,23 +115,23 @@ module ClassicHandler =
         >=> noop
 
  type RequestBuilder () =
-    member this.Zero () : HttpHandlerClassic<HttpResponseMessage, _, 'err> =
+    member this.Zero () : HttpHandlerClassic<HttpResponseMessage, _, 'TError> =
         fun _ ->
             Ok Context.defaultContext |> Task.FromResult
 
-    member this.Return (res: 'a) : HttpHandlerClassic<HttpResponseMessage, 'a, 'err> =
+    member this.Return (res: 'T) : HttpHandlerClassic<HttpResponseMessage, 'T, 'TError> =
         fun _ ->
             Ok { Request = Context.defaultRequest; Response = res } |> Task.FromResult
 
-    member this.Return (req: HttpRequest) : HttpHandlerClassic<HttpResponseMessage, _, 'err> =
+    member this.Return (req: HttpRequest) : HttpHandlerClassic<HttpResponseMessage, _, 'TError> =
         fun _ ->
             Ok { Request = req; Response = Context.defaultResult } |> Task.FromResult
 
-    member this.ReturnFrom (req : HttpHandlerClassic<'a, 'r, 'err>) : HttpHandlerClassic<'a, 'r, 'err> = req
+    member this.ReturnFrom (req : HttpHandlerClassic<'T, 'TResult, 'TError>) : HttpHandlerClassic<'T, 'TResult, 'TError> = req
 
     member this.Delay (fn) = fn ()
 
-    member this.Bind(source: HttpHandlerClassic<'a, 'b, 'err>, fn: 'b -> HttpHandlerClassic<'a, 'r, 'err>) : HttpHandlerClassic<'a, 'r, 'err> =
+    member this.Bind(source: HttpHandlerClassic<'T, 'TNext, 'TError>, fn: 'TNext -> HttpHandlerClassic<'T, 'TResult, 'TError>) : HttpHandlerClassic<'T, 'TResult, 'TError> =
         fun ctx -> task {
             let! br = source ctx
             match br with

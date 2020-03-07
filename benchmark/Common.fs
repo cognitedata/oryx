@@ -56,7 +56,7 @@ let decoder : Decoder<TestType> =
     })
 let listDecoder = Decode.list decoder
 
-let noop (next: HttpFunc<int, int, 'err>) (ctx: Context<'a>) : HttpFuncResult<int, 'err> =
+let noop (next: HttpFunc<int, int, 'TError>) (ctx: Context<'T>) : HttpFuncResult<int, 'TError> =
     task {
         let ctx' = { Request = ctx.Request; Response = 42 }
         return! next ctx'
@@ -79,40 +79,40 @@ let getList () =
     >=> withError decodeError
     >=> json listDecoder
 
-let readUtf8<'a> stream =
+let readUtf8<'T> stream =
     task {
         try
-            let! a = (JsonSerializer.DeserializeAsync<'a> stream)
+            let! a = (JsonSerializer.DeserializeAsync<'T> stream)
             return Ok a
         with
         | e -> return Error (e.ToString())
     }
 
-let readJson<'a> stream =
+let readJson<'T> stream =
     let options = Json.JsonSerializerOptions(AllowTrailingCommas=true)
 
     task {
         try
-            let! a = (Json.JsonSerializer.DeserializeAsync<'a>(stream, options)).AsTask()
+            let! a = (Json.JsonSerializer.DeserializeAsync<'T>(stream, options)).AsTask()
             return Ok a
         with
         | e -> return Error (e.ToString())
     }
 
-let readNewtonsoft<'a> (stream: IO.Stream) =
+let readNewtonsoft<'T> (stream: IO.Stream) =
     let serializer = JsonSerializer()
     use tr = new StreamReader(stream) // StreamReader will dispose the stream
     use jtr = new JsonTextReader(tr, DateParseHandling = DateParseHandling.None)
 
     task {
         try
-            let a = (serializer.Deserialize<'a> jtr)
+            let a = (serializer.Deserialize<'T> jtr)
             return Ok a
         with
         | e -> return Error (e.ToString())
     }
 
-let jsonReader<'a, 'r, 'err> (reader: Stream -> Task<Result<'a, string>>) (next: HttpFunc<'a,'r, 'err>) (context: HttpContext) : HttpFuncResult<'r, 'err> =
+let jsonReader<'T, 'Result, 'TError> (reader: Stream -> Task<Result<'T, string>>) (next: HttpFunc<'T,'Result, 'TError>) (context: HttpContext) : HttpFuncResult<'Result, 'TError> =
     task {
         use! stream = context.Response.Content.ReadAsStreamAsync ()
         let! ret = reader stream
@@ -124,7 +124,7 @@ let jsonReader<'a, 'r, 'err> (reader: Stream -> Task<Result<'a, string>>) (next:
             return Error (Panic <| JsonDecodeException error)
     }
 
-let getJson (reader: Stream -> Task<Result<TestType seq, string>>) : HttpHandler<HttpResponseMessage, TestType seq, 'b, TestError> =
+let getJson (reader: Stream -> Task<Result<TestType seq, string>>) : HttpHandler<HttpResponseMessage, TestType seq, 'TNext, TestError> =
     GET
     >=> withUrl "http://test"
     >=> fetch
