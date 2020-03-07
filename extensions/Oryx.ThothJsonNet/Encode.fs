@@ -22,7 +22,7 @@ module Encode =
     let inline int53list (items: int64 list) = List.map int53 items |> Encode.list
 
     /// Encode int64 list to string for use in URL query strings
-    let inline int53listStringify (values: int64 list) = int53list >> stringify
+    let int53listStringify  = int53list >> stringify
 
     /// Encode URI.
     let inline uri (value: Uri) : JsonValue =
@@ -32,7 +32,7 @@ module Encode =
     let inline propertyBag (values: Map<string, string>) =  values |> Map.map (fun _ value -> Encode.string value) |> Encode.dict
 
     /// Encode optional property.
-    let optionalProperty<'a> (name: string) (encoder: 'a -> JsonValue) (value : 'a option) =
+    let optionalProperty<'T> (name: string) (encoder: 'T -> JsonValue) (value : 'T option) =
         [
             if value.IsSome then name, encoder value.Value
         ]

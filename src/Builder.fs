@@ -27,12 +27,13 @@ type RequestBuilder () =
         |> Seq.map func
         |> sequential
 
-    member _.Bind(source: HttpHandler<'a, 'b, 'r, 'err>, fn: 'b -> HttpHandler<'a, 'c, 'r, 'err>) : HttpHandler<'a, 'c, 'r, 'err> =
+    /// Binds value of 'TValue for let! All handlers runs in same context within the builder.
+    member _.Bind(source: HttpHandler<'T, 'TValue, 'TResult, 'TError>, fn: 'TValue -> HttpHandler<'T, 'TNext, 'TResult, 'TError>) : HttpHandler<'T, 'TNext, 'TResult, 'TError> =
         fun next ctx ->
-            let next' (cb : Context<'b>) =
-                fn cb.Response next ctx // Run function in given context
+            let next' (ctx' : Context<'TValue>) =
+                fn ctx'.Response next ctx // Run function in context
 
-            source next' ctx // Run source is given context
+            source next' ctx // Run source is context
 
 [<AutoOpen>]
 module Builder =

@@ -3,4 +3,4 @@ namespace Oryx.Protobuf
 open Oryx
 
 module ResponseReader =
-    let protobuf<'b, 'r, 'err> = parse<'b, 'r, 'err>
+    let protobuf<'T, 'TResult, 'TError> = parse<'T, 'TResult, 'TError>

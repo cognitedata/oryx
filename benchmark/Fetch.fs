@@ -9,8 +9,6 @@ open FSharp.Control.Tasks.V2
 
 open BenchmarkDotNet.Attributes
 
-open Thoth.Json.Net
-
 open Oryx
 open Benchmark.Common
 open Classic
