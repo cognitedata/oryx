@@ -47,7 +47,7 @@ and HttpRequest = {
     /// List of headers to be sent
     Headers: Map<string, string>
     /// Authorization handler
-    Authorize: (CancellationToken -> Task<string>)
+    Authorize: (CancellationToken -> Task<string option>)
     /// A function that builds the request URL based on the collected extra info.
     UrlBuilder: UrlBuilder
     /// Optional CancellationToken for cancelling the request.
@@ -89,7 +89,7 @@ module Context =
             Query = List.empty
             ResponseType = JsonValue
             Headers = [ "User-Agent", ua ] |> Map
-            Authorize = (fun _ -> Task.FromResult String.Empty)
+            Authorize = (fun _ -> Some String.Empty |> Task.FromResult)
             UrlBuilder = fun _ -> String.Empty
             CancellationToken = CancellationToken.None
             Logger = None
@@ -153,5 +153,5 @@ module Context =
         { context with Request = { context.Request with Metrics = metrics } }
 
     /// Set the authorization handler.
-    let withAuthorization (func: CancellationToken -> Task<string>) (context: HttpContext) =
+    let withAuthorization (func: CancellationToken -> Task<string option>) (context: HttpContext) =
         { context with Request = { context.Request with Authorize = func } }
