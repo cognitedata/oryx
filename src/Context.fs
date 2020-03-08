@@ -151,3 +151,7 @@ module Context =
     /// Set the metrics (IMetrics) to use.
     let withMetrics (metrics: IMetrics) (context: HttpContext) =
         { context with Request = { context.Request with Metrics = metrics } }
+
+    /// Set the authorization handler.
+    let withAuthorization (func: CancellationToken -> Task<string>) (context: HttpContext) =
+        { context with Request = { context.Request with Authorize = func } }
