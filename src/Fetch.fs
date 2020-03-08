@@ -40,14 +40,14 @@ module Fetch =
             | JsonValue -> "Accept", "application/json"
             | Protobuf -> "Accept", "application/protobuf"
 
-        for header, value in acceptHeader :: ctx.Request.Headers do
+        for KeyValue(header, value) in ctx.Request.Headers.Add(acceptHeader) do
             if not (client.DefaultRequestHeaders.Contains header) then
                 request.Headers.Add (header, value)
 
         let content = ctx.Request.ContentBuilder |> Option.map (fun builder -> builder ())
         match content with
         | Some content -> request.Content <- content
-        | None -> ()
+        | _ -> ()
         request
 
     /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{RequestContent}` and `{Elapsed}`
@@ -56,11 +56,7 @@ module Fetch =
         let timer = Stopwatch ()
         let client = ctx.Request.HttpClient ()
 
-        use source = new CancellationTokenSource()
-        let cancellationToken =
-            match ctx.Request.CancellationToken with
-            | Some token -> token
-            | None -> source.Token
+        let cancellationToken = ctx.Request.CancellationToken
 
         task {
             try

@@ -139,6 +139,7 @@ module Handler =
                 return Error (Panic ex)
         }
 
+    /// Extract header from response.
     let extractHeader<'T, 'TResult, 'TError> (header: string) (next: HttpFunc<_ ,_, 'TError>) (context: HttpContext) = task {
         let success, values = context.Response.Headers.TryGetValues header
         let values = if success then values else Seq.empty
@@ -146,3 +147,9 @@ module Handler =
         return! next { Request = context.Request; Response = Ok values }
     }
 
+    /// Authorize this request, setting bearer token. This enables e.g. token refresh.
+    let authorize<'TResult, 'TError> (next: HttpFunc<HttpResponseMessage, 'TResult, 'TError>) (ctx: HttpContext) = task {
+        let! token = ctx.Request.Authorize ctx.Request.CancellationToken
+        let ctx' = Context.withBearerToken token ctx
+        return! next ctx'
+    }

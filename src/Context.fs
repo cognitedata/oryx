@@ -7,6 +7,7 @@ open System.Net
 open System.Net.Http
 open System.Reflection
 open System.Threading
+open System.Threading.Tasks
 
 open Microsoft.Extensions.Logging
 
@@ -44,11 +45,13 @@ and HttpRequest = {
     /// Responsetype. JSON or Protobuf
     ResponseType: ResponseType
     /// List of headers to be sent
-    Headers: (string * string) list
+    Headers: Map<string, string>
+    /// Authorization handler
+    Authorize: (CancellationToken -> Task<string>)
     /// A function that builds the request URL based on the collected extra info.
     UrlBuilder: UrlBuilder
     /// Optional CancellationToken for cancelling the request.
-    CancellationToken: CancellationToken option
+    CancellationToken: CancellationToken
     /// Optional Logger for logging requests.
     Logger: ILogger option
     /// The LogLevel to log at
@@ -85,9 +88,10 @@ module Context =
             ContentBuilder = None
             Query = List.empty
             ResponseType = JsonValue
-            Headers = [ "User-Agent", ua ]
+            Headers = [ "User-Agent", ua ] |> Map
+            Authorize = (fun _ -> Task.FromResult String.Empty)
             UrlBuilder = fun _ -> String.Empty
-            CancellationToken = None
+            CancellationToken = CancellationToken.None
             Logger = None
             LogLevel = LogLevel.None
             LogFormat = defaultLogFormat
@@ -105,16 +109,16 @@ module Context =
 
     /// Add HTTP header to context.
     let withHeader (header: string*string) (context: HttpContext) =
-        { context with Request = { context.Request with Headers = header :: context.Request.Headers  } }
+        { context with Request = { context.Request with Headers = context.Request.Headers.Add header } }
 
-    /// Add a list of headers to the context.
-    let withHeaders (headers: (string*string) list) (context: HttpContext) =
-        { context with Request = { context.Request with Headers = List.append headers context.Request.Headers } }
+    /// Replace all headers in the context.
+    let withHeaders (headers: Map<string,string>) (context: HttpContext) =
+        { context with Request = { context.Request with Headers = headers } }
 
     /// Helper for setting Bearer token as Authorization header.
     let withBearerToken (token: string) (context: HttpContext) =
         let header = ("Authorization", sprintf "Bearer %s" token)
-        { context with Request = { context.Request with Headers = header :: context.Request.Headers  } }
+        { context with Request = { context.Request with Headers = context.Request.Headers.Add header  } }
 
     /// Set the HTTP client to use for the requests.
     let withHttpClient (client: HttpClient) (context: HttpContext) =
@@ -130,7 +134,7 @@ module Context =
 
     /// Set a cancellation token to use for the requests.
     let withCancellationToken (token: CancellationToken) (context: HttpContext) =
-        { context with Request = { context.Request with CancellationToken = Some token } }
+        { context with Request = { context.Request with CancellationToken = token } }
 
     /// Set the logger (ILogger) to use.
     let withLogger (logger: ILogger) (context: HttpContext) =
