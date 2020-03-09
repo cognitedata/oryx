@@ -164,6 +164,7 @@ The context may then be transformed using HTTP handlers. HTTP handlers are like 
 - `withUrl` - Use the given URL for the request.
 - `withUrlBuilder` - Use the given URL builder for the request.
 - `withError` - Detect if the HTTP request failed, and then fail processing.
+- `withTokenProvider` - Enables refresh of bearer tokens without building a new context.
 
 In addition there are several extension for decoding JSON and Protobuf responses:
 
