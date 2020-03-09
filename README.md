@@ -22,12 +22,12 @@ Oryx is available as a [NuGet package](https://www.nuget.org/packages/Oryx/). To
 
 Using Package Manager:
 ```sh
-Install-Package Oryx -IncludePrerelease
+Install-Package Oryx
 ```
 
 Using .NET CLI:
 ```sh
-dotnet add package Oryx -v 1.0.0-beta-002
+dotnet add package Oryx
 ```
 
 Or [directly in Visual Studio](https://docs.microsoft.com/en-us/nuget/quickstart/install-and-use-a-package-in-visual-studio).
@@ -164,6 +164,7 @@ The context may then be transformed using HTTP handlers. HTTP handlers are like 
 - `withUrl` - Use the given URL for the request.
 - `withUrlBuilder` - Use the given URL builder for the request.
 - `withError` - Detect if the HTTP request failed, and then fail processing.
+- `withTokenProvider` - Enables refresh of bearer tokens without building a new context.
 
 In addition there are several extension for decoding JSON and Protobuf responses:
 

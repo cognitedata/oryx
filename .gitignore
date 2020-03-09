@@ -1,5 +1,4 @@
 .ionide
-paket-files
 obj
 bin
 .vs
@@ -16,3 +15,7 @@ extensions/Oryx.SystemTextJson/obj
 extensions/Oryx.ThothJsonNet/bin
 extensions/Oryx.ThothJsonNet/obj
 .idea
+
+#Paket dependency manager
+.paket/
+paket-files/
