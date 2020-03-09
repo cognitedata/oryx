@@ -4,6 +4,7 @@ namespace Oryx
 
 open System.IO
 open System.Net.Http
+open System.Threading
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2.ContextInsensitive
@@ -139,6 +140,7 @@ module Handler =
                 return Error (Panic ex)
         }
 
+    /// Extract header from response.
     let extractHeader<'T, 'TResult, 'TError> (header: string) (next: HttpFunc<_ ,_, 'TError>) (context: HttpContext) = task {
         let success, values = context.Response.Headers.TryGetValues header
         let values = if success then values else Seq.empty
@@ -146,3 +148,12 @@ module Handler =
         return! next { Request = context.Request; Response = Ok values }
     }
 
+    /// Use the given token provider to return a bearer token to use. This enables e.g. token refresh.
+    let withTokenProvider<'TResult, 'TError> (tokenProvider: CancellationToken -> Task<string option>) (next: HttpFunc<HttpResponseMessage, 'TResult, 'TError>) (ctx: HttpContext) = task {
+        let! token = tokenProvider ctx.Request.CancellationToken
+        let ctx' =
+            match token with
+            | Some token -> Context.withBearerToken token ctx
+            | _ -> ctx
+        return! next ctx'
+    }

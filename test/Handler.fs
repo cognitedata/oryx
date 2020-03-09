@@ -236,3 +236,43 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
         | Ok ctx -> test <@ Seq.toList ctx.Response = [ 1; 2; 3; 4; 5 ] @>
         | Error err -> failwith "error"
     } |> fun x -> x.Result
+
+[<Fact>]
+let ``Request with token provider sets Authorization header``() = task {
+    // Arrange
+    let provider _ = Some "token" |> Task.FromResult
+    let ctx =
+        Context.defaultContext
+
+    let req = withTokenProvider provider >=> unit 42
+
+    // Act
+    let! result = req finishEarly ctx
+    // Assert
+    match result with
+    | Ok ctx ->
+        let found = ctx.Request.Headers.TryGetValue "Authorization" |> (fun (found, value) -> found && value.Contains "token")
+        test <@ found @>
+    | Error (Panic err) -> raise err
+    | Error (ResponseError err) -> failwith (err.ToString())
+}
+
+[<Fact>]
+let ``Request with token provider without token does not set Authorization header``() = task {
+    // Arrange
+    let provider _ = Task.FromResult None
+    let ctx =
+        Context.defaultContext
+
+    let req = withTokenProvider provider >=> unit 42
+
+    // Act
+    let! result = req finishEarly ctx
+    // Assert
+    match result with
+    | Ok ctx ->
+        let found = ctx.Request.Headers.ContainsKey "Authorization"
+        test <@ not found @>
+    | Error (Panic err) -> raise err
+    | Error (ResponseError err) -> failwith (err.ToString())
+}

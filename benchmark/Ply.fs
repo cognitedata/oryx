@@ -72,11 +72,7 @@ module Handler =
 
     let fetch<'TError> (ctx: HttpContext) : HttpFuncResultPly<HttpResponseMessage, 'TError> =
         let client = ctx.Request.HttpClient ()
-        use source = new CancellationTokenSource()
-        let cancellationToken =
-            match ctx.Request.CancellationToken with
-            | Some token -> token
-            | None -> source.Token
+        let cancellationToken = ctx.Request.CancellationToken
 
         uply {
             try

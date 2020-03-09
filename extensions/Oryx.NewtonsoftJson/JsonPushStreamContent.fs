@@ -1,8 +1,8 @@
 namespace Oryx.NewtonsoftJson
 
-open System.Net.Http
 open System.IO
 open System.Net
+open System.Net.Http
 open System.Net.Http.Headers
 open System.Text
 open System.Threading.Tasks
