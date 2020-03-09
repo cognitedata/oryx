@@ -238,7 +238,7 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
     } |> fun x -> x.Result
 
 [<Fact>]
-let ``Authorize request sets Authorize header``() = task {
+let ``Authorize request sets Authorization header``() = task {
     // Arrange
     let handler _ = Some "token" |> Task.FromResult
     let ctx =
