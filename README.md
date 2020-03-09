@@ -22,12 +22,12 @@ Oryx is available as a [NuGet package](https://www.nuget.org/packages/Oryx/). To
 
 Using Package Manager:
 ```sh
-Install-Package Oryx -IncludePrerelease
+Install-Package Oryx
 ```
 
 Using .NET CLI:
 ```sh
-dotnet add package Oryx -v 1.0.0-beta-002
+dotnet add package Oryx
 ```
 
 Or [directly in Visual Studio](https://docs.microsoft.com/en-us/nuget/quickstart/install-and-use-a-package-in-visual-studio).
