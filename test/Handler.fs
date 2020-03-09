@@ -240,11 +240,11 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
 [<Fact>]
 let ``Authorize request sets Authorize header``() = task {
     // Arrange
-    let handler token = Some "token" |> Task.FromResult
+    let handler _ = Some "token" |> Task.FromResult
     let ctx =
         Context.defaultContext
-        |> Context.withAuthorization handler
-    let req = authorize >=> unit 42
+
+    let req = authorize handler >=> unit 42
 
     // Act
     let! result = req finishEarly ctx

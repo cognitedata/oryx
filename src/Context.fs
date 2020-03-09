@@ -7,7 +7,6 @@ open System.Net
 open System.Net.Http
 open System.Reflection
 open System.Threading
-open System.Threading.Tasks
 
 open Microsoft.Extensions.Logging
 
@@ -46,8 +45,6 @@ and HttpRequest = {
     ResponseType: ResponseType
     /// List of headers to be sent
     Headers: Map<string, string>
-    /// Authorization handler
-    Authorize: (CancellationToken -> Task<string option>)
     /// A function that builds the request URL based on the collected extra info.
     UrlBuilder: UrlBuilder
     /// Optional CancellationToken for cancelling the request.
@@ -89,7 +86,6 @@ module Context =
             Query = List.empty
             ResponseType = JsonValue
             Headers = [ "User-Agent", ua ] |> Map
-            Authorize = (fun _ -> Some String.Empty |> Task.FromResult)
             UrlBuilder = fun _ -> String.Empty
             CancellationToken = CancellationToken.None
             Logger = None
@@ -151,7 +147,3 @@ module Context =
     /// Set the metrics (IMetrics) to use.
     let withMetrics (metrics: IMetrics) (context: HttpContext) =
         { context with Request = { context.Request with Metrics = metrics } }
-
-    /// Set the authorization handler.
-    let withAuthorization (func: CancellationToken -> Task<string option>) (context: HttpContext) =
-        { context with Request = { context.Request with Authorize = func } }

@@ -4,6 +4,7 @@ namespace Oryx
 
 open System.IO
 open System.Net.Http
+open System.Threading
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2.ContextInsensitive
@@ -148,8 +149,8 @@ module Handler =
     }
 
     /// Authorize this request, setting bearer token. This enables e.g. token refresh.
-    let authorize<'TResult, 'TError> (next: HttpFunc<HttpResponseMessage, 'TResult, 'TError>) (ctx: HttpContext) = task {
-        let! token = ctx.Request.Authorize ctx.Request.CancellationToken
+    let authorize<'TResult, 'TError> (authorize: CancellationToken -> Task<string option>) (next: HttpFunc<HttpResponseMessage, 'TResult, 'TError>) (ctx: HttpContext) = task {
+        let! token = authorize ctx.Request.CancellationToken
         let ctx' =
             match token with
             | Some token -> Context.withBearerToken token ctx
