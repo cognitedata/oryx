@@ -256,3 +256,23 @@ let ``Request with token provider sets Authorization header``() = task {
     | Error (Panic err) -> raise err
     | Error (ResponseError err) -> failwith (err.ToString())
 }
+
+[<Fact>]
+let ``Request with token provider without token does not set Authorization header``() = task {
+    // Arrange
+    let provider _ = Task.FromResult None
+    let ctx =
+        Context.defaultContext
+
+    let req = withTokenProvider provider >=> unit 42
+
+    // Act
+    let! result = req finishEarly ctx
+    // Assert
+    match result with
+    | Ok ctx ->
+        let found = ctx.Request.Headers.ContainsKey "Authorization"
+        test <@ not found @>
+    | Error (Panic err) -> raise err
+    | Error (ResponseError err) -> failwith (err.ToString())
+}

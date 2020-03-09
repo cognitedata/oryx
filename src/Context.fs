@@ -43,7 +43,7 @@ and HttpRequest = {
     Query: seq<struct (string * string)>
     /// Responsetype. JSON or Protobuf
     ResponseType: ResponseType
-    /// List of headers to be sent
+    /// Map of headers to be sent
     Headers: Map<string, string>
     /// A function that builds the request URL based on the collected extra info.
     UrlBuilder: UrlBuilder
