@@ -148,9 +148,9 @@ module Handler =
         return! next { Request = context.Request; Response = Ok values }
     }
 
-    /// Use the given token provider to get a bearer token to use. This enables e.g. token refresh.
-    let withTokenProvider<'TResult, 'TError> (provider: CancellationToken -> Task<string option>) (next: HttpFunc<HttpResponseMessage, 'TResult, 'TError>) (ctx: HttpContext) = task {
-        let! token = provider ctx.Request.CancellationToken
+    /// Use the given token provider to return a bearer token to use. This enables e.g. token refresh.
+    let withTokenProvider<'TResult, 'TError> (tokenProvider: CancellationToken -> Task<string option>) (next: HttpFunc<HttpResponseMessage, 'TResult, 'TError>) (ctx: HttpContext) = task {
+        let! token = tokenProvider ctx.Request.CancellationToken
         let ctx' =
             match token with
             | Some token -> Context.withBearerToken token ctx
