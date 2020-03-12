@@ -163,7 +163,12 @@ module Handler =
     /// Use the given token provider to return a bearer token to use. This enables e.g. token refresh. The handler will
     /// fail the request if it's unable to authenticate.
     let withTokenProvider'<'TResult, 'TError> (tokenProvider: CancellationToken -> Task<Result<string, HandlerError<'TError>>>) (next: HttpFunc<HttpResponseMessage, 'TResult, 'TError>) (ctx: HttpContext) = task {
-        let! result = tokenProvider ctx.Request.CancellationToken
+        let! result = task {
+            try
+                return! tokenProvider ctx.Request.CancellationToken
+            with
+            | ex -> return Panic ex |> Error
+        }
         match result with
         | Ok token ->
             let ctx = Context.withBearerToken token ctx

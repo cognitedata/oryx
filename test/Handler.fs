@@ -281,7 +281,7 @@ let ``Request with token provider without token gives error``() = task {
 let ``Request with token provider throws exception gives error``() = task {
     // Arrange
     let err = Exception "Unable to authenticate"
-    let provider _ = failwith "failing"
+    let provider _ = failwith "failing" |> Task.FromResult
     let ctx =
         Context.defaultContext
 
