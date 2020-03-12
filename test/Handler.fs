@@ -262,11 +262,11 @@ let ``Request with token provider sets Authorization header``() = task {
 let ``Request with token provider without token gives error``() = task {
     // Arrange
     let err = Exception "Unable to authenticate"
-    let provider _ = Panic err |> Error |> Task.FromResult
+    let renewer _ = Panic err |> Error |> Task.FromResult
     let ctx =
         Context.defaultContext
 
-    let req = withTokenProvider' provider >=> unit 42
+    let req = withTokenRenewer renewer >=> unit 42
 
     // Act
     let! result = req finishEarly ctx
@@ -281,11 +281,11 @@ let ``Request with token provider without token gives error``() = task {
 let ``Request with token provider throws exception gives error``() = task {
     // Arrange
     let err = Exception "Unable to authenticate"
-    let provider _ = failwith "failing" |> Task.FromResult
+    let renewer _ = failwith "failing" |> Task.FromResult
     let ctx =
         Context.defaultContext
 
-    let req = withTokenProvider' provider >=> unit 42
+    let req = withTokenRenewer renewer >=> unit 42
 
     // Act
     let! result = req finishEarly ctx
