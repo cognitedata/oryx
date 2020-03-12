@@ -241,11 +241,11 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
 [<Fact>]
 let ``Request with token provider sets Authorization header``() = task {
     // Arrange
-    let provider _ = Ok "token" |> Task.FromResult
+    let renewer _ = Ok "token" |> Task.FromResult
     let ctx =
         Context.defaultContext
 
-    let req = withTokenProvider' provider >=> unit 42
+    let req = withTokenRenewer renewer >=> unit 42
 
     // Act
     let! result = req finishEarly ctx
