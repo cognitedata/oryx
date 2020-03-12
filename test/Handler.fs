@@ -239,7 +239,7 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
     } |> fun x -> x.Result
 
 [<Fact>]
-let ``Request with token provider sets Authorization header``() = task {
+let ``Request with token renewer sets Authorization header``() = task {
     // Arrange
     let renewer _ = Ok "token" |> Task.FromResult
     let ctx =
@@ -259,7 +259,7 @@ let ``Request with token provider sets Authorization header``() = task {
 }
 
 [<Fact>]
-let ``Request with token provider without token gives error``() = task {
+let ``Request with token renewer without token gives error``() = task {
     // Arrange
     let err = Exception "Unable to authenticate"
     let renewer _ = Panic err |> Error |> Task.FromResult
@@ -278,7 +278,7 @@ let ``Request with token provider without token gives error``() = task {
 }
 
 [<Fact>]
-let ``Request with token provider throws exception gives error``() = task {
+let ``Request with token renewer throws exception gives error``() = task {
     // Arrange
     let err = Exception "Unable to authenticate"
     let renewer _ = failwith "failing" |> Task.FromResult
