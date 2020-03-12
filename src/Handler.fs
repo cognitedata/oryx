@@ -2,6 +2,7 @@
 
 namespace Oryx
 
+open System
 open System.IO
 open System.Net.Http
 open System.Threading
@@ -149,6 +150,7 @@ module Handler =
     }
 
     /// Use the given token provider to return a bearer token to use. This enables e.g. token refresh.
+    [<Obsolete("Do not use. Use withTokenProvider' instead.")>]
     let withTokenProvider<'TResult, 'TError> (tokenProvider: CancellationToken -> Task<string option>) (next: HttpFunc<HttpResponseMessage, 'TResult, 'TError>) (ctx: HttpContext) = task {
         let! token = tokenProvider ctx.Request.CancellationToken
         let ctx' =
@@ -156,4 +158,15 @@ module Handler =
             | Some token -> Context.withBearerToken token ctx
             | _ -> ctx
         return! next ctx'
+    }
+
+    /// Use the given token provider to return a bearer token to use. This enables e.g. token refresh. The handler will
+    /// fail the request if it's unable to authenticate.
+    let withTokenProvider'<'TResult, 'TError> (tokenProvider: CancellationToken -> Task<Result<string, HandlerError<'TError>>>) (next: HttpFunc<HttpResponseMessage, 'TResult, 'TError>) (ctx: HttpContext) = task {
+        let! result = tokenProvider ctx.Request.CancellationToken
+        match result with
+        | Ok token ->
+            let ctx = Context.withBearerToken token ctx
+            return! next ctx
+        | Error err -> return err |> Error
     }

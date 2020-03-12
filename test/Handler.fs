@@ -13,6 +13,7 @@ open FsCheck.Arb
 open Oryx
 open Oryx.Chunk
 open Tests.Common
+open System
 
 [<Fact>]
 let ``Simple unit handler is Ok``() = task {
@@ -240,11 +241,11 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
 [<Fact>]
 let ``Request with token provider sets Authorization header``() = task {
     // Arrange
-    let provider _ = Some "token" |> Task.FromResult
+    let provider _ = Ok "token" |> Task.FromResult
     let ctx =
         Context.defaultContext
 
-    let req = withTokenProvider provider >=> unit 42
+    let req = withTokenProvider' provider >=> unit 42
 
     // Act
     let! result = req finishEarly ctx
@@ -258,21 +259,39 @@ let ``Request with token provider sets Authorization header``() = task {
 }
 
 [<Fact>]
-let ``Request with token provider without token does not set Authorization header``() = task {
+let ``Request with token provider without token gives error``() = task {
     // Arrange
-    let provider _ = Task.FromResult None
+    let err = Exception "Unable to authenticate"
+    let provider _ = Panic err |> Error |> Task.FromResult
     let ctx =
         Context.defaultContext
 
-    let req = withTokenProvider provider >=> unit 42
+    let req = withTokenProvider' provider >=> unit 42
 
     // Act
     let! result = req finishEarly ctx
     // Assert
     match result with
-    | Ok ctx ->
-        let found = ctx.Request.Headers.ContainsKey "Authorization"
-        test <@ not found @>
-    | Error (Panic err) -> raise err
+    | Ok ctx -> failwith "Request should fail"
+    | Error (Panic err) -> test <@ err.ToString().Contains("Unable to authenticate") @>
+    | Error (ResponseError err) -> failwith (err.ToString())
+}
+
+[<Fact>]
+let ``Request with token provider throws exception gives error``() = task {
+    // Arrange
+    let err = Exception "Unable to authenticate"
+    let provider _ = failwith "failing"
+    let ctx =
+        Context.defaultContext
+
+    let req = withTokenProvider' provider >=> unit 42
+
+    // Act
+    let! result = req finishEarly ctx
+    // Assert
+    match result with
+    | Ok ctx -> failwith "Request should fail"
+    | Error (Panic err) -> test <@ err.ToString().Contains("failing") @>
     | Error (ResponseError err) -> failwith (err.ToString())
 }
