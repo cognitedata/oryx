@@ -65,7 +65,7 @@ module Fetch =
                 // Note: we don't use `use!` for response since the next handler will never throw exceptions. Thus we
                 // can dispose ourselves which is much faster than using `use!`.
                 ctx.Request.Metrics.Counter Metric.FetchInc Map.empty 1L
-                let! response = client.SendAsync (request, cancellationToken)
+                let! response = client.SendAsync (request, ctx.Request.CompletionMode, cancellationToken)
                 timer.Stop ()
                 ctx.Request.Metrics.Gauge Metric.FetchLatencyUpdate Map.empty (float timer.ElapsedMilliseconds)
                 let items = ctx.Request.Items.Add(PlaceHolder.Url, Url request.RequestUri).Add(PlaceHolder.Elapsed, Number timer.ElapsedMilliseconds)

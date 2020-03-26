@@ -60,6 +60,7 @@ and HttpRequest = {
     /// Extra state used to e.g build the URL. Clients are free to utilize this property for adding extra information to
     /// the context.
     Items: Map<string, Value>
+    CompletionMode : HttpCompletionOption
 }
 
 type Context<'T> = {
@@ -93,6 +94,7 @@ module Context =
             LogFormat = defaultLogFormat
             Metrics = EmptyMetrics ()
             Items = Map.empty
+            CompletionMode = HttpCompletionOption.ResponseContentRead
         }
 
     let defaultResult = new HttpResponseMessage (HttpStatusCode.NotFound)
