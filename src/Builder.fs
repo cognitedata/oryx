@@ -7,8 +7,7 @@ open System.Net.Http
 
 type RequestBuilder () =
     member _.Zero () : HttpHandler<HttpResponseMessage, HttpResponseMessage, _, 'err> =
-        fun next ctx ->
-            next ctx
+        id
 
     member _.Return (res: 'T) : HttpHandler<HttpResponseMessage, 'T, _, 'TError> =
         fun next ctx ->
