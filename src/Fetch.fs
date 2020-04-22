@@ -7,7 +7,6 @@ open System.Collections.Generic
 open System.Diagnostics
 open System.Net.Http
 open System.Net.Http.Headers
-open System.Threading
 open System.Web
 
 open FSharp.Control.Tasks.V2.ContextInsensitive

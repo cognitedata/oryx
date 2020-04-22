@@ -117,6 +117,7 @@ module Handler =
         | Error err -> return Error err
     }
 
+    /// Parse response stream to a user specified type synchronously.
     let parse<'T, 'TResult, 'TError> (parser : Stream -> 'T) (next: HttpFunc<'T, 'TResult, 'TError>) (ctx : Context<HttpResponseMessage>) : HttpFuncResult<'TResult, 'TError> =
         task {
             let! stream = ctx.Response.Content.ReadAsStreamAsync ()
@@ -129,6 +130,7 @@ module Handler =
                 return Error (Panic ex)
         }
 
+    /// Parse response stream to a user specified type asynchronously.
     let parseAsync<'T, 'TResult, 'TError> (parser : Stream -> Task<'T>) (next: HttpFunc<'T, 'TResult, 'TError>) (ctx : Context<HttpResponseMessage>) : HttpFuncResult<'TResult, 'TError> =
         task {
             let! stream = ctx.Response.Content.ReadAsStreamAsync ()

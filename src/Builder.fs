@@ -7,12 +7,12 @@ open System.Net.Http
 
 type RequestBuilder () =
     member _.Zero () : HttpHandler<HttpResponseMessage, HttpResponseMessage, _, 'err> =
-        fun next _ ->
-            next Context.defaultContext
+        fun next ctx ->
+            next ctx
 
     member _.Return (res: 'T) : HttpHandler<HttpResponseMessage, 'T, _, 'TError> =
-        fun next _ ->
-            next { Request = Context.defaultRequest; Response = res }
+        fun next ctx ->
+            next { Request = ctx.Request; Response = res }
 
     member _.Return (req: HttpRequest) : HttpHandler<HttpResponseMessage, HttpResponseMessage, _, 'err> =
         fun next _ ->
