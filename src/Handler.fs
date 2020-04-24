@@ -15,6 +15,11 @@ type HandlerError<'TError> =
     | Panic of exn
     /// User defined error response.
     | ResponseError of 'TError
+    with
+        override this.ToString() =
+            match this with
+            | Panic exn -> exn.ToString()
+            | ResponseError err -> err.ToString()
 
 type HttpFuncResult<'TResult, 'TError> =  Task<Result<Context<'TResult>, HandlerError<'TError>>>
 
