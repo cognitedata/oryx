@@ -246,7 +246,7 @@ let ``Post with logging is OK``() = task {
 
     // Act
     let request = req {
-        let! result = post content >=> logWithMessage msg
+        let! result = logWithMessage msg >=> post content 
         return result
     }
 

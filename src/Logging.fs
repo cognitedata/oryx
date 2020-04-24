@@ -6,6 +6,7 @@ open System
 open System.Net.Http
 open System.Text.RegularExpressions
 open Microsoft.Extensions.Logging
+open FSharp.Control.Tasks.V2.ContextInsensitive
 
 module PlaceHolder =
     [<Literal>]
@@ -40,39 +41,47 @@ module Logging =
 
     /// Logger handler with message. Needs to be composed in the request after the fetch handler.
     let logWithMessage (msg: string) (next: HttpFunc<'T, 'TResult, 'TError>) (ctx : Context<'T>) : HttpFuncResult<'TResult, 'TError> =
-        let request = ctx.Request
+        task {
+            let! ctx' = next ctx
+            let request = ctx.Request
+            let format = ctx.Request.LogFormat                               
+            match request.Logger, request.LogLevel with
+            | _, LogLevel.None -> ()                
+            | Some logger, _ ->
+                match ctx' with
+                | Ok res ->
+                    printfn "%A" res.Response
+                    let matches = reqex.Matches format
+                    // Create an array with values in the same order as in the format string. Important to be lazy and not
+                    // stringify any values here. Only pass references to the objects themselves so the logger can stringify
+                    // when / if the values are acutally being used / logged.
+                    let valueArray =
+                        matches
+                        |> Seq.cast
+                        |> Seq.map (fun (matche: Match) ->
+                            match matche.Groups.[1].Value with
+                            | PlaceHolder.HttpMethod -> box request.Method
+                            | PlaceHolder.RequestContent ->
+                                ctx.Request.ContentBuilder
+                                |> Option.map (fun builder -> builder ())
+                                |> Option.toObj :> _
+                            | PlaceHolder.ResponseContent -> res.Response :> _
+                            | PlaceHolder.Message -> msg :> _
+                            | key ->
+                                // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
+                                // placeholders to the format string.
+                                match ctx.Request.Items.TryFind key with
+                                | Some value -> value :> _
+                                | _ -> String.Empty :> _
+                        )
+                        |> Array.ofSeq
+                    logger.Log (request.LogLevel, format, valueArray)
+                | Error err ->
+                    logger.Log (LogLevel.Error, format, err)
+            | _ -> ()     
 
-        match request.Logger, request.LogLevel with
-        | _, LogLevel.None -> ()
-        | Some logger, _ ->
-            let format = ctx.Request.LogFormat
-            let matches = reqex.Matches format
-            // Create an array with values in the same order as in the format string. Important to be lazy and not
-            // stringify any values here. Only pass references to the objects themselves so the logger can stringify
-            // when / if the values are acutally being used / logged.
-            let valueArray =
-                matches
-                |> Seq.cast
-                |> Seq.map (fun (matche: Match) ->
-                    match matche.Groups.[1].Value with
-                    | PlaceHolder.HttpMethod -> box request.Method
-                    | PlaceHolder.RequestContent ->
-                        ctx.Request.ContentBuilder
-                        |> Option.map (fun builder -> builder ())
-                        |> Option.toObj :> _
-                    | PlaceHolder.ResponseContent -> ctx.Response :> _
-                    | PlaceHolder.Message -> msg :> _
-                    | key ->
-                        // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
-                        // placeholders to the format string.
-                        match ctx.Request.Items.TryFind key with
-                        | Some value -> value :> _
-                        | _ -> String.Empty :> _
-                )
-                |> Array.ofSeq
-            logger.Log (request.LogLevel, format, valueArray)
-        | _ -> ()
-        next ctx
+            return ctx'
+        }
 
     /// Logger handler. Needs to be composed in the request after the fetch handler.
     let log (next: HttpFunc<'T, 'TResult, 'TError>) (ctx : Context<'T>) : HttpFuncResult<'TResult, 'TError> =
