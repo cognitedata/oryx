@@ -6,16 +6,10 @@ open System.Net.Http
 
 
 type RequestBuilder () =
-    member _.Zero () : HttpHandler<HttpResponseMessage, HttpResponseMessage, _, 'err> =
-        id
+    member _.Zero () : HttpHandler<HttpResponseMessage, HttpResponseMessage, _, 'err> = id
 
     member _.Return (res: 'T) : HttpHandler<HttpResponseMessage, 'T, _, 'TError> =
-        fun next ctx ->
-            next { Request = ctx.Request; Response = res }
-
-    member _.Return (req: HttpRequest) : HttpHandler<HttpResponseMessage, HttpResponseMessage, _, 'err> =
-        fun next _ ->
-            next { Request = req; Response = Context.defaultResult }
+        fun next ctx -> next { Request = ctx.Request; Response = res }
 
     member _.ReturnFrom (req : HttpHandler<'T, 'TNext, 'TResult, 'TError>) : HttpHandler<'T, 'TNext, 'TResult, 'TError> = req
 

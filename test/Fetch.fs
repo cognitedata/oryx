@@ -200,7 +200,7 @@ let ``Get with logging is OK``() = task {
 
     // Act
     let request = req {
-        let! result = get () >=> log
+        let! result = get ()
         return result
     }
 
@@ -245,12 +245,11 @@ let ``Post with logging is OK``() = task {
 
 
     // Act
-    let request = req {
-        let! result = logWithMessage msg >=> post content 
-        return result
-    }
+    let! result =
+        withLogMessage msg
+        >=> post content
+        |> runAsync ctx
 
-    let! result = request |> runAsync ctx
     let retries' = retries
 
     // Assert
@@ -259,6 +258,48 @@ let ``Post with logging is OK``() = task {
     test <@ logger.Output.Contains "http://testing.org" @>
     test <@ Result.isOk result @>
     test <@ retries' = 1 @>
+}
+
+[<Fact>]
+let ``Multiple post with logging is OK``() = task {
+    // Arrange
+    let logger = new TestLogger<string>()
+    let json x = sprintf """{ "ping": %d }""" x
+
+    let stub =
+        Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
+        (task {
+            let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+            responseMessage.Content <- new PushStreamContent("""{ "pong": 42 }""")
+            return responseMessage
+        }))
+
+    let client = new HttpClient(new HttpMessageHandlerStub(stub))
+    let content x () = new StringableContent(json x) :> HttpContent
+
+    let ctx =
+        Context.defaultContext
+        |> Context.withHttpClientFactory (fun () -> client)
+        |> Context.withUrlBuilder (fun _ -> "http://testing.org/")
+        |> Context.withHeader ("api-key", "test-key")
+        |> Context.withLogger(logger)
+        |> Context.withLogLevel LogLevel.Debug
+
+
+    // Act
+    let! result =
+
+        req {
+            let! a = withLogMessage "first" >=> post (content 41)
+            let! b = withLogMessage "second" >=> post (content 42)
+            return a + b
+        } |> runAsync ctx
+
+    // Assert
+    test <@ logger.Output.Contains (json 41) @>
+    test <@ logger.Output.Contains "first" @>
+    test <@ logger.Output.Contains "http://testing.org" @>
+    test <@ Result.isOk result @>
 }
 
 [<Fact>]
@@ -291,7 +332,7 @@ let ``Post with disabled logging does not log``() = task {
 
     // Act
     let request = req {
-        let! result = post content >=> logWithMessage msg
+        let! result = withLogMessage msg >=> post content
         return result
     }
 
