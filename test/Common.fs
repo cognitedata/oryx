@@ -99,13 +99,14 @@ let errorHandler (response : HttpResponseMessage) = task {
 }
 
 let json (next: HttpFunc<string, 'c, 'err>) (ctx: Context<HttpResponseMessage>) : HttpFuncResult<'c, 'err> =
-    parseAsync (fun stream -> task { return! ctx.Response.Content.ReadAsStringAsync () }) next ctx
+    parseAsync (fun _ -> task { return! ctx.Response.Content.ReadAsStringAsync () }) next ctx
 
 let get () =
     GET
     >=> withUrl "http://test.org"
     >=> withQuery [ struct ("debug", "true") ]
     >=> fetch
+    >=> log
     >=> withError errorHandler
     >=> json
 
@@ -114,9 +115,9 @@ let post content =
     >=> withResponseType JsonValue
     >=> withContent content
     >=> fetch
+    >=> log
     >=> withError errorHandler
     >=> json
-    >=> log
 
 let retryCount = 5
 let retry next ctx = retry shouldRetry 0<ms> retryCount next ctx
@@ -133,7 +134,7 @@ type TestLogger<'a> () =
 
     interface ILogger<'a> with
         member this.Log<'TState>(logLevel: LogLevel, eventId: EventId, state: 'TState, exception': exn, formatter: Func<'TState,exn,string>) : unit =
-            this.Output <- formatter.Invoke(state, exception')
+            this.Output <- this.Output + formatter.Invoke(state, exception')
             this.LoggerLevel <- logLevel
         member this.IsEnabled (logLevel: LogLevel): bool = true
         member this.BeginScope<'TState>(state: 'TState) : IDisposable = this :> IDisposable

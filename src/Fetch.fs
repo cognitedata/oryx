@@ -68,7 +68,7 @@ module Fetch =
                 timer.Stop ()
                 ctx.Request.Metrics.Gauge Metric.FetchLatencyUpdate Map.empty (float timer.ElapsedMilliseconds)
                 let items = ctx.Request.Items.Add(PlaceHolder.Url, Url request.RequestUri).Add(PlaceHolder.Elapsed, Number timer.ElapsedMilliseconds)
-                let! result = next { ctx with Response = response; Request = { ctx.Request with Items = items }}
+                let! result = next { ctx with Request = { ctx.Request with Items = items }; Response = response; }
                 response.Dispose ()
                 return result
             with

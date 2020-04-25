@@ -30,6 +30,27 @@ type Value =
         | Number num -> num.ToString ()
         | Url uri -> uri.ToString ()
 
+
+module PlaceHolder =
+    [<Literal>]
+    let HttpMethod = "HttpMethod"
+
+    [<Literal>]
+    let RequestContent = "RequestContent"
+
+    [<Literal>]
+    let ResponseContent = "ResponseContent"
+
+    [<Literal>]
+    let Message = "Message"
+
+    [<Literal>]
+    let Url = "Url"
+
+    [<Literal>]
+    let Elapsed = "Elapsed"
+
+
 type UrlBuilder = HttpRequest -> string
 
 and HttpRequest = {
@@ -145,6 +166,10 @@ module Context =
     /// Set the log format to use.
     let withLogFormat (format: string) (context: HttpContext) =
         { context with Request = { context.Request with LogFormat = format } }
+
+    /// Set the log format to use.
+    let withLogMessage (msg: string) (context: HttpContext) =
+        { context with Request = { context.Request with Items = context.Request.Items.Add (PlaceHolder.Message, String msg) } }
 
     /// Set the metrics (IMetrics) to use.
     let withMetrics (metrics: IMetrics) (context: HttpContext) =
