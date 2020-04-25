@@ -468,12 +468,14 @@ You can also use a custom log format string by setting the log format using `wit
 
 **Note:** Oryx will not call `.ToString ()` but will hand it over to the `ILogger` for the actual string interpolation, given that the message will actually end up being logged.
 
-There are to logging handlers. One without a message and one where you can supply a custom message that may be added to the logging output (see format string). The logging handlers do not alter the types of the pipeline and may be composed anywhere. But to give meaningful output they should be composed after fetching (`fetch`).
+NOTE: The logging handler (`log`) do not alter the types of the pipeline and may be composed anywhere. But to give meaningful output they should be composed after fetching (`fetch`) but before error handling (`withError`). This is because fetch related values goes down the pipeline while error values short-circuits and goes up. So you need to log in between to catch both.
 
 ```fs
-val log : next: HttpFunc<'T, 'TResult, 'TError> -> ctx : Context<'T>  -> HttpFuncResult<'TResult, 'TError>
+val withLogger: logger : ILogger -> next: HttpFunc<HttpResponseMessage,'T,'TError> -> context: HttpContext -> HttpFuncResult<'T,'TError>
+val withLogLevel: logLevel: LogLevel -> next: HttpFunc<HttpResponseMessage,'T,'TError> -> context : HttpContext -> HttpFuncResult<'T,'TError>
+val withLogMessage: msg: string -> next: HttpFunc<HttpResponseMessage,'T,'TError> -> context: HttpContext -> HttpFuncResult<'T,'TError>
 
-val logWithMessage : msg: string -> next: HttpFunc<'T, 'TResult, 'TError> -> ctx : Context<'T> -> HttpFuncResult<'TResult, 'TError>
+val log : next: HttpFunc<'T, 'TResult, 'TError> -> ctx : Context<'T>  -> HttpFuncResult<'TResult, 'TError>
 ```
 
 Oryx may also emit metrics using the `IMetrics` interface (Oryx specific) that you can use with e.g Prometheus.
