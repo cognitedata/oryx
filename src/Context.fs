@@ -167,7 +167,7 @@ module Context =
     let withLogFormat (format: string) (context: HttpContext) =
         { context with Request = { context.Request with LogFormat = format } }
 
-    /// Set the log format to use.
+    /// Set the log message to use (normally you would like to use the withLogMessage handler instead)
     let withLogMessage (msg: string) (context: HttpContext) =
         { context with Request = { context.Request with Items = context.Request.Items.Add (PlaceHolder.Message, String msg) } }
 
