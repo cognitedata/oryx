@@ -243,7 +243,6 @@ let ``Post with logging is OK``() = task {
         |> Context.withLogger(logger)
         |> Context.withLogLevel LogLevel.Debug
 
-
     // Act
     let! result =
         withLogMessage msg
@@ -284,7 +283,6 @@ let ``Multiple post with logging is OK``() = task {
         |> Context.withHeader ("api-key", "test-key")
         |> Context.withLogger(logger)
         |> Context.withLogLevel LogLevel.Debug
-
 
     // Act
     let! result =
@@ -344,3 +342,42 @@ let ``Post with disabled logging does not log``() = task {
     test <@ Result.isOk result @>
     test <@ retries' = 1 @>
 }
+
+[<Fact>]
+let ``Fetch with internal error will log error``() = task {
+    // Arrange
+    let metrics = TestMetrics ()
+    let json = """{ "code": 500, "message": "failed" }"""
+    let logger = new TestLogger<string>()
+
+    let stub =
+        Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
+        (task {
+            let responseMessage = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+            responseMessage.Content <- new StringableContent(json)
+            return responseMessage
+        }))
+
+    let client = new HttpClient(new HttpMessageHandlerStub(stub))
+
+    let ctx =
+        Context.defaultContext
+        |> Context.withHttpClient client
+        |> Context.withUrlBuilder (fun _ -> "http://test.org/")
+        |> Context.withHeader ("api-key", "test-key")
+        |> Context.withLogger logger
+        |> Context.withLogLevel LogLevel.Debug
+
+    // Act
+    let request =
+        let content = fun () -> new PushStreamContent("testing") :> HttpContent
+        req {
+            let! result = post content
+            return result
+        }
+
+    let! result = request |> runAsync ctx
+
+    // Assert
+    test <@ Result.isError result @>
+    test <@ logger.Output.Contains "Got error" @>}
