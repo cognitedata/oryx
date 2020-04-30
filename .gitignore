@@ -19,3 +19,4 @@ extensions/Oryx.ThothJsonNet/obj
 #Paket dependency manager
 .paket/
 paket-files/
+.mypy_cache
