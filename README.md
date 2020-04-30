@@ -1,6 +1,6 @@
 # Oryx
 
-[![Build](https://img.shields.io/travis/cognitedata/oryx)](https://travis-ci.org/cognitedata/oryx)
+![Build and Test](https://github.com/cognitedata/oryx/workflows/Build%20and%20Test/badge.svg)
 [![codecov](https://codecov.io/gh/cognitedata/oryx/branch/master/graph/badge.svg)](https://codecov.io/gh/cognitedata/oryx)
 [![Nuget](https://img.shields.io/nuget/vpre/oryx)](https://www.nuget.org/packages/Oryx/)
 
