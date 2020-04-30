@@ -17,5 +17,4 @@ extensions/Oryx.ThothJsonNet/obj
 .idea
 
 #Paket dependency manager
-.paket/
 paket-files/
