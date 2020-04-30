@@ -183,7 +183,6 @@ module Handler =
         | Error err -> return err |> Error
     }
 
-
     /// Use the given `completionMode` to change when the Response is considered to be 'complete'.
     ///
     /// Using `HttpCompletionOption.ResponseContentRead` (the default) means that the entire response content will be available in-memory when the handle response completes. This can lead to lower throughput in situations where files are being received over HTTP.
