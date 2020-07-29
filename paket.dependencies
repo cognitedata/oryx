@@ -7,6 +7,7 @@ group Main
     nuget Microsoft.Extensions.Logging
     nuget FSharp.Core ~> 4.7
     nuget Taskbuilder.fs ~> 2.1
+nuget Thoth.Json.Net
 
 group Json
     source https://www.nuget.org/api/v2
