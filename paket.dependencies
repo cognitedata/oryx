@@ -8,6 +8,7 @@ group Main
     nuget FSharp.Core ~> 4.7
     nuget Taskbuilder.fs ~> 2.1
 
+
 group Json
     source https://www.nuget.org/api/v2
     storage: none
@@ -71,3 +72,9 @@ group Benchmark
     nuget Thoth.Json.Net
     nuget Utf8Json
     nuget Ply
+
+group Examples
+    source https://www.nuget.org/api/v2
+    storage: none
+    
+    nuget Thoth.Json.Net

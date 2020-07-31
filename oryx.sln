@@ -19,6 +19,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Oryx.NewtonsoftJson", "exte
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Oryx.ThothJsonNet", "extensions\Oryx.ThothJsonNet\Oryx.ThothJsonNet.fsproj", "{535AE660-B32C-4833-8C7B-A8DAEA8799E1}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "examples", "examples\examples.fsproj", "{755A4763-1976-41A1-91A2-FFB772343479}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -116,6 +118,18 @@ Global
 		{535AE660-B32C-4833-8C7B-A8DAEA8799E1}.Release|x64.Build.0 = Release|Any CPU
 		{535AE660-B32C-4833-8C7B-A8DAEA8799E1}.Release|x86.ActiveCfg = Release|Any CPU
 		{535AE660-B32C-4833-8C7B-A8DAEA8799E1}.Release|x86.Build.0 = Release|Any CPU
+		{755A4763-1976-41A1-91A2-FFB772343479}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{755A4763-1976-41A1-91A2-FFB772343479}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{755A4763-1976-41A1-91A2-FFB772343479}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{755A4763-1976-41A1-91A2-FFB772343479}.Debug|x64.Build.0 = Debug|Any CPU
+		{755A4763-1976-41A1-91A2-FFB772343479}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{755A4763-1976-41A1-91A2-FFB772343479}.Debug|x86.Build.0 = Debug|Any CPU
+		{755A4763-1976-41A1-91A2-FFB772343479}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{755A4763-1976-41A1-91A2-FFB772343479}.Release|Any CPU.Build.0 = Release|Any CPU
+		{755A4763-1976-41A1-91A2-FFB772343479}.Release|x64.ActiveCfg = Release|Any CPU
+		{755A4763-1976-41A1-91A2-FFB772343479}.Release|x64.Build.0 = Release|Any CPU
+		{755A4763-1976-41A1-91A2-FFB772343479}.Release|x86.ActiveCfg = Release|Any CPU
+		{755A4763-1976-41A1-91A2-FFB772343479}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{EDBBC8E4-1CAF-41BA-B945-6AC59717D720} = {C9E10FD9-70B4-421A-BDB1-421F5901CB7C}
