@@ -41,11 +41,10 @@ module Handler =
     /// Run the HTTP handler in the given context.
     let runAsync (ctx : Context<'T>) (handler: HttpHandler<'T, 'TResult, 'TResult, 'TError>) : Task<Result<'TResult, HandlerError<'TError>>> =
         task {
-            let! result = handler finishEarly ctx
-            match result with
-            | Ok a -> return Ok a.Response
-            | Error err -> return Error err
+            let! result = (handler finishEarly) ctx
+            return Result.map (fun a -> a.Response) result
         }
+
     let map (mapper: 'T1 -> 'T2) (next : HttpFunc<'T2, 'TResult, 'TError>) (ctx : Context<'T1>) : HttpFuncResult<'TResult, 'TError> =
         next { Request = ctx.Request; Response = (mapper ctx.Response) }
 

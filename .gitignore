@@ -17,3 +17,5 @@ extensions/Oryx.ThothJsonNet/obj
 paket-files/
 .idea
 .mypy_cache
+
+.metals/

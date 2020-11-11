@@ -5,7 +5,7 @@ group Main
     framework: netstandard2.0
 
     nuget Microsoft.Extensions.Logging
-    nuget FSharp.Core ~> 4.7
+    nuget FSharp.Core >= 4.7
     nuget Taskbuilder.fs ~> 2.1
 
 
@@ -14,9 +14,9 @@ group Json
     storage: none
 
     framework: netstandard2.0
-    nuget FSharp.Core ~> 4.7
+    nuget FSharp.Core >= 4.7
     nuget System.Text.Json
-    nuget Taskbuilder.fs ~> 2.1
+    nuget Taskbuilder.fs ~> 2
     nuget Oryx
 
 group Newtonsoft
@@ -24,9 +24,9 @@ group Newtonsoft
     storage: none
 
     framework: netstandard2.0
-    nuget FSharp.Core ~> 4.7
+    nuget FSharp.Core >= 4.7
     nuget Newtonsoft.Json
-    nuget Taskbuilder.fs ~> 2.1
+    nuget Taskbuilder.fs ~> 2
     nuget Oryx
 
 group Thoth
@@ -34,9 +34,9 @@ group Thoth
     storage: none
 
     framework: netstandard2.0
-    nuget FSharp.Core ~> 4.7
+    nuget FSharp.Core >= 4.7
     nuget Thoth.Json.Net
-    nuget Taskbuilder.fs ~> 2.1
+    nuget Taskbuilder.fs ~> 2
     nuget Oryx
 
 group Google
@@ -44,18 +44,18 @@ group Google
     storage: none
 
     framework: netstandard2.0
-    nuget FSharp.Core ~> 4.7
-    nuget Google.Protobuf ~> 3.9
-    nuget Taskbuilder.fs ~> 2.1
+    nuget FSharp.Core >= 4.7
+    nuget Google.Protobuf ~> 3
+    nuget Taskbuilder.fs ~> 2
     nuget Oryx
 
 group Test
     source https://www.nuget.org/api/v2
     storage: none
 
-    nuget FSharp.Core 4.7.0
+    nuget FSharp.Core >= 4.7
     nuget coverlet.msbuild 2.5.1
-    nuget Unquote ~> 4
+    nuget Unquote ~> 5
     nuget xunit ~> 2
     nuget xunit.runner.visualstudio ~> 2
     nuget Serilog.Sinks.XUnit
@@ -76,5 +76,5 @@ group Benchmark
 group Examples
     source https://www.nuget.org/api/v2
     storage: none
-    
+
     nuget Thoth.Json.Net
