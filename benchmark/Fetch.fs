@@ -12,7 +12,7 @@ open BenchmarkDotNet.Attributes
 open Oryx
 open Benchmark.Common
 open Classic
-open FSharp.Control.Tasks.Builders.Unsafe
+open FSharp.Control.Tasks.Affine.Unsafe
 
 
 [<MemoryDiagnoser>]
@@ -26,19 +26,21 @@ type FetchBenchmark () =
             let! b = Common.get ()
 
             return b
-        }) finishEarly
+         })
+            finishEarly
 
     [<GlobalSetup>]
-    member self.GlobalSetupData () =
+    member self.GlobalSetupData() =
         let json = """{ "name": "test", "value": 42}"""
 
         let stub =
-            Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
-            (task {
-                let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-                responseMessage.Content <- new StringContent(json)
-                return responseMessage
-            }))
+            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
+                (fun request token ->
+                    (task {
+                        let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+                        responseMessage.Content <- new StringContent(json)
+                        return responseMessage
+                     }))
 
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
@@ -50,56 +52,70 @@ type FetchBenchmark () =
 
 
     [<Benchmark(Description = "Oryx", Baseline = true)>]
-    member self.Fetch () =
+    member self.Fetch() =
         (task {
-            let request = req {
-                let! a = Common.get ()
-                let! b = Common.get ()
+            let request =
+                req {
+                    let! a = Common.get ()
+                    let! b = Common.get ()
 
-                return b
-            }
+                    return b
+                }
+
             let! res = request |> runAsync ctx
+
             match res with
-            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
+            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString())
             | Ok data -> ()
-        }).Result
+         })
+            .Result
 
     [<Benchmark(Description = "Oryx Compiled")>]
-    member self.FetchCompiled () =
+    member self.FetchCompiled() =
         (task {
             let! res = compiled ctx
+
             match res with
-            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
+            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString())
             | Ok data -> ()
-        }).Result
+         })
+            .Result
 
     [<Benchmark(Description = "No next handler")>]
-    member self.FetchClassic () =
+    member self.FetchClassic() =
         (task {
-            let request = Classic.Builder.req {
-                let! a = ClassicHandler.get ()
-                let! b = ClassicHandler.get ()
+            let request =
+                Classic.Builder.req {
+                    let! a = ClassicHandler.get ()
+                    let! b = ClassicHandler.get ()
 
-                return b
-            }
+                    return b
+                }
+
             let! res = request ctx
+
             match res with
-            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
+            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString())
             | Ok data -> ()
-        }).Result
+         })
+            .Result
 
 
     [<Benchmark(Description = "No next handler w/Ply")>]
-    member self.FetchClassicPly () =
+    member self.FetchClassicPly() =
         (uply {
-            let req = Ply.Builder.oryx {
-                let! a = Ply.Handler.get ()
-                let! b = Ply.Handler.get ()
+            let req =
+                Ply.Builder.oryx {
+                    let! a = Ply.Handler.get ()
+                    let! b = Ply.Handler.get ()
 
-                return b
-            }
+                    return b
+                }
+
             let! res = req ctx
+
             match res with
-            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
+            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString())
             | Ok data -> ()
-        }).Result
+         })
+            .Result

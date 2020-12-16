@@ -1,9 +1,9 @@
 // Copyright 2020 Cognite AS
+// SPDX-License-Identifier: Apache-2.0
 
 namespace Oryx
 
 open System
-open System.Net.Http
 open System.Text.RegularExpressions
 open Microsoft.Extensions.Logging
 open FSharp.Control.Tasks.V2.ContextInsensitive
@@ -12,15 +12,15 @@ open FSharp.Control.Tasks.V2.ContextInsensitive
 module Logging =
 
     /// Set the logger (ILogger) to use. Usually you would use `Context.withLogger` instead to set the logger for all requests.
-    let withLogger (logger: ILogger) (next: HttpFunc<HttpResponseMessage,'T, 'TError>) (context: HttpContext) =
+    let withLogger (logger: ILogger) (next: HttpFunc<unit,'T, 'TError>) (context: Context) =
         next { context with Request = { context.Request with Logger = Some logger } }
 
     /// Set the log level to use (default is LogLevel.None).
-    let withLogLevel (logLevel: LogLevel) (next: HttpFunc<HttpResponseMessage,'T, 'TError>) (context: HttpContext) =
+    let withLogLevel (logLevel: LogLevel) (next: HttpFunc<unit,'T, 'TError>) (context: Context) =
         next { context with Request = { context.Request with LogLevel = logLevel } }
 
     /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
-    let withLogMessage (msg: string) (next: HttpFunc<HttpResponseMessage,'T, 'TError>) (context: HttpContext) =
+    let withLogMessage (msg: string) (next: HttpFunc<unit,'T, 'TError>) (context: Context) =
         next { context with Request = { context.Request with Items = context.Request.Items.Add (PlaceHolder.Message, Value.String msg)  } }
 
     // Pre-compiled
