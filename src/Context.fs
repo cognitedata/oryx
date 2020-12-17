@@ -99,6 +99,7 @@ type HttpResponse<'T> =
         StatusCode: HttpStatusCode
         /// True if response is successful
         IsSuccessStatusCode: bool
+        /// Reason phrase which typically is sent by servers together with the status code
         ReasonPhrase: string
     }
 
