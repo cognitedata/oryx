@@ -312,10 +312,7 @@ let ``Multiple post with logging is OK`` () =
                 let! a = withLogMessage "first" >=> post (content 41)
                 let! b = withLogMessage "second" >=> post (content 42)
 
-                return
-                    { a with
-                        Content = a.Content + b.Content
-                    }
+                return a + b
             }
             |> runAsync ctx
 

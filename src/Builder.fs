@@ -3,9 +3,6 @@
 
 namespace Oryx
 
-open System.Net.Http
-
-
 type RequestBuilder () =
     member _.Zero(): HttpHandler<unit, unit, _, 'err> = id
 
@@ -14,7 +11,7 @@ type RequestBuilder () =
             next
                 {
                     Request = ctx.Request
-                    Response = res
+                    Response = ctx.Response.Replace(res)
                 }
 
     member _.ReturnFrom(req: HttpHandler<'T, 'TNext, 'TResult, 'TError>): HttpHandler<'T, 'TNext, 'TResult, 'TError> =
@@ -31,7 +28,7 @@ type RequestBuilder () =
                   fn: 'TValue -> HttpHandler<'T, 'TNext, 'TResult, 'TError>)
                   : HttpHandler<'T, 'TNext, 'TResult, 'TError> =
         fun next ctx ->
-            let next' (ctx': Context<'TValue>) = fn ctx'.Response next ctx // Run function in context
+            let next' (ctx': Context<'TValue>) = fn ctx'.Response.Content next ctx // Run function in context
 
             source next' ctx // Run source is context
 

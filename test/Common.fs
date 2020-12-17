@@ -55,14 +55,14 @@ type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationTok
                             : Task<HttpResponseMessage> =
         task { return! sendAsync.Invoke(request, cancellationToken) }
 
-let unit (value: 'a) (next: HttpFunc<'a, 'r, 'err>) (context: Context): HttpFuncResult<'r, 'err> =
+let unit (value: 'a) (next: HttpFunc<'a, 'r, 'err>) (context: HttpContext): HttpFuncResult<'r, 'err> =
     next
         {
             Request = context.Request
-            Response = value
+            Response = context.Response.Replace(value)
         }
 
-let add (a: int) (b: int) (next: HttpFunc<int, 'b, 'err>) (context: Context): HttpFuncResult<'b, 'err> =
+let add (a: int) (b: int) (next: HttpFunc<int, 'b, 'err>) (context: HttpContext): HttpFuncResult<'b, 'err> =
     unit (a + b) next context
 
 exception TestException of string with
@@ -93,7 +93,7 @@ let badRequestHandler<'a, 'b> (response: 'b) (error: HandlerError<TestError>) (c
                     Ok
                         {
                             Request = ctx.Request
-                            Response = response
+                            Response = ctx.Response.Replace(response)
                         }
             | _ -> return Error error
         | _ -> return Error error
@@ -104,7 +104,7 @@ let shouldRetry (error: HandlerError<TestError>): bool =
     | ResponseError error -> true
     | Panic _ -> false
 
-let errorHandler (response: HttpResponseMessage) =
+let errorHandler (response: HttpResponse<HttpContent>) =
     task {
         return
             {
@@ -114,11 +114,7 @@ let errorHandler (response: HttpResponseMessage) =
             |> ResponseError
     }
 
-let json
-    (next: HttpFunc<HttpResponse<string>, 'c, 'err>)
-    (ctx: Context<HttpResponseMessage>)
-    : HttpFuncResult<'c, 'err>
-    =
+let json (next: HttpFunc<string, 'c, 'err>) (ctx: Context<HttpContent>): HttpFuncResult<'c, 'err> =
     parseAsync (fun _ -> task { return! ctx.Response.Content.ReadAsStringAsync() }) next ctx
 
 let get () =

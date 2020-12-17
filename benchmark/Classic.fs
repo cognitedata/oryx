@@ -34,7 +34,7 @@ module ClassicHandler =
             let! result = handler ctx
 
             match result with
-            | Ok a -> return Ok a.Response
+            | Ok a -> return Ok a.Response.Content
             | Error err -> return Error err
         }
 
@@ -42,7 +42,7 @@ module ClassicHandler =
         Ok
             {
                 Request = ctx.Request
-                Response = (mapper ctx.Response)
+                Response = ctx.Response.Replace(mapper ctx.Response.Content)
             }
         |> Task.FromResult
 
@@ -62,7 +62,7 @@ module ClassicHandler =
 
     let (>=>) = compose
 
-    let GET<'TResult, 'TError> (context: Context) =
+    let GET<'TResult, 'TError> (context: HttpContext) =
         Ok
             { context with
                 Request =
@@ -74,9 +74,9 @@ module ClassicHandler =
         |> Task.FromResult
 
     let withError<'TError>
-        (errorHandler: HttpResponseMessage -> Task<HandlerError<'TError>>)
-        (context: Context<HttpResponseMessage>)
-        : HttpFuncResultClassic<HttpResponseMessage, 'TError>
+        (errorHandler: HttpResponse<HttpContent> -> Task<HandlerError<'TError>>)
+        (context: Context<HttpContent>)
+        : HttpFuncResultClassic<HttpContent, 'TError>
         =
         task {
             let response = context.Response
@@ -88,7 +88,7 @@ module ClassicHandler =
                 return err |> Error
         }
 
-    let withUrlBuilder<'TResult, 'TError> (builder: UrlBuilder) (context: Context) =
+    let withUrlBuilder<'TResult, 'TError> (builder: UrlBuilder) (context: HttpContext) =
         Ok
             { context with
                 Request =
@@ -98,9 +98,9 @@ module ClassicHandler =
             }
         |> Task.FromResult
 
-    let setUrl<'TResult, 'TError> (url: string) (context: Context) = withUrlBuilder (fun _ -> url) context
+    let setUrl<'TResult, 'TError> (url: string) (context: HttpContext) = withUrlBuilder (fun _ -> url) context
 
-    let fetch<'TError> (ctx: Context): HttpFuncResultClassic<HttpResponseMessage, 'TError> =
+    let fetch<'TError> (ctx: HttpContext): HttpFuncResultClassic<HttpContent, 'TError> =
         let client = ctx.Request.HttpClient()
         let cancellationToken = ctx.Request.CancellationToken
 
@@ -113,19 +113,14 @@ module ClassicHandler =
                     Ok
                         {
                             Request = ctx.Request
-                            Response = response
+                            Response = ctx.Response.Replace(response.Content)
                         }
             with ex -> return Panic ex |> Error
         }
 
-    let json<'T, 'TError>
-        (decoder: Decoder<'T>)
-        (context: Context<HttpResponseMessage>)
-        : HttpFuncResultClassic<'T, 'TError>
-        =
+    let json<'T, 'TError> (decoder: Decoder<'T>) (context: Context<HttpContent>): HttpFuncResultClassic<'T, 'TError> =
         task {
-            use response = context.Response
-            let! stream = response.Content.ReadAsStreamAsync()
+            let! stream = context.Response.Content.ReadAsStreamAsync()
             let! ret = decodeStreamAsync decoder stream
             do! stream.DisposeAsync()
 
@@ -135,7 +130,7 @@ module ClassicHandler =
                     Ok
                         {
                             Request = context.Request
-                            Response = result
+                            Response = context.Response.Replace(result)
                         }
             | Error error -> return Error(Panic <| JsonDecodeException error)
         }
@@ -149,7 +144,12 @@ module ClassicHandler =
                 })
 
     let noop (ctx: Context<'T>): HttpFuncResultClassic<int, 'TError> =
-        let ctx' = { Request = ctx.Request; Response = 42 }
+        let ctx' =
+            {
+                Request = ctx.Request
+                Response = ctx.Response.Replace(42)
+            }
+
         Ok ctx' |> Task.FromResult
 
     let get () =
@@ -165,11 +165,11 @@ type RequestBuilder () =
     member this.Zero(): HttpHandlerClassic<unit, _, 'TError> = fun _ -> Ok Context.defaultContext |> Task.FromResult
 
     member this.Return(res: 'T): HttpHandlerClassic<unit, 'T, 'TError> =
-        fun _ ->
+        fun ctx ->
             Ok
                 {
-                    Request = Context.defaultRequest
-                    Response = res
+                    Request = ctx.Request
+                    Response = ctx.Response.Replace(res)
                 }
             |> Task.FromResult
 
@@ -197,7 +197,7 @@ type RequestBuilder () =
                 match br with
                 | Ok cb ->
                     let b = cb.Response
-                    return! (fn cb.Response) ctx
+                    return! (fn cb.Response.Content) ctx
                 | Error err -> return Error err
             }
 

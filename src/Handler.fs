@@ -41,6 +41,16 @@ module Handler =
     let finishEarly<'T, 'TError> : HttpFunc<'T, 'T, 'TError> = Ok >> Task.FromResult
 
     /// Run the HTTP handler in the given context.
+    let runAsync'
+        (ctx: Context<'T>)
+        (handler: HttpHandler<'T, 'TResult, 'TResult, 'TError>)
+        : Task<Result<HttpResponse<'TResult>, HandlerError<'TError>>>
+        =
+        task {
+            let! result = (handler finishEarly) ctx
+            return Result.map (fun a -> a.Response) result
+        }
+
     let runAsync
         (ctx: Context<'T>)
         (handler: HttpHandler<'T, 'TResult, 'TResult, 'TError>)
@@ -48,7 +58,7 @@ module Handler =
         =
         task {
             let! result = (handler finishEarly) ctx
-            return Result.map (fun a -> a.Response) result
+            return Result.map (fun a -> a.Response.Content) result
         }
 
     let map
@@ -60,7 +70,7 @@ module Handler =
         next
             {
                 Request = ctx.Request
-                Response = (mapper ctx.Response)
+                Response = ctx.Response.Replace(mapper ctx.Response.Content)
             }
 
     let inline compose
@@ -72,9 +82,14 @@ module Handler =
 
     let (>=>) = compose
 
+
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
-    let withQuery (query: seq<struct (string * string)>) (next: HttpFunc<unit, 'TResult, 'TError>) (context: Context) =
+    let withQuery
+        (query: seq<struct (string * string)>)
+        (next: HttpFunc<unit, 'TResult, 'TError>)
+        (context: HttpContext)
+        =
         next
             { context with
                 Request = { context.Request with Query = query }
@@ -85,7 +100,7 @@ module Handler =
     let withContent<'TResult, 'TError>
         (builder: unit -> HttpContent)
         (next: HttpFunc<unit, 'TResult, 'TError>)
-        (context: Context)
+        (context: HttpContext)
         =
         next
             { context with
@@ -95,10 +110,25 @@ module Handler =
                     }
             }
 
+    let withHeader<'TResult, 'TError>
+        (name: string)
+        (value: string)
+        (next: HttpFunc<unit, 'TResult, 'TError>)
+        (context: HttpContext)
+        =
+        next
+            { context with
+                Request =
+                    { context.Request with
+                        Headers = context.Request.Headers.Add(name, value)
+                    }
+            }
+
+
     let withResponseType<'TResult, 'TError>
         (respType: ResponseType)
         (next: HttpFunc<unit, 'TResult, 'TError>)
-        (context: Context)
+        (context: HttpContext)
         =
         next
             { context with
@@ -112,7 +142,7 @@ module Handler =
     let withMethod<'TResult, 'TError>
         (method: HttpMethod)
         (next: HttpFunc<unit, 'TResult, 'TError>)
-        (context: Context)
+        (context: HttpContext)
         =
         next
             { context with
@@ -122,7 +152,7 @@ module Handler =
     let withUrlBuilder<'TResult, 'TError>
         (builder: UrlBuilder)
         (next: HttpFunc<unit, 'TResult, 'TError>)
-        (context: Context)
+        (context: HttpContext)
         =
         next
             { context with
@@ -136,7 +166,7 @@ module Handler =
     let withUrl<'TResult, 'TError> (url: string) = withUrlBuilder<'TResult, 'TError> (fun _ -> url)
 
     /// Http GET request. Also clears any content set in the context.
-    let GET<'TResult, 'TError> (next: HttpFunc<unit, 'TResult, 'TError>) (context: Context) =
+    let GET<'TResult, 'TError> (next: HttpFunc<unit, 'TResult, 'TError>) (context: HttpContext) =
         next
             { context with
                 Request =
@@ -175,7 +205,7 @@ module Handler =
                 let bs =
                     {
                         Request = ctx.Request
-                        Response = results |> List.map (fun r -> r.Response)
+                        Response = ctx.Response.Replace(results |> List.map (fun r -> r.Response.Content))
                     }
 
                 return! next bs
@@ -204,7 +234,7 @@ module Handler =
                 let bs =
                     {
                         Request = ctx.Request
-                        Response = results |> List.map (fun c -> c.Response)
+                        Response = ctx.Response.Replace(results |> List.map (fun c -> c.Response.Content))
                     }
 
                 return! next bs
@@ -214,33 +244,21 @@ module Handler =
     /// Parse response stream to a user specified type synchronously.
     let parse<'T, 'TResult, 'TError>
         (parser: Stream -> 'T)
-        (next: HttpFunc<HttpResponse<'T>, 'TResult, 'TError>)
-        (ctx: Context<HttpResponseMessage>)
+        (next: HttpFunc<'T, 'TResult, 'TError>)
+        (ctx: Context<HttpContent>)
         : HttpFuncResult<'TResult, 'TError>
         =
         task {
             let! stream = ctx.Response.Content.ReadAsStreamAsync()
 
-            let headers =
-                Map [
-                    for KeyValue (k, v) in ctx.Response.Headers do
-                        k, v
-                ]
-
             try
-                let a = parser stream
+                let item = parser stream
 
                 return!
                     next
                         {
                             Request = ctx.Request
-                            Response =
-                                {
-                                    Content = a
-                                    Headers = headers
-                                    StatusCode = ctx.Response.StatusCode
-                                    IsSuccessStatusCode = ctx.Response.IsSuccessStatusCode
-                                }
+                            Response = ctx.Response.Replace(item)
                         }
             with ex ->
                 ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
@@ -250,33 +268,22 @@ module Handler =
     /// Parse response stream to a user specified type asynchronously.
     let parseAsync<'T, 'TResult, 'TError>
         (parser: Stream -> Task<'T>)
-        (next: HttpFunc<HttpResponse<'T>, 'TResult, 'TError>)
-        (ctx: Context<HttpResponseMessage>)
+        (next: HttpFunc<'T, 'TResult, 'TError>)
+        (ctx: Context<HttpContent>)
         : HttpFuncResult<'TResult, 'TError>
         =
         task {
             let! stream = ctx.Response.Content.ReadAsStreamAsync()
 
-            let headers =
-                Map [
-                    for KeyValue (k, v) in ctx.Response.Headers do
-                        k, v
-                ]
 
             try
-                let! a = parser stream
+                let! item = parser stream
 
                 return!
                     next
                         {
                             Request = ctx.Request
-                            Response =
-                                {
-                                    Content = a
-                                    Headers = headers
-                                    StatusCode = ctx.Response.StatusCode
-                                    IsSuccessStatusCode = ctx.Response.IsSuccessStatusCode
-                                }
+                            Response = ctx.Response.Replace(item)
                         }
             with ex ->
                 ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
@@ -289,7 +296,7 @@ module Handler =
     let withTokenRenewer<'TResult, 'TError>
         (tokenProvider: CancellationToken -> Task<Result<string, HandlerError<'TError>>>)
         (next: HttpFunc<unit, 'TResult, 'TError>)
-        (ctx: Context)
+        (ctx: HttpContext)
         =
         task {
             let! result =
@@ -314,7 +321,7 @@ module Handler =
     let withCompletion<'TResult, 'TError>
         (completionMode: HttpCompletionOption)
         (next: HttpFunc<unit, 'TResult, 'TError>)
-        (ctx: Context)
+        (ctx: HttpContext)
         =
         next
             { ctx with

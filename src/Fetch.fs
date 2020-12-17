@@ -25,7 +25,7 @@ module Fetch =
             content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded"
             content :> HttpContent
 
-    let buildRequest (client: HttpClient) (ctx: Context): HttpRequestMessage =
+    let buildRequest (client: HttpClient) (ctx: HttpContext): HttpRequestMessage =
         let query = ctx.Request.Query
 
         let url =
@@ -64,11 +64,7 @@ module Fetch =
 
     /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{RequestContent}` and `{Elapsed}`
     /// to the log format.
-    let fetch<'T, 'TError>
-        (next: HttpFunc<HttpResponseMessage, 'T, 'TError>)
-        (ctx: Context)
-        : HttpFuncResult<'T, 'TError>
-        =
+    let fetch<'T, 'TError> (next: HttpFunc<HttpContent, 'T, 'TError>) (ctx: HttpContext): HttpFuncResult<'T, 'TError> =
         let timer = Stopwatch()
         let client = ctx.Request.HttpClient()
         let cancellationToken = ctx.Request.CancellationToken
@@ -90,11 +86,24 @@ module Fetch =
                         .Add(PlaceHolder.Url, Url request.RequestUri)
                         .Add(PlaceHolder.Elapsed, Number timer.ElapsedMilliseconds)
 
+                let headers =
+                    Map [
+                        for KeyValue (k, v) in ctx.Response.Headers do
+                            k, v
+                    ]
+
                 let! result =
                     next
                         {
                             Request = { ctx.Request with Items = items }
-                            Response = response
+                            Response =
+                                {
+                                    Content = response.Content
+                                    StatusCode = response.StatusCode
+                                    IsSuccessStatusCode = response.IsSuccessStatusCode
+                                    ReasonPhrase = response.ReasonPhrase
+                                    Headers = headers
+                                }
                         }
 
                 response.Dispose()

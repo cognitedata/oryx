@@ -99,13 +99,27 @@ type HttpResponse<'T> =
         StatusCode: HttpStatusCode
         /// True if response is successful
         IsSuccessStatusCode: bool
+        ReasonPhrase: string
     }
 
-type Context<'T> = { Request: HttpRequest; Response: 'T }
+    /// Replaces the content of the HTTP response.
+    member x.Replace<'TResult>(content: 'TResult): HttpResponse<'TResult> =
+        {
+            Content = content
+            StatusCode = x.StatusCode
+            IsSuccessStatusCode = x.IsSuccessStatusCode
+            Headers = x.Headers
+            ReasonPhrase = x.ReasonPhrase
+        }
+
+type Context<'T> =
+    {
+        Request: HttpRequest
+        Response: HttpResponse<'T>
+    }
 
 /// Empty context (without response content)
-type Context = Context<unit>
-type HttpContext<'T> = Context<HttpResponse<'T>>
+type HttpContext = Context<unit>
 
 module Context =
     let private fileVersion =
@@ -116,7 +130,7 @@ module Context =
     let defaultLogFormat =
         "Oryx: {Message} {HttpMethod} {Url}\n→ {RequestContent}\n← {ResponseContent}"
 
-    /// Default context to use.
+    /// Default request to use.
     let defaultRequest =
         let ua = sprintf "Oryx / v%s (Cognite)" fileVersion
 
@@ -137,17 +151,25 @@ module Context =
             CompletionMode = HttpCompletionOption.ResponseContentRead
         }
 
-    let defaultResponse = ()
+    /// Default response to use.
+    let defaultResponse =
+        {
+            Content = ()
+            StatusCode = HttpStatusCode.NotFound
+            IsSuccessStatusCode = false
+            Headers = Map.empty
+            ReasonPhrase = String.Empty
+        }
 
     /// The default context.
-    let defaultContext: Context =
+    let defaultContext: HttpContext =
         {
             Request = defaultRequest
             Response = defaultResponse
         }
 
     /// Add HTTP header to context.
-    let withHeader (header: string * string) (context: Context) =
+    let withHeader (header: string * string) (context: HttpContext) =
         { context with
             Request =
                 { context.Request with
@@ -156,7 +178,7 @@ module Context =
         }
 
     /// Replace all headers in the context.
-    let withHeaders (headers: Map<string, string>) (context: Context) =
+    let withHeaders (headers: Map<string, string>) (context: HttpContext) =
         { context with
             Request =
                 { context.Request with
@@ -165,7 +187,7 @@ module Context =
         }
 
     /// Helper for setting Bearer token as Authorization header.
-    let withBearerToken (token: string) (context: Context) =
+    let withBearerToken (token: string) (context: HttpContext) =
         let header = ("Authorization", sprintf "Bearer %s" token)
 
         { context with
@@ -176,7 +198,7 @@ module Context =
         }
 
     /// Set the HTTP client to use for the requests.
-    let withHttpClient (client: HttpClient) (context: Context) =
+    let withHttpClient (client: HttpClient) (context: HttpContext) =
         { context with
             Request =
                 { context.Request with
@@ -185,7 +207,7 @@ module Context =
         }
 
     /// Set the HTTP client factory to use for the requests.
-    let withHttpClientFactory (factory: unit -> HttpClient) (context: Context) =
+    let withHttpClientFactory (factory: unit -> HttpClient) (context: HttpContext) =
         { context with
             Request =
                 { context.Request with
@@ -194,7 +216,7 @@ module Context =
         }
 
     /// Set the URL builder to use.
-    let withUrlBuilder (builder: HttpRequest -> string) (context: Context) =
+    let withUrlBuilder (builder: HttpRequest -> string) (context: HttpContext) =
         { context with
             Request =
                 { context.Request with
@@ -203,7 +225,7 @@ module Context =
         }
 
     /// Set a cancellation token to use for the requests.
-    let withCancellationToken (token: CancellationToken) (context: Context) =
+    let withCancellationToken (token: CancellationToken) (context: HttpContext) =
         { context with
             Request =
                 { context.Request with
@@ -212,7 +234,7 @@ module Context =
         }
 
     /// Set the logger (ILogger) to use.
-    let withLogger (logger: ILogger) (context: Context) =
+    let withLogger (logger: ILogger) (context: HttpContext) =
         { context with
             Request =
                 { context.Request with
@@ -221,7 +243,7 @@ module Context =
         }
 
     /// Set the log level to use (default is LogLevel.None).
-    let withLogLevel (logLevel: LogLevel) (context: Context) =
+    let withLogLevel (logLevel: LogLevel) (context: HttpContext) =
         { context with
             Request =
                 { context.Request with
@@ -230,7 +252,7 @@ module Context =
         }
 
     /// Set the log format to use.
-    let withLogFormat (format: string) (context: Context) =
+    let withLogFormat (format: string) (context: HttpContext) =
         { context with
             Request =
                 { context.Request with
@@ -239,7 +261,7 @@ module Context =
         }
 
     /// Set the log message to use (normally you would like to use the withLogMessage handler instead)
-    let withLogMessage (msg: string) (context: Context) =
+    let withLogMessage (msg: string) (context: HttpContext) =
         { context with
             Request =
                 { context.Request with
@@ -248,7 +270,7 @@ module Context =
         }
 
     /// Set the metrics (IMetrics) to use.
-    let withMetrics (metrics: IMetrics) (context: Context) =
+    let withMetrics (metrics: IMetrics) (context: HttpContext) =
         { context with
             Request =
                 { context.Request with
