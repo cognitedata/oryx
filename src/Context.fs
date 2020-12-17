@@ -10,6 +10,7 @@ open System.Reflection
 open System.Threading
 
 open Microsoft.Extensions.Logging
+open System.Diagnostics
 
 type RequestMethod =
     | POST
@@ -107,22 +108,17 @@ type Context = Context<unit>
 type HttpContext<'T> = Context<HttpResponse<'T>>
 
 module Context =
-    let private version =
-        let version = Assembly.GetExecutingAssembly().GetName().Version
-
-        {|
-            Major = version.Major
-            Minor = version.Minor
-            Build = version.Build
-        |}
+    let private fileVersion =
+        FileVersionInfo
+            .GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+            .FileVersion
 
     let defaultLogFormat =
         "Oryx: {Message} {HttpMethod} {Url}\n→ {RequestContent}\n← {ResponseContent}"
 
     /// Default context to use.
     let defaultRequest =
-        let ua =
-            sprintf "Oryx / v%d.%d.%d (Cognite)" version.Major version.Minor version.Build
+        let ua = sprintf "Oryx / v%s (Cognite)" fileVersion
 
         {
             HttpClient = (fun () -> failwith "Must set HttpClient")
