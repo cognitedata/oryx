@@ -29,18 +29,12 @@ type HttpFunc<'T, 'TResult, 'TError> = Context<'T> -> HttpFuncResult<'TResult, '
 type HttpHandler<'T, 'TNext, 'TResult, 'TError> =
     HttpFunc<'TNext, 'TResult, 'TError> -> Context<'T> -> HttpFuncResult<'TResult, 'TError>
 
-type HttpHandler<'T, 'TResult, 'TError> = HttpHandler<'T, 'T, 'TResult, 'TError>
-
-type HttpHandler<'T, 'TError> = HttpHandler<HttpResponseMessage, 'T, 'TError>
-
-type HttpHandler<'TError> = HttpHandler<HttpResponseMessage, 'TError>
-
 [<AutoOpen>]
 module Handler =
     /// A next continuation that produces an Ok async result. Used to end the processing pipeline.
     let finishEarly<'T, 'TError> : HttpFunc<'T, 'T, 'TError> = Ok >> Task.FromResult
 
-    /// Run the HTTP handler in the given context.
+    /// Run the HTTP handler in the given context. Returns HttpResponse with headers and status-code etc.
     let runAsync'
         (ctx: Context<'T>)
         (handler: HttpHandler<'T, 'TResult, 'TResult, 'TError>)
@@ -51,6 +45,7 @@ module Handler =
             return Result.map (fun a -> a.Response) result
         }
 
+    /// Run the HTTP handler in the given context. Returns content only.
     let runAsync
         (ctx: Context<'T>)
         (handler: HttpHandler<'T, 'TResult, 'TResult, 'TError>)
@@ -61,6 +56,7 @@ module Handler =
             return Result.map (fun a -> a.Response.Content) result
         }
 
+    /// Map the content of the HTTP handler.
     let map
         (mapper: 'T1 -> 'T2)
         (next: HttpFunc<'T2, 'TResult, 'TError>)
@@ -73,6 +69,7 @@ module Handler =
                 Response = ctx.Response.Replace(mapper ctx.Response.Content)
             }
 
+    /// Compose two HTTP handlers into one.
     let inline compose
         (first: HttpHandler<'T1, 'T2, 'TResult, 'TError>)
         (second: HttpHandler<'T2, 'T3, 'TResult, 'TError>)
@@ -80,6 +77,7 @@ module Handler =
         =
         second >> first
 
+    /// Composes two HTTP handlers.
     let (>=>) = compose
 
 
@@ -95,8 +93,9 @@ module Handler =
                 Request = { context.Request with Query = query }
             }
 
-    /// Add content builder to context. These content will be added to the HTTP body of
-    /// requests that uses this context.
+    /// HTTP handler for adding content builder to context. These
+    /// content will be added to the HTTP body of requests that uses
+    /// this context.
     let withContent<'TResult, 'TError>
         (builder: unit -> HttpContent)
         (next: HttpFunc<unit, 'TResult, 'TError>)
@@ -110,6 +109,9 @@ module Handler =
                     }
             }
 
+    /// HTTP handler for adding HTTP header to the context. The header
+    /// will be added to the HTTP request when using the `fetch` HTTP
+    /// handler.
     let withHeader<'TResult, 'TError>
         (name: string)
         (value: string)
@@ -125,6 +127,7 @@ module Handler =
             }
 
 
+    /// HTTP handler for setting the expected response type.
     let withResponseType<'TResult, 'TError>
         (respType: ResponseType)
         (next: HttpFunc<unit, 'TResult, 'TError>)
@@ -138,7 +141,10 @@ module Handler =
                     }
             }
 
-    /// Set the method to be used for requests using this context.
+    /// HTTP handler for setting the method to be used for requests
+    /// using this context. You will normally want to use the `GET`,
+    /// `POST`, `PUT`, `DELETE`, or `OPTIONS` HTTP handlers instead of
+    /// this one.
     let withMethod<'TResult, 'TError>
         (method: HttpMethod)
         (next: HttpFunc<unit, 'TResult, 'TError>)
@@ -149,6 +155,7 @@ module Handler =
                 Request = { context.Request with Method = method }
             }
 
+    /// HTTP handler for building the URL.
     let withUrlBuilder<'TResult, 'TError>
         (builder: UrlBuilder)
         (next: HttpFunc<unit, 'TResult, 'TError>)
@@ -165,7 +172,7 @@ module Handler =
     // A basic way to set the request URL. Use custom builders for more advanced usage.
     let withUrl<'TResult, 'TError> (url: string) = withUrlBuilder<'TResult, 'TError> (fun _ -> url)
 
-    /// Http GET request. Also clears any content set in the context.
+    /// HTTP GET request. Also clears any content set in the context.
     let GET<'TResult, 'TError> (next: HttpFunc<unit, 'TResult, 'TError>) (context: HttpContext) =
         next
             { context with
@@ -176,13 +183,13 @@ module Handler =
                     }
             }
 
-    /// Http POST request.
+    /// HTTP POST request.
     let POST<'T, 'TError> = withMethod<'T, 'TError> HttpMethod.Post
-    /// Http PUT request.
+    /// HTTP PUT request.
     let PUT<'T, 'TError> = withMethod<'T, 'TError> HttpMethod.Put
-    /// Http DELETE request.
+    /// HTTP DELETE request.
     let DELETE<'T, 'TError> = withMethod<'T, 'TError> HttpMethod.Delete
-    /// Http Options request.
+    /// HTTP Options request.
     let OPTIONS<'T, 'TError> = withMethod<'T, 'TError> HttpMethod.Options
 
     /// Run list of HTTP handlers concurrently.

@@ -84,24 +84,18 @@ making the request, and also contains any response (or error) received from the 
 ```fs
 type Context<'T> = {
     Request: HttpRequest
-    Response: 'T
+    Response: HttpResponse<'T>
 }
 ```
 
 The `Context` is constructed synchronously using a series of context builder functions (`Context -> Context`). But it
-may also be transformed by series of asynchronous HTTP handlers. The `HttpHandler` takes a `Context` (and a `HttpFunc`)
-and returns a new `Context` wrapped in a `Result` and a `Task`.
+may also be transformed by a series of asynchronous HTTP handlers. The `HttpHandler` takes a `Context` (and a
+`HttpFunc`) and returns a new `Context` wrapped in a `Result` and a `Task`.
 
 ```fs
 type HttpFuncResult<'TResult, 'TError> =  Task<Result<Context<'TResult>, HandlerError<'TError>>>
 type HttpFunc<'T, 'TResult, 'TError> = Context<'T> -> HttpFuncResult<'TResult, 'TError>
 type HttpHandler<'T, 'TNext, 'TResult, 'TError> = HttpFunc<'TNext, 'TResult, 'TError> -> Context<'T> -> HttpFuncResult<'TResult, 'TError>
-
-// For convenience
-type HttpHandler<'T, 'TResult, 'TError> = HttpHandler<'T, 'T, 'TResult, 'TError>
-type HttpHandler<'T, 'TError> = HttpHandler<HttpResponseMessage, 'T, 'TError>
-type HttpHandler<'TError> = HttpHandler<HttpResponseMessage, 'TError>
-
 ```
 
 An `HttpHandler` is a plain function that takes two curried arguments, a `HttpFunc` and a `Context`, and returns a new
@@ -139,7 +133,7 @@ The following builder functions may be used:
 - `withBearerToken` - Adds an `Authorization` header with `Bearer` token.
 - `withHttpClient` - Adds the `HttpClient` to use for making requests using the `fetch` handler.
 - `withHttpClientFactory` - Adds an `HttpClient` factory function to use for producing the `HttpClient`.
-- `withUrlBuilder` - Adds an the URL builder to use. An URL builder construct the URL for the `Request` part of the
+- `withUrlBuilder` - Adds the URL builder to use. An URL builder construct the URL for the `Request` part of the
   context.
 - `withCancellationToken` - Adds a cancellation token to use for the context. This is particularly useful when using
   Oryx together with C# client code that supplies a cancellation token.
@@ -162,14 +156,14 @@ may be composed into more complex HTTP handlers. The HTTP handlers included with
 - `chunk` - Chunks a sequence of HTTP handlers into sequential and concurrent batches.
 - `concurrent` - Runs a sequence of HTTP handlers concurrently.
 - `extractHeader` - Extract header from the HTTP response.
-- `fetch` - Fetches from remote using current context
+- `fetch` - Fetches from remote using the current context
 - `log` - Log information about the given request.
-- `parse` - Parse response stream to a user specified type synchronously.
-- `parseAsync` - Parse response stream to a user specified type asynchronously.
+- `parse` - Parse response stream to a user-specified type synchronously.
+- `parseAsync` - Parse response stream to a user-specified type asynchronously.
 - `retry` - Retries the current HTTP chandler if an error occurs.
 - `sequential` - Runs a sequence of HTTP handlers sequentially.
 - `withContent` - Add HTTP content to the fetch request
-- `withLogMessage` - Log information about the given request supplying a user specified message.
+- `withLogMessage` - Log information about the given request supplying a user-specified message.
 - `withMethod` - with HTTP method. You can use GET, PUT, POST instead.
 - `withQuery` - Add URL query parameters
 - `withResponseType` - Sets the Accept header of the request.
@@ -180,7 +174,7 @@ may be composed into more complex HTTP handlers. The HTTP handlers included with
 
 In addition there are several extension for decoding JSON and Protobuf responses:
 
-- `json` - Decodes the given `application/json` response into a user specified type.
+- `json` - Decodes the given `application/json` response into a user-specified type.
 - `protobuf` - - Decodes the given `application/protobuf` response into a Protobuf specific type.
 
 See [JSON and Protobuf Content Handling](#json-and-protobuf-content-handling) for more information.
@@ -232,7 +226,7 @@ This enables you to compose your web requests and decode the response, e.g as we
 [Cognite Data Fusion SDK](https://github.com/cognitedata/cognite-sdk-dotnet/blob/master/Oryx.Cognite/src/Handler.fs):
 
 ```fs
-    let list (query: AssetQuery) : HttpHandler<HttpResponseMessage, ItemsWithCursor<AssetReadDto>, 'a> =
+    let list (query: AssetQuery) : HttpHandler<unit, ItemsWithCursor<AssetReadDto>, 'a> =
         let url = Url +/ "list"
 
         POST
@@ -334,9 +328,9 @@ multiple requests.
 val chunk:
    chunkSize     : int     ->
    maxConcurrency: int     ->
-   handler       : seq<'a> -> HttpHandler<HttpResponseMessage,seq<'b>,seq<'b>,'err> ->
+   handler       : seq<'a> -> HttpHandler<unit,seq<'b>,seq<'b>,'err> ->
    items         : seq<'a>
-                -> HttpHandler<HttpResponseMessage,seq<'b>,'r,'err>
+                -> HttpHandler<unit,seq<'b>,'r,'err>
 ```
 
 Note that chunk will fail if one of the inner requests fails so for e.g a writing scenario you most likely want to
@@ -359,11 +353,11 @@ type HandlerError<'err> =
 ```
 
 To produce a custom error response you can use the `withError` handler _after_ e.g `fetch`. The supplied `errorHandler`
-is given full access the the `HttpResponseMessage` and may produce a custom `ErrorRespose`, or fail with `Panic` if
+is given full access the the `HttpResponse<HttpContent>` and may produce a custom `ErrorRespose`, or fail with `Panic` if
 decoding fails.
 
 ```fs
-val withError<'T, TResult, 'TError> (errorHandler : HttpResponseMessage -> Task<HandlerError<'TError>>) -> (next: HttpFunc<HttpResponseMessage,'TResult, 'TError>) -> (context: HttpContext) -> HttpFuncResult<'TResult, 'TError>
+val withError<'T, TResult, 'TError> (errorHandler : HttpResponseMessage -> Task<HandlerError<'TError>>) -> (next: HttpFunc<unit,'TResult, 'TError>) -> (context: HttpContext) -> HttpFuncResult<'TResult, 'TError>
 ```
 
 It's also possible to catch errors using the `catch` handler _before_ e.g `fetch`. The function takes an `errorHandler`
@@ -431,7 +425,7 @@ extension.
 The `protobuf` decoder takes a `Stream -> 'T` usually generated by ``. to decode the response into user defined type of `'T`.
 
 ```fs
-val protobuf<'T, 'TResult, 'TError> : (parser : Stream -> 'T) -> (next: HttpFunc<'T, 'TResult, 'TError>) -> (context : Context<HttpResponseMessage>) -> Task<Result<Context<'TResult>,HandlerError<'TError>>>
+val protobuf<'T, 'TResult, 'TError> : (parser : Stream -> 'T) -> (next: HttpFunc<'T, 'TResult, 'TError>) -> (context : Context<unit>) -> Task<Result<Context<'TResult>,HandlerError<'TError>>>
 ```
 
 Both encode and decode uses streaming all the way so no large strings or arrays will be allocated in the process.
@@ -506,9 +500,9 @@ because fetch related values goes down the pipeline while error values short-cir
 between to catch both.
 
 ```fs
-val withLogger: logger : ILogger -> next: HttpFunc<HttpResponseMessage,'T,'TError> -> context: HttpContext -> HttpFuncResult<'T,'TError>
-val withLogLevel: logLevel: LogLevel -> next: HttpFunc<HttpResponseMessage,'T,'TError> -> context : HttpContext -> HttpFuncResult<'T,'TError>
-val withLogMessage: msg: string -> next: HttpFunc<HttpResponseMessage,'T,'TError> -> context: HttpContext -> HttpFuncResult<'T,'TError>
+val withLogger: logger : ILogger -> next: HttpFunc<unit,'T,'TError> -> context: HttpContext -> HttpFuncResult<'T,'TError>
+val withLogLevel: logLevel: LogLevel -> next: HttpFunc<unit,'T,'TError> -> context : HttpContext -> HttpFuncResult<'T,'TError>
+val withLogMessage: msg: string -> next: HttpFunc<unit,'T,'TError> -> context: HttpContext -> HttpFuncResult<'T,'TError>
 
 val log : next: HttpFunc<'T, 'TResult, 'TError> -> ctx : Context<'T>  -> HttpFuncResult<'TResult, 'TError>
 ```
@@ -571,6 +565,21 @@ let urlBuilder (request: HttpRequest) : string =
     ...
 ```
 
+## Upgrade from Oryx v1 to v2
+
+The context is now initiated with a content `'T` of `unit`. E.g your custom HTTP handlers that is used before `fetch`
+need to be rewritten from using a `'TSource` of `HttpResponseMessage` to `unit` e.g:
+
+```diff
+- let withLogMessage (msg: string) (next: HttpFunc<HttpResponseMessage, 'T, 'TError>) (context: HttpContext) =
++ let withLogMessage (msg: string) (next: HttpFunc<unit, 'T, 'TError>) (context: HttpContext) =
+```
+
+There is now also a `runAsync'` overload that returns the full `HttpResponse` record i.e:
+`Task<Result<HttpResponse<'TResult>, HandlerError<'TError>>>`. This makes it possible to get the response status-code,
+response-headers etc even after decoding of the content. This is great when using Oryx for a web-proxy or protocol
+converter where you need to pass on any response-headers.
+
 ## Differences from Giraffe
 
 Oryx and Giraffe is build on the same ideas of using HTTP handlers. The difference is that Oryx is for clients while
@@ -579,7 +588,7 @@ Giraffe is for servers.
 In addition:
 
 The Oryx `HttpHandler` is generic both on the response and error types. This means that you may decode the response or
-the error response to user defined types within the pipeline itself.
+the error response to a user-defined type within the pipeline itself.
 
 ```fs
 type HttpHandler<'a, 'b, 'r, 'err> = HttpFunc<'b, 'r, 'err> -> Context<'a> -> HttpFuncResult<'r, 'err>

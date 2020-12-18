@@ -307,11 +307,17 @@ let ``Multiple post with logging is OK`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
         let content x () = new StringableContent(json x) :> HttpContent
 
-       let ctx = testCtx
+
+        let ctx =
+            Context.defaultContext
+            |> Context.withHttpClientFactory (fun () -> client)
+            |> Context.withUrlBuilder (fun _ -> "http://testing.org/")
+            |> Context.withHeader ("api-key", "test-key")
+            |> Context.withLogger (logger)
+            |> Context.withLogLevel LogLevel.Debug
 
         // Act
         let! result =
-
             req {
                 let! a = withLogMessage "first" >=> post (content 41)
                 let! b = withLogMessage "second" >=> post (content 42)
