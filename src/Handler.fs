@@ -335,9 +335,12 @@ module Handler =
 
     /// Use the given `completionMode` to change when the Response is considered to be 'complete'.
     ///
-    /// Using `HttpCompletionOption.ResponseContentRead` (the default) means that the entire response content will be available in-memory when the handle response completes. This can lead to lower throughput in situations where files are being received over HTTP.
+    /// Using `HttpCompletionOption.ResponseContentRead` (the default) means that the entire response content will be
+    /// available in-memory when the handle response completes. This can lead to lower throughput in situations where
+    /// files are being received over HTTP.
     ///
-    /// In such cases, using `HttpCompletionOption.ResponseHeadersRead` can lead to faster response times overall, while not forcing the file stream to buffer in memory.
+    /// In such cases, using `HttpCompletionOption.ResponseHeadersRead` can lead to faster response times overall, while
+    /// not forcing the file stream to buffer in memory.
     let withCompletion<'TResult, 'TError>
         (completionMode: HttpCompletionOption)
         (next: HttpFunc<unit, 'TResult, 'TError>)
