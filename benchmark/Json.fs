@@ -23,7 +23,7 @@ type JsonBenchmark () =
     let mutable ctx = Context.defaultContext
 
     [<GlobalSetup>]
-    member self.GlobalSetupData () =
+    member self.GlobalSetupData() =
         let json =
             (List.replicate 10000 "{ \"name\": \"test\", \"value\": 42}")
             |> String.concat ","
@@ -31,12 +31,13 @@ type JsonBenchmark () =
             |> fun a -> a.Replace(";", ",")
 
         let stub =
-            Func<HttpRequestMessage,CancellationToken,Task<HttpResponseMessage>>(fun request token ->
-            (task {
-                let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-                responseMessage.Content <- new StringContent(json)
-                return responseMessage
-            }))
+            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
+                (fun request token ->
+                    (task {
+                        let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+                        responseMessage.Content <- new StringContent(json)
+                        return responseMessage
+                     }))
 
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
@@ -48,53 +49,69 @@ type JsonBenchmark () =
 
 
     [<Benchmark(Description = "Toth", Baseline = true)>]
-    member self.FetchToth () =
+    member self.FetchToth() =
         (task {
-            let request = req {
-                let! a = Common.getList ()
-                return a
-            }
+            let request =
+                req {
+                    let! a = Common.getList ()
+                    return a
+                }
+
             let! res = request |> runAsync ctx
+
             match res with
-            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
+            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString())
             | Ok data -> ()
-        }).Result
+         })
+            .Result
 
     [<Benchmark(Description = "Utf8Json")>]
-    member self.FetchUtf8 () =
+    member self.FetchUtf8() =
         (task {
-            let request = req {
-                let! a = Common.getJson (readUtf8)
-                return a
-            }
+            let request =
+                req {
+                    let! a = Common.getJson (readUtf8)
+                    return a
+                }
+
             let! res = request |> runAsync ctx
+
             match res with
-            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
+            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString())
             | Ok data -> ()
-        }).Result
+         })
+            .Result
 
     [<Benchmark(Description = "System.Text.Json")>]
-    member self.FetchJson () =
+    member self.FetchJson() =
         (task {
-            let request = req {
-                let! a = Common.getJson (readJson)
-                return a
-            }
+            let request =
+                req {
+                    let! a = Common.getJson (readJson)
+                    return a
+                }
+
             let! res = request |> runAsync ctx
+
             match res with
-            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
+            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString())
             | Ok data -> ()
-        }).Result
+         })
+            .Result
 
     [<Benchmark(Description = "Newtonsoft")>]
-    member self.FetchNewtonsoft () =
+    member self.FetchNewtonsoft() =
         (task {
-            let request = req {
-                let! a = Common.getJson (readNewtonsoft)
-                return a
-            }
+            let request =
+                req {
+                    let! a = Common.getJson (readNewtonsoft)
+                    return a
+                }
+
             let! res = request |> runAsync ctx
+
             match res with
-            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString ())
+            | Error e -> failwith <| sprintf "Got error: %A" (e.ToString())
             | Ok data -> ()
-        }).Result
+         })
+            .Result
