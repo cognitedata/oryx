@@ -311,7 +311,6 @@ let ``Multiple post with logging is OK`` () =
             req {
                 let! a = withLogMessage "first" >=> post (content 41)
                 let! b = withLogMessage "second" >=> post (content 42)
-
                 return a + b
             }
             |> runAsync ctx

@@ -7,7 +7,7 @@ open Oryx
 open Oryx.ThothJsonNet.ResponseReader
 open Thoth.Json.Net
 
-type WikiSearchHit = 
+type WikiSearchHit =
     | SearchTerm of string
     | SearchHits of string list
 
