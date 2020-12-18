@@ -29,7 +29,7 @@ type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationTok
 [<CLIMutable>]
 type TestType = { Name: string; Value: int }
 
-let decodeError (response: HttpResponseMessage): Task<HandlerError<TestError>> =
+let decodeError (response: HttpResponse<HttpContent>): Task<HandlerError<TestError>> =
     task {
         let! stream = response.Content.ReadAsStreamAsync()
 
@@ -60,7 +60,12 @@ let listDecoder = Decode.list decoder
 
 let noop (next: HttpFunc<int, int, 'TError>) (ctx: Context<'T>): HttpFuncResult<int, 'TError> =
     task {
-        let ctx' = { Request = ctx.Request; Response = 42 }
+        let ctx' =
+            {
+                Request = ctx.Request
+                Response = ctx.Response.Replace(42)
+            }
+
         return! next ctx'
     }
 
@@ -119,7 +124,7 @@ let readNewtonsoft<'T> (stream: IO.Stream) =
 let jsonReader<'T, 'Result, 'TError>
     (reader: Stream -> Task<Result<'T, string>>)
     (next: HttpFunc<'T, 'Result, 'TError>)
-    (context: HttpContext)
+    (context: Context<HttpContent>)
     : HttpFuncResult<'Result, 'TError>
     =
     task {
@@ -132,15 +137,12 @@ let jsonReader<'T, 'Result, 'TError>
                 next
                     {
                         Request = context.Request
-                        Response = result
+                        Response = context.Response.Replace(result)
                     }
         | Error error -> return Error(Panic <| JsonDecodeException error)
     }
 
-let getJson
-    (reader: Stream -> Task<Result<TestType seq, string>>)
-    : HttpHandler<HttpResponseMessage, TestType seq, 'TNext, TestError>
-    =
+let getJson (reader: Stream -> Task<Result<TestType seq, string>>): HttpHandler<unit, TestType seq, 'TNext, TestError> =
     GET
     >=> withUrl "http://test"
     >=> fetch

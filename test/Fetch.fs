@@ -30,6 +30,7 @@ let ``Get with return expression is Ok`` () =
                         retries <- retries + 1
                         let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
                         responseMessage.Content <- new StringContent(json)
+                        responseMessage.Headers.Add("x-request-id", "123")
                         return responseMessage
                      }))
 
@@ -48,8 +49,17 @@ let ``Get with return expression is Ok`` () =
                 return result
             }
 
-        let! result = request |> runAsync ctx
+        let! result = request |> runAsync' ctx
         let retries' = retries
+
+        match result with
+        | Ok response ->
+            test <@ response.StatusCode = HttpStatusCode.OK @>
+
+            test
+                <@ Map.tryFind "X-Request-ID" response.Headers
+                   |> Option.isSome @>
+        | _ -> ()
 
         // Assert
         test <@ Result.isOk result @>
@@ -297,6 +307,7 @@ let ``Multiple post with logging is OK`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
         let content x () = new StringableContent(json x) :> HttpContent
 
+
         let ctx =
             Context.defaultContext
             |> Context.withHttpClientFactory (fun () -> client)
@@ -307,7 +318,6 @@ let ``Multiple post with logging is OK`` () =
 
         // Act
         let! result =
-
             req {
                 let! a = withLogMessage "first" >=> post (content 41)
                 let! b = withLogMessage "second" >=> post (content 42)

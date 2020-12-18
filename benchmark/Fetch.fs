@@ -12,7 +12,7 @@ open BenchmarkDotNet.Attributes
 open Oryx
 open Benchmark.Common
 open Classic
-open FSharp.Control.Tasks.Builders.Unsafe
+open FSharp.Control.Tasks.Affine.Unsafe
 
 
 [<MemoryDiagnoser>]

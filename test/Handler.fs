@@ -28,7 +28,7 @@ let ``Simple unit handler is Ok`` () =
         test <@ Result.isOk result @>
 
         match result with
-        | Ok ctx -> test <@ ctx.Response = 42 @>
+        | Ok ctx -> test <@ ctx.Response.Content = 42 @>
         | Error (Panic err) -> raise err
         | Error (ResponseError err) -> failwith (err.ToString())
     }
@@ -104,7 +104,7 @@ let ``Catching ok is Ok`` () =
 
         // Assert
         match result with
-        | Ok ctx -> test <@ ctx.Response = 420 @>
+        | Ok ctx -> test <@ ctx.Response.Content = 420 @>
         | Error (Panic err) -> raise err
         | Error (ResponseError err) -> failwith (err.ToString())
     }
@@ -126,7 +126,7 @@ let ``Catching errors is Ok`` () =
 
         // Assert
         match result with
-        | Ok ctx -> test <@ ctx.Response = 420 @>
+        | Ok ctx -> test <@ ctx.Response.Content = 420 @>
         | Error (Panic err) -> raise err
         | Error (ResponseError err) -> failwith (err.ToString())
     }
@@ -167,7 +167,7 @@ let ``Sequential handlers is Ok`` () =
         test <@ Result.isOk result @>
 
         match result with
-        | Ok ctx -> test <@ ctx.Response = [ 1; 2; 3; 4; 5 ] @>
+        | Ok ctx -> test <@ ctx.Response.Content = [ 1; 2; 3; 4; 5 ] @>
         | Error err -> failwith "error"
     }
 
@@ -204,7 +204,7 @@ let ``Concurrent handlers is Ok`` () =
         test <@ Result.isOk result @>
 
         match result with
-        | Ok ctx -> test <@ ctx.Response = [ 1; 2; 3; 4; 5 ] @>
+        | Ok ctx -> test <@ ctx.Response.Content = [ 1; 2; 3; 4; 5 ] @>
         | Error err -> failwith "error"
     }
 
@@ -241,7 +241,7 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
         test <@ Result.isOk result @>
 
         match result with
-        | Ok ctx -> test <@ Seq.toList ctx.Response = [ 1; 2; 3; 4; 5 ] @>
+        | Ok ctx -> test <@ Seq.toList ctx.Response.Content = [ 1; 2; 3; 4; 5 ] @>
         | Error err -> failwith "error"
     }
     |> fun x -> x.Result

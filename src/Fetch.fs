@@ -1,4 +1,5 @@
-// Copyright 2019 Cognite AS
+// Copyright 2020 Cognite AS
+// SPDX-License-Identifier: Apache-2.0
 
 namespace Oryx
 
@@ -63,22 +64,15 @@ module Fetch =
 
     /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{RequestContent}` and `{Elapsed}`
     /// to the log format.
-    let fetch<'T, 'TError>
-        (next: HttpFunc<HttpResponseMessage, 'T, 'TError>)
-        (ctx: HttpContext)
-        : HttpFuncResult<'T, 'TError>
-        =
+    let fetch<'T, 'TError> (next: HttpFunc<HttpContent, 'T, 'TError>) (ctx: HttpContext): HttpFuncResult<'T, 'TError> =
         let timer = Stopwatch()
         let client = ctx.Request.HttpClient()
-
         let cancellationToken = ctx.Request.CancellationToken
 
         task {
             try
                 use request = buildRequest client ctx
                 timer.Start()
-                // Note: we don't use `use!` for response since the next handler will never throw exceptions. Thus we
-                // can dispose ourselves which is much faster than using `use!`.
                 ctx.Request.Metrics.Counter Metric.FetchInc Map.empty 1L
 
                 let! response = client.SendAsync(request, ctx.Request.CompletionMode, cancellationToken)
@@ -92,11 +86,24 @@ module Fetch =
                         .Add(PlaceHolder.Url, Url request.RequestUri)
                         .Add(PlaceHolder.Elapsed, Number timer.ElapsedMilliseconds)
 
+                let headers =
+                    Map [
+                        for KeyValue (k, v) in response.Headers do
+                            k, v
+                    ]
+
                 let! result =
                     next
-                        { ctx with
+                        {
                             Request = { ctx.Request with Items = items }
-                            Response = response
+                            Response =
+                                {
+                                    Content = response.Content
+                                    StatusCode = response.StatusCode
+                                    IsSuccessStatusCode = response.IsSuccessStatusCode
+                                    ReasonPhrase = response.ReasonPhrase
+                                    Headers = headers
+                                }
                         }
 
                 response.Dispose()

@@ -1,19 +1,17 @@
-// Copyright 2019 Cognite AS
+// Copyright 2020 Cognite AS
+// SPDX-License-Identifier: Apache-2.0
 
 namespace Oryx
 
-open System.Net.Http
-
-
 type RequestBuilder () =
-    member _.Zero(): HttpHandler<HttpResponseMessage, HttpResponseMessage, _, 'err> = id
+    member _.Zero(): HttpHandler<unit, unit, _, 'err> = id
 
-    member _.Return(res: 'T): HttpHandler<HttpResponseMessage, 'T, _, 'TError> =
+    member _.Return(res: 'T): HttpHandler<unit, 'T, _, 'TError> =
         fun next ctx ->
             next
                 {
                     Request = ctx.Request
-                    Response = res
+                    Response = ctx.Response.Replace(res)
                 }
 
     member _.ReturnFrom(req: HttpHandler<'T, 'TNext, 'TResult, 'TError>): HttpHandler<'T, 'TNext, 'TResult, 'TError> =
@@ -29,8 +27,16 @@ type RequestBuilder () =
     member _.Bind(source: HttpHandler<'T, 'TValue, 'TResult, 'TError>,
                   fn: 'TValue -> HttpHandler<'T, 'TNext, 'TResult, 'TError>)
                   : HttpHandler<'T, 'TNext, 'TResult, 'TError> =
+
         fun next ctx ->
-            let next' (ctx': Context<'TValue>) = fn ctx'.Response next ctx // Run function in context
+            let next' (ctx': Context<'TValue>) =
+                fn
+                    ctx'.Response.Content
+                    next
+                    { ctx with
+                        // Preserve headers and status-code from previous response.
+                        Response = ctx'.Response.Replace(ctx.Response.Content)
+                    }
 
             source next' ctx // Run source is context
 

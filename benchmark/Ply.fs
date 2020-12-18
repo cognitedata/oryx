@@ -6,7 +6,7 @@ open System.Threading
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks.Builders
-open FSharp.Control.Tasks.Builders.Unsafe
+open FSharp.Control.Tasks.Affine.Unsafe
 open Thoth.Json.Net
 
 open Oryx
@@ -35,7 +35,7 @@ module Handler =
             let! result = handler ctx
 
             match result with
-            | Ok a -> return Ok a.Response
+            | Ok a -> return Ok a.Response.Content
             | Error err -> return Error err
         }
 
@@ -45,7 +45,7 @@ module Handler =
                 Ok
                     {
                         Request = ctx.Request
-                        Response = (mapper ctx.Response)
+                        Response = ctx.Response.Replace(mapper ctx.Response.Content)
                     }
         }
 
@@ -79,9 +79,9 @@ module Handler =
         }
 
     let withError<'TError>
-        (errorHandler: HttpResponseMessage -> Task<HandlerError<'TError>>)
-        (context: HttpContext)
-        : HttpFuncResultPly<HttpResponseMessage, 'TError>
+        (errorHandler: HttpResponse<HttpContent> -> Task<HandlerError<'TError>>)
+        (context: Context<HttpContent>)
+        : HttpFuncResultPly<HttpContent, 'TError>
         =
         uply {
             let response = context.Response
@@ -107,7 +107,7 @@ module Handler =
 
     let withUrl<'TResult, 'TError> (url: string) (context: HttpContext) = withUrlBuilder (fun _ -> url) context
 
-    let fetch<'TError> (ctx: HttpContext): HttpFuncResultPly<HttpResponseMessage, 'TError> =
+    let fetch<'TError> (ctx: HttpContext): HttpFuncResultPly<HttpContent, 'TError> =
         let client = ctx.Request.HttpClient()
         let cancellationToken = ctx.Request.CancellationToken
 
@@ -115,14 +115,19 @@ module Handler =
             try
                 use message = buildRequest client ctx
                 let! response = client.SendAsync(message, cancellationToken)
-                return Ok { ctx with Response = response }
+
+                return
+                    Ok
+                        {
+                            Request = ctx.Request
+                            Response = ctx.Response.Replace(response.Content)
+                        }
             with ex -> return Panic ex |> Error
         }
 
-    let json<'T, 'TError> (decoder: Decoder<'T>) (context: HttpContext): HttpFuncResultPly<'T, 'TError> =
+    let json<'T, 'TError> (decoder: Decoder<'T>) (context: Context<HttpContent>): HttpFuncResultPly<'T, 'TError> =
         uply {
-            use response = context.Response
-            let! stream = response.Content.ReadAsStreamAsync()
+            let! stream = context.Response.Content.ReadAsStreamAsync()
             let! ret = decodeStreamAsync decoder stream
             do! stream.DisposeAsync()
 
@@ -132,7 +137,7 @@ module Handler =
                     Ok
                         {
                             Request = context.Request
-                            Response = result
+                            Response = context.Response.Replace(result)
                         }
             | Error error -> return Error(Panic <| JsonDecodeException error)
         }
@@ -146,7 +151,12 @@ module Handler =
                 })
 
     let noop (ctx: Context<'T>): HttpFuncResultPly<int, 'TError> =
-        let ctx' = { Request = ctx.Request; Response = 42 }
+        let ctx' =
+            {
+                Request = ctx.Request
+                Response = ctx.Response.Replace(42)
+            }
+
         uply { return Ok ctx' }
 
     let get () =
@@ -159,28 +169,27 @@ module Handler =
         >=> noop
 
 type RequestBuilder () =
-    member this.Zero(): HttpHandlerPly<HttpResponseMessage, _, 'TError> =
-        fun _ -> uply { return Ok Context.defaultContext }
+    member this.Zero(): HttpHandlerPly<unit, _, 'TError> = fun _ -> uply { return Ok Context.defaultContext }
 
-    member this.Return(res: 'T): HttpHandlerPly<HttpResponseMessage, 'T, 'TError> =
-        fun _ ->
+    member this.Return(res: 'T): HttpHandlerPly<unit, 'T, 'TError> =
+        fun ctx ->
             uply {
                 return
                     Ok
                         {
-                            Request = Context.defaultRequest
-                            Response = res
+                            Request = ctx.Request
+                            Response = ctx.Response.Replace(res)
                         }
             }
 
-    member this.Return(req: HttpRequest): HttpHandlerPly<HttpResponseMessage, _, 'TError> =
-        fun _ ->
+    member this.Return(req: HttpRequest): HttpHandlerPly<unit, _, 'TError> =
+        fun ctx ->
             uply {
                 return
                     Ok
                         {
                             Request = req
-                            Response = Context.defaultResult
+                            Response = ctx.Response
                         }
             }
 
@@ -197,7 +206,7 @@ type RequestBuilder () =
                 match br with
                 | Ok cb ->
                     let b = cb.Response
-                    return! (fn cb.Response) ctx
+                    return! (fn cb.Response.Content) ctx
                 | Error err -> return Error err
             }
 

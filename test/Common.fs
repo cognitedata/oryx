@@ -59,7 +59,7 @@ let unit (value: 'a) (next: HttpFunc<'a, 'r, 'err>) (context: HttpContext): Http
     next
         {
             Request = context.Request
-            Response = value
+            Response = context.Response.Replace(value)
         }
 
 let add (a: int) (b: int) (next: HttpFunc<int, 'b, 'err>) (context: HttpContext): HttpFuncResult<'b, 'err> =
@@ -93,7 +93,7 @@ let badRequestHandler<'a, 'b> (response: 'b) (error: HandlerError<TestError>) (c
                     Ok
                         {
                             Request = ctx.Request
-                            Response = response
+                            Response = ctx.Response.Replace(response)
                         }
             | _ -> return Error error
         | _ -> return Error error
@@ -104,7 +104,7 @@ let shouldRetry (error: HandlerError<TestError>): bool =
     | ResponseError error -> true
     | Panic _ -> false
 
-let errorHandler (response: HttpResponseMessage) =
+let errorHandler (response: HttpResponse<HttpContent>) =
     task {
         return
             {
@@ -114,7 +114,7 @@ let errorHandler (response: HttpResponseMessage) =
             |> ResponseError
     }
 
-let json (next: HttpFunc<string, 'c, 'err>) (ctx: Context<HttpResponseMessage>): HttpFuncResult<'c, 'err> =
+let json (next: HttpFunc<string, 'c, 'err>) (ctx: Context<HttpContent>): HttpFuncResult<'c, 'err> =
     parseAsync (fun _ -> task { return! ctx.Response.Content.ReadAsStringAsync() }) next ctx
 
 let get () =
@@ -136,7 +136,7 @@ let post content =
     >=> json
 
 let retryCount = 5
-let retry next ctx = retry shouldRetry 0<ms> retryCount next ctx
+let retry next ctx = retry shouldRetry 500<ms> retryCount next ctx
 
 type TestLogger<'a> () =
     member val Output: string = String.Empty with get, set

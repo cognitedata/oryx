@@ -1,4 +1,5 @@
-// Copyright 2019 Cognite AS
+// Copyright 2020 Cognite AS
+// SPDX-License-Identifier: Apache-2.0
 
 namespace Oryx
 
@@ -25,9 +26,9 @@ module Error =
 
     /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
     let withError<'T, 'TResult, 'TError>
-        (errorHandler: HttpResponseMessage -> Task<HandlerError<'TError>>)
-        (next: HttpFunc<HttpResponseMessage, 'TResult, 'TError>)
-        (ctx: HttpContext)
+        (errorHandler: HttpResponse<HttpContent> -> Task<HandlerError<'TError>>)
+        (next: HttpFunc<HttpContent, 'TResult, 'TError>)
+        (ctx: Context<HttpContent>)
         : HttpFuncResult<'TResult, 'TError>
         =
         task {
