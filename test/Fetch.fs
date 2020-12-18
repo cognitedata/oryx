@@ -55,9 +55,12 @@ let ``Get with return expression is Ok`` () =
         match result with
         | Ok response ->
             test <@ response.StatusCode = HttpStatusCode.OK @>
-            test <@ Map.tryFind "X-Request-ID" response.Headers |> Option.isSome  @>
+
+            test
+                <@ Map.tryFind "X-Request-ID" response.Headers
+                   |> Option.isSome @>
         | _ -> ()
-        
+
         // Assert
         test <@ Result.isOk result @>
         test <@ retries' = 1 @>
@@ -304,13 +307,7 @@ let ``Multiple post with logging is OK`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
         let content x () = new StringableContent(json x) :> HttpContent
 
-        let ctx =
-            Context.defaultContext
-            |> Context.withHttpClientFactory (fun () -> client)
-            |> Context.withUrlBuilder (fun _ -> "http://testing.org/")
-            |> Context.withHeader ("api-key", "test-key")
-            |> Context.withLogger (logger)
-            |> Context.withLogLevel LogLevel.Debug
+       let ctx = testCtx
 
         // Act
         let! result =

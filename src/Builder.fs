@@ -27,12 +27,14 @@ type RequestBuilder () =
     member _.Bind(source: HttpHandler<'T, 'TValue, 'TResult, 'TError>,
                   fn: 'TValue -> HttpHandler<'T, 'TNext, 'TResult, 'TError>)
                   : HttpHandler<'T, 'TNext, 'TResult, 'TError> =
+
         fun next ctx ->
-            let next' (ctx': Context<'TValue>) = 
+            let next' (ctx': Context<'TValue>) =
                 fn
                     ctx'.Response.Content
                     next
                     { ctx with
+                        // Preserve headers and status-code from previous response.
                         Response = ctx'.Response.Replace(ctx.Response.Content)
                     }
 
