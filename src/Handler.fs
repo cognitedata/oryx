@@ -297,6 +297,19 @@ module Handler =
                 return Error(Panic ex)
         }
 
+    /// Extract header from response.
+    let extractHeader<'T, 'TResult, 'TError> (header: string) (next: HttpFunc<_, _, 'TError>) (context: HttpContext) =
+        task {
+            let success, values = context.Response.Headers.TryGetValue header
+            let values = if success then values else Seq.empty
+
+            return!
+                next
+                    {
+                        Request = context.Request
+                        Response = context.Response.Replace(Ok values)
+                    }
+        }
 
     /// Use the given token provider to return a bearer token to use. This enables e.g. token refresh. The handler will
     /// fail the request if it's unable to authenticate.

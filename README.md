@@ -321,7 +321,7 @@ val concurrent : (handlers: seq<HttpHandler<'T, 'TNext, 'TNext>>) -> (next: Http
 
 You can also combine sequential and concurrent requests by chunking the request. The `chunk` handler uses `chunkSize`
 and `maxConcurrency` to decide how much will be done in parallel. It takes a list of items and a handler that transforms
-these items into HTTP handlers. This is really nice if you need to e.g read thousands of items from a service in
+these items into HTTP handlers. This is nice if you need to e.g read thousands of items from a web service in
 multiple requests.
 
 ```fs
@@ -362,8 +362,8 @@ val withError<'T, TResult, 'TError> (errorHandler : HttpResponseMessage -> Task<
 
 It's also possible to catch errors using the `catch` handler _before_ e.g `fetch`. The function takes an `errorHandler`
 that is given the returned error and produces a new `next` continuation that may then decide to return `Ok` instead of
-`Error`. This is very helpful when a failed request not necessarily means error, e.g if you need to check if an object
-with a given id exist at the server.
+`Error`. This is very helpful when a failed request not necessarily means an error, e.g if you need to check if an
+object with a given id exists at the server.
 
 ```fs
 val catch : (errorHandler: HandlerError<'TError> -> HttpFunc<'T, 'TResult, 'TError>) -> (next: HttpFunc<'T, 'TResult, 'TError>) -> (ctx : Context<'T>) -> HttpFuncResult<'TResult, 'TError>
