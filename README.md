@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/cognitedata/oryx/branch/master/graph/badge.svg)](https://codecov.io/gh/cognitedata/oryx)
 [![Nuget](https://img.shields.io/nuget/vpre/oryx)](https://www.nuget.org/packages/Oryx/)
 
-Oryx is a high performance .NET cross platform functional HTTP request handler library for writing HTTP clients and
+Oryx is a high-performance .NET cross-platform functional HTTP request handler library for writing HTTP clients and
 orchestrating web requests in F#.
 
 > An SDK for writing HTTP web clients and orchestrating web requests.
@@ -340,7 +340,7 @@ open a PR so we can include them in the library.
 ## Error handling
 
 Errors are handled by the main handler logic. Every HTTP handler returns a `HttpFuncResult<'Result, 'TError>>` i.e a
-`Task<Result<Context<'TResult>, HandlerError<'err>>>`. Thus every stage in the pipeline may be short-circuit by `Error`,
+`Task<Result<Context<'TResult>, HandlerError<'err>>>`. Thus every stage in the pipeline may be short-circuited by `Error`,
 or be continued by `Ok`. The error type is generic and needs to be set by the client SDK or application. Oryx don't know
 anything about how to decode the `ResponseError`.
 
@@ -486,7 +486,7 @@ you may use are:
 
 - `Elapsed` - The elapsed request time for `fetch` in milliseconds.
 - `HttpMethod` - The HTTP method used, i.e `PUT`, `GET`, `POST`, `DELETE` or `PATCH`.
-- `Message` - A user supplied message using `logWithMessage`.
+- `Message` - A user-supplied message using `logWithMessage`.
 - `ResponseContent` - The response content received. Must implement `ToString` to give meaningful output.
 - `RequestContent` - The request content being sent. Must implement `ToString` to give meaningful output.
 - `Url` - The URL used for fetching.
@@ -565,6 +565,47 @@ let urlBuilder (request: HttpRequest) : string =
     ...
 ```
 
+## What is new in Oryx v2
+
+We needed to change Oryx to preserve any response headers and status-code that got lost after decoding the response
+content into a custom type. The response used to be a custom `'T` so it could not hold any additional info.
+We changed this so the response is now an `HttpResponse` type:
+
+```fs
+type HttpResponse<'T> =
+    {
+        /// Response content
+        Content: 'T
+        /// Map of received headers
+        Headers: Map<string, seq<string>>
+        /// Http status code
+        StatusCode: HttpStatusCode
+        /// True if response is successful
+        IsSuccessStatusCode: bool
+        /// Reason phrase which typically is sent by servers together with the status code
+        ReasonPhrase: string
+    }
+
+    /// Replaces the content of the HTTP response.
+    member x.Replace<'TResult>(content: 'TResult): HttpResponse<'TResult> =
+        {
+            Content = content
+            StatusCode = x.StatusCode
+            IsSuccessStatusCode = x.IsSuccessStatusCode
+            Headers = x.Headers
+            ReasonPhrase = x.ReasonPhrase
+        }
+
+type Context<'T> =
+    {
+        Request: HttpRequest
+        Response: HttpResponse<'T>
+    }
+```
+
+The `runAsync` function to run a handler chain still returns a result of the content `'T`, but there is also a variant
+that returns the full `HttpResponse` called `runAsync'`.
+
 ## Upgrade from Oryx v1 to v2
 
 The context is now initiated with a content `'T` of `unit`. E.g your custom HTTP handlers that is used before `fetch`
@@ -607,9 +648,6 @@ type HttpFuncResult<'TResult> = Task<Result<Context<'TResult>, HandlerError<Resp
 type HttpFunc<'T, 'TResult> = Context<'T> -> HttpFuncResult<'TResult, ResponseException>
 type HttpFunc<'T, 'TResult> = HttpFunc<'T, 'TReszult, ResponseException>
 type HttpHandler<'T, 'TNext, 'TResult> = HttpFunc<'TNext, 'TResult, ResponseException> -> Context<'T> -> HttpFuncResult<'TResult, ResponseException>
-type HttpHandler<'T, 'TResult> = HttpHandler<'T, 'T, 'TResult, ResponseException>
-type HttpHandler<'T> = HttpHandler<HttpResponseMessage, 'T, ResponseException>
-type HttpHandler = HttpHandler<HttpResponseMessage, ResponseException>
 ```
 
 ## Using Oryx with Giraffe
