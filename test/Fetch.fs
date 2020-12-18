@@ -30,6 +30,7 @@ let ``Get with return expression is Ok`` () =
                         retries <- retries + 1
                         let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
                         responseMessage.Content <- new StringContent(json)
+                        responseMessage.Headers.Add("x-request-id", "123")
                         return responseMessage
                      }))
 
@@ -48,9 +49,15 @@ let ``Get with return expression is Ok`` () =
                 return result
             }
 
-        let! result = request |> runAsync ctx
+        let! result = request |> runAsync' ctx
         let retries' = retries
 
+        match result with
+        | Ok response ->
+            test <@ response.StatusCode = HttpStatusCode.OK @>
+            test <@ Map.tryFind "X-Request-ID" response.Headers |> Option.isSome  @>
+        | _ -> ()
+        
         // Assert
         test <@ Result.isOk result @>
         test <@ retries' = 1 @>

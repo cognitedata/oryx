@@ -28,7 +28,13 @@ type RequestBuilder () =
                   fn: 'TValue -> HttpHandler<'T, 'TNext, 'TResult, 'TError>)
                   : HttpHandler<'T, 'TNext, 'TResult, 'TError> =
         fun next ctx ->
-            let next' (ctx': Context<'TValue>) = fn ctx'.Response.Content next ctx // Run function in context
+            let next' (ctx': Context<'TValue>) = 
+                fn
+                    ctx'.Response.Content
+                    next
+                    { ctx with
+                        Response = ctx'.Response.Replace(ctx.Response.Content)
+                    }
 
             source next' ctx // Run source is context
 

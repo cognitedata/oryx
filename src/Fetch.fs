@@ -88,7 +88,7 @@ module Fetch =
 
                 let headers =
                     Map [
-                        for KeyValue (k, v) in ctx.Response.Headers do
+                        for KeyValue (k, v) in response.Headers do
                             k, v
                     ]
 
