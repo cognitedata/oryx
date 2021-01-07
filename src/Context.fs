@@ -278,3 +278,60 @@ module Context =
                     Metrics = metrics
                 }
         }
+
+    /// Set the response content.
+    let withResponseContent<'TSource, 'TResult> (content: 'TResult) (context: Context<'TSource>) =
+        {
+            Request = context.Request
+            Response = context.Response.Replace(content)
+        }
+
+    /// Merge the responses in the list of context objects. Used by the sequential and concurrent HTTP handlers.
+    let mergeResponses (context: List<Context<'TSource>>): Context<List<'TSource>> =
+        // Use the max status code.
+        let statusCode =
+            context
+            |> List.map (fun ctx -> ctx.Response.StatusCode)
+            |> List.max
+
+        // Concat the reason phrases
+        let reasonPhrase =
+            context
+            |> List.map (fun ctx -> ctx.Response.ReasonPhrase)
+            |> String.concat ", "
+
+        // List of content
+        let content =
+            context
+            |> List.map (fun ctx -> ctx.Response.Content)
+
+        let merge (a: Map<'a, 'b>) (b: Map<'a, 'b>) (f: 'a -> 'b * 'b -> 'b) =
+            Map.fold
+                (fun s k v ->
+                    match Map.tryFind k s with
+                    | Some v' -> Map.add k (f k (v, v')) s
+                    | None -> Map.add k v s)
+                a
+                b
+
+        // Merge headers
+        let headers =
+            context
+            |> List.map (fun ctx -> ctx.Response.Headers)
+            |> List.fold (fun state hdr -> merge state hdr (fun k (a, b) -> Seq.append a b)) Map.empty
+
+        {
+            Request =
+                context
+                |> List.tryHead
+                |> Option.map (fun ctx -> ctx.Request)
+                |> Option.defaultValue defaultRequest
+            Response =
+                {
+                    Content = content
+                    Headers = headers
+                    StatusCode = statusCode
+                    IsSuccessStatusCode = true
+                    ReasonPhrase = reasonPhrase
+                }
+        }
