@@ -318,7 +318,9 @@ module Context =
         let headers =
             context
             |> List.map (fun ctx -> ctx.Response.Headers)
-            |> List.fold (fun state hdr -> merge state hdr (fun k (a, b) -> Seq.append a b)) Map.empty
+            |> List.fold
+                (fun state hdr -> merge state hdr (fun k (a, b) -> if a = b then a else Seq.append a b))
+                Map.empty
 
         {
             Request =
