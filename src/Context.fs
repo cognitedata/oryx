@@ -294,10 +294,11 @@ module Context =
             |> List.map (fun ctx -> ctx.Response.StatusCode)
             |> List.max
 
-        // Concat the reason phrases
+        // Concat the reason phrases (if they are different)
         let reasonPhrase =
             context
             |> List.map (fun ctx -> ctx.Response.ReasonPhrase)
+            |> List.distinct
             |> String.concat ", "
 
         // List of content
