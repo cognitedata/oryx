@@ -3,7 +3,6 @@
 
 namespace Oryx
 
-open System
 open System.IO
 open System.Net.Http
 open System.Threading
@@ -38,8 +37,7 @@ module Handler =
     let runAsync'
         (ctx: Context<'T>)
         (handler: HttpHandler<'T, 'TResult, 'TResult, 'TError>)
-        : Task<Result<HttpResponse<'TResult>, HandlerError<'TError>>>
-        =
+        : Task<Result<HttpResponse<'TResult>, HandlerError<'TError>>> =
         task {
             let! result = (handler finishEarly) ctx
             return Result.map (fun a -> a.Response) result
@@ -49,8 +47,7 @@ module Handler =
     let runAsync
         (ctx: Context<'T>)
         (handler: HttpHandler<'T, 'TResult, 'TResult, 'TError>)
-        : Task<Result<'TResult, HandlerError<'TError>>>
-        =
+        : Task<Result<'TResult, HandlerError<'TError>>> =
         task {
             let! result = (handler finishEarly) ctx
             return Result.map (fun a -> a.Response.Content) result
@@ -61,8 +58,7 @@ module Handler =
         (mapper: 'T1 -> 'T2)
         (next: HttpFunc<'T2, 'TResult, 'TError>)
         (ctx: Context<'T1>)
-        : HttpFuncResult<'TResult, 'TError>
-        =
+        : HttpFuncResult<'TResult, 'TError> =
         next
             {
                 Request = ctx.Request
@@ -73,8 +69,7 @@ module Handler =
     let inline compose
         (first: HttpHandler<'T1, 'T2, 'TResult, 'TError>)
         (second: HttpHandler<'T2, 'T3, 'TResult, 'TError>)
-        : HttpHandler<'T1, 'T3, 'TResult, 'TError>
-        =
+        : HttpHandler<'T1, 'T3, 'TResult, 'TError> =
         second >> first
 
     /// Composes two HTTP handlers.
@@ -197,8 +192,7 @@ module Handler =
         (handlers: seq<HttpHandler<'T, 'TNext, 'TNext, 'TError>>)
         (next: HttpFunc<'TNext list, 'TResult, 'TError>)
         (ctx: Context<'T>)
-        : HttpFuncResult<'TResult, 'TError>
-        =
+        : HttpFuncResult<'TResult, 'TError> =
         task {
             let! res =
                 handlers
@@ -209,12 +203,7 @@ module Handler =
 
             match result with
             | Ok results ->
-                let bs =
-                    {
-                        Request = ctx.Request
-                        Response = ctx.Response.Replace(results |> List.map (fun r -> r.Response.Content))
-                    }
-
+                let bs = Context.mergeResponses results
                 return! next bs
             | Error err -> return Error err
         }
@@ -224,8 +213,7 @@ module Handler =
         (handlers: seq<HttpHandler<'T, 'TNext, 'TNext, 'TError>>)
         (next: HttpFunc<'TNext list, 'TResult, 'TError>)
         (ctx: Context<'T>)
-        : HttpFuncResult<'TResult, 'TError>
-        =
+        : HttpFuncResult<'TResult, 'TError> =
         task {
             let res =
                 ResizeArray<Result<Context<'TNext>, HandlerError<'TError>>>()
@@ -238,12 +226,7 @@ module Handler =
 
             match result with
             | Ok results ->
-                let bs =
-                    {
-                        Request = ctx.Request
-                        Response = ctx.Response.Replace(results |> List.map (fun c -> c.Response.Content))
-                    }
-
+                let bs = Context.mergeResponses results
                 return! next bs
             | Error err -> return Error err
         }
@@ -253,8 +236,7 @@ module Handler =
         (parser: Stream -> 'T)
         (next: HttpFunc<'T, 'TResult, 'TError>)
         (ctx: Context<HttpContent>)
-        : HttpFuncResult<'TResult, 'TError>
-        =
+        : HttpFuncResult<'TResult, 'TError> =
         task {
             let! stream = ctx.Response.Content.ReadAsStreamAsync()
 
@@ -277,8 +259,7 @@ module Handler =
         (parser: Stream -> Task<'T>)
         (next: HttpFunc<'T, 'TResult, 'TError>)
         (ctx: Context<HttpContent>)
-        : HttpFuncResult<'TResult, 'TError>
-        =
+        : HttpFuncResult<'TResult, 'TError> =
         task {
             let! stream = ctx.Response.Content.ReadAsStreamAsync()
 
