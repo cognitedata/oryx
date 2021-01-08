@@ -290,9 +290,14 @@ module Context =
     let mergeResponses (context: List<Context<'TSource>>): Context<List<'TSource>> =
         // Use the max status code.
         let statusCode =
-            context
-            |> List.map (fun ctx -> ctx.Response.StatusCode)
-            |> List.max
+            let codes =
+                context
+                |> List.map (fun ctx -> ctx.Response.StatusCode)
+
+            if codes.IsEmpty then
+                HttpStatusCode.NotFound
+            else
+                List.max codes
 
         // Concat the reason phrases (if they are different)
         let reasonPhrase =
