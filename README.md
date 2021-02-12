@@ -155,7 +155,6 @@ may be composed into more complex HTTP handlers. The HTTP handlers included with
 - `catch` - Catches errors and continue using another handler.
 - `chunk` - Chunks a sequence of HTTP handlers into sequential and concurrent batches.
 - `concurrent` - Runs a sequence of HTTP handlers concurrently.
-- `extractHeader` - Extract header from the HTTP response.
 - `fetch` - Fetches from remote using the current context
 - `log` - Log information about the given request.
 - `parse` - Parse response stream to a user-specified type synchronously.
