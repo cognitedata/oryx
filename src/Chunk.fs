@@ -8,8 +8,8 @@ module Chunk =
     let chunk<'TSource, 'TNext, 'TResult>
         (chunkSize: int)
         (maxConcurrency: int)
-        (handler: seq<'TSource> -> HttpHandler<'TSource, seq<'TResult>>)
-        (items: seq<'TSource>)
+        (handler: seq<'TNext> -> HttpHandler<'TSource, seq<'TResult>>)
+        (items: seq<'TNext>)
         : HttpHandler<'TSource, seq<'TResult>> =
         items
         |> Seq.chunkBySize chunkSize

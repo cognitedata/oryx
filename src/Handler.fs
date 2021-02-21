@@ -253,7 +253,7 @@ module Handler =
                             }
 
                         for handler in handlers do
-                            do! handler obv |> (fun h -> h.SendAsync ctx)
+                            do! handler obv |> (fun obv -> obv.SendAsync ctx)
 
                         let result = res |> List.ofSeq |> Result.sequenceList
 

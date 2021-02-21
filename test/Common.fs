@@ -58,9 +58,9 @@ type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationTok
         ): Task<HttpResponseMessage> =
         task { return! sendAsync.Invoke(request, cancellationToken) }
 
-let unit (value: 'TResult): HttpHandler<'TSource, 'TResult> =
+let unit<'TResult> (value: 'TResult): HttpHandler<unit, 'TResult> =
     fun next ->
-        { new IHttpFunc<'TSource> with
+        { new IHttpFunc<unit> with
             member _.SendAsync ctx =
                 next.SendAsync
                     {
@@ -78,7 +78,7 @@ let add (a: int) (b: int) = unit (a + b)
 exception TestException of code: int * message: string with
     override this.ToString() = this.message
 
-let error msg: HttpHandler<_> =
+let error msg: HttpHandler<'TSource, 'TResult> =
     fun next ->
         { new IHttpFunc<'TSource> with
             member _.SendAsync ctx =
