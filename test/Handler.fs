@@ -22,15 +22,14 @@ let ``Simple unit handler is Ok`` () =
         let ctx = Context.defaultContext
 
         // Act
-        let! result = unit 42 finishEarly ctx
+        let! result = unit 42 |> runAsync ctx
 
         // Assert
         test <@ Result.isOk result @>
 
         match result with
-        | Ok ctx -> test <@ ctx.Response.Content = 42 @>
-        | Error (Panic err) -> raise err
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Ok content -> test <@ content = 42 @>
+        | Error err -> raise err
     }
 
 [<Fact>]
@@ -40,15 +39,14 @@ let ``Simple error handler is Error`` () =
         let ctx = Context.defaultContext
 
         // Act
-        let! result = error "failed" finishEarly ctx
+        let! result = error "failed" |> runAsync ctx
 
         // Assert
         test <@ Result.isError result @>
 
         match result with
         | Ok _ -> failwith "error"
-        | Error (Panic err) -> test <@ err.ToString() = "failed" @>
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> test <@ err.ToString() = "failed" @>
     }
 
 [<Fact>]
@@ -59,15 +57,14 @@ let ``Simple error then ok is Error`` () =
         let req = error "failed" >=> unit 42
 
         // Act
-        let! result = req finishEarly ctx
+        let! result = req |> runAsync ctx
 
         // Assert
         test <@ Result.isError result @>
 
         match result with
         | Ok _ -> failwith "error"
-        | Error (Panic err) -> test <@ err.ToString() = "failed" @>
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> test <@ err.ToString() = "failed" @>
     }
 
 [<Fact>]
@@ -78,13 +75,12 @@ let ``Simple ok then error is Error`` () =
         let req = unit 42 >=> error "failed"
 
         // Act
-        let! result = req finishEarly ctx
+        let! result = req |> runAsync ctx
 
         // Assert
         match result with
         | Ok _ -> failwith "error"
-        | Error (Panic err) -> test <@ err.ToString() = "failed" @>
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> test <@ err.ToString() = "failed" @>
     }
 
 [<Fact>]
@@ -100,13 +96,12 @@ let ``Catching ok is Ok`` () =
             >=> map (fun a -> a * 10)
 
         // Act
-        let! result = req finishEarly ctx
+        let! result = req |> runAsync ctx
 
         // Assert
         match result with
-        | Ok ctx -> test <@ ctx.Response.Content = 420 @>
-        | Error (Panic err) -> raise err
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Ok content -> test <@ content = 420 @>
+        | Error err -> raise err
     }
 
 [<Fact>]
@@ -116,10 +111,7 @@ let ``Catching errors is Ok`` () =
         let ctx = Context.defaultContext
         let errorHandler = badRequestHandler 420
 
-        let req =
-            unit 42
-            >=> catch errorHandler
-            >=> apiError "failed"
+        let req = unit 42 >=> catch errorHandler >=> error "failed"
 
         // Act
         let! result = req finishEarly ctx
@@ -127,8 +119,7 @@ let ``Catching errors is Ok`` () =
         // Assert
         match result with
         | Ok ctx -> test <@ ctx.Response.Content = 420 @>
-        | Error (Panic err) -> raise err
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> raise err
     }
 
 [<Fact>]

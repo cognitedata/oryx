@@ -17,11 +17,11 @@ open Oryx.Retry
 open Microsoft.Extensions.Logging
 
 type StringableContent (content: string) =
-    inherit StringContent(content)
+    inherit StringContent (content)
     override this.ToString() = content
 
 type PushStreamContent (content: string) =
-    inherit HttpContent()
+    inherit HttpContent ()
     let _content = content
     let mutable _disposed = false
     do base.Headers.ContentType <- MediaTypeHeaderValue "application/json"
@@ -48,61 +48,74 @@ type PushStreamContent (content: string) =
 
 
 type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
-    inherit HttpMessageHandler()
+    inherit HttpMessageHandler ()
     let sendAsync = sendAsync
 
-    override self.SendAsync(request: HttpRequestMessage, cancellationToken: CancellationToken)
-                            : Task<HttpResponseMessage> =
+    override self.SendAsync
+        (
+            request: HttpRequestMessage,
+            cancellationToken: CancellationToken
+        ): Task<HttpResponseMessage> =
         task { return! sendAsync.Invoke(request, cancellationToken) }
 
-let unit (value: 'a) (next: HttpFunc<'a, 'r, 'err>) (context: HttpContext): HttpFuncResult<'r, 'err> =
-    next
-        {
-            Request = context.Request
-            Response = context.Response.Replace(value)
+let unit (value: 'TResult): HttpHandler<'TSource, 'TResult> =
+    fun next ->
+        { new IHttpFunc<'TSource> with
+            member _.SendAsync ctx =
+                next.SendAsync
+                    {
+                        Request = ctx.Request
+                        Response = ctx.Response.Replace(value)
+                    }
+
+            member _.ThrowAsync exn = next.ThrowAsync exn
         }
 
-let add (a: int) (b: int) (next: HttpFunc<int, 'b, 'err>) (context: HttpContext): HttpFuncResult<'b, 'err> =
-    unit (a + b) next context
 
-exception TestException of string with
-    override this.ToString() = this.Data0
+let add (a: int) (b: int) = unit (a + b)
 
-type TestError = { Code: int; Message: string }
 
-let apiError msg (next: HttpFunc<'b, 'c, 'err>) (_: Context<'a>): HttpFuncResult<'c, TestError> =
-    { Code = 400; Message = msg }
-    |> ResponseError
-    |> Error
-    |> Task.FromResult
+exception TestException of code: int * message: string with
+    override this.ToString() = this.message
 
-let error msg (next: HttpFunc<'b, 'c, 'err>) (_: Context<'a>): HttpFuncResult<'c, TestError> =
-    TestException msg
-    |> Panic
-    |> Error
-    |> Task.FromResult
+let error msg: HttpHandler<_> =
+    fun next ->
+        { new IHttpFunc<'TSource> with
+            member _.SendAsync ctx =
+                TestException(code = 400, message = msg)
+                |> next.ThrowAsync
+
+            member _.ThrowAsync exn = next.ThrowAsync exn
+        }
+
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
-let badRequestHandler<'a, 'b> (response: 'b) (error: HandlerError<TestError>) (ctx: Context<'a>) =
-    task {
-        match error with
-        | ResponseError api ->
-            match enum<HttpStatusCode> (api.Code) with
-            | HttpStatusCode.BadRequest ->
-                return
-                    Ok
-                        {
-                            Request = ctx.Request
-                            Response = ctx.Response.Replace(response)
-                        }
-            | _ -> return Error error
-        | _ -> return Error error
-    }
+let badRequestHandler<'TSource, 'TResult> (response: 'TResult) (error: exn): HttpHandler<'TSource, 'TResult> =
+    fun next ->
+        { new IHttpFunc<'TSource> with
+            member _.SendAsync ctx =
+                task {
+                    match error with
+                    | :? TestException as ex ->
+                        match enum<HttpStatusCode> (ex.code) with
+                        | HttpStatusCode.BadRequest ->
+                            return!
+                                next.SendAsync
+                                    {
+                                        Request = ctx.Request
+                                        Response = ctx.Response.Replace(response)
+                                    }
+                        | _ -> return! next.ThrowAsync error
+                    | _ -> return! next.ThrowAsync error
+                }
 
-let shouldRetry (error: HandlerError<TestError>): bool =
+            member _.ThrowAsync exn = next.ThrowAsync exn
+        }
+
+let shouldRetry (error: exn): bool =
     match error with
-    | ResponseError error -> true
-    | Panic _ -> false
+    | :? TestException -> true
+    | _ -> false
 
 let errorHandler (response: HttpResponse<HttpContent>) =
     task {
@@ -114,8 +127,23 @@ let errorHandler (response: HttpResponse<HttpContent>) =
             |> ResponseError
     }
 
-let json (next: HttpFunc<string, 'c, 'err>) (ctx: Context<HttpContent>): HttpFuncResult<'c, 'err> =
-    parseAsync (fun _ -> task { return! ctx.Response.Content.ReadAsStringAsync() }) next ctx
+let json<'TResult> : HttpHandler<HttpContent, 'TResult> =
+    fun next ->
+        { new IHttpFunc<HttpContent> with
+            member _.SendAsync ctx =
+                task {
+                    let! res = parseAsync (fun _ -> ctx.Response.Content.ReadAsStringAsync())
+
+                    return!
+                        next.SendAsync
+                            {
+                                Request = ctx.Request
+                                Response = ctx.Response.Replace(res)
+                            }
+                }
+
+            member _.ThrowAsync exn = next.ThrowAsync exn
+        }
 
 let get () =
     GET
@@ -150,12 +178,14 @@ type TestLogger<'a> () =
         member this.Dispose() = ()
 
     interface ILogger<'a> with
-        member this.Log<'TState>(logLevel: LogLevel,
-                                 eventId: EventId,
-                                 state: 'TState,
-                                 exception': exn,
-                                 formatter: Func<'TState, exn, string>)
-                                 : unit =
+        member this.Log<'TState>
+            (
+                logLevel: LogLevel,
+                eventId: EventId,
+                state: 'TState,
+                exception': exn,
+                formatter: Func<'TState, exn, string>
+            ): unit =
             this.Output <- this.Output + formatter.Invoke(state, exception')
             this.LoggerLevel <- logLevel
 

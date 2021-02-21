@@ -3,42 +3,64 @@
 
 namespace Oryx
 
+open FSharp.Control.Tasks.V2.ContextInsensitive
+
 type RequestBuilder () =
-    member _.Zero(): HttpHandler<unit, unit, _, 'err> = id
+    member _.Zero(): HttpHandler<unit, unit> = id
 
-    member _.Return(res: 'T): HttpHandler<unit, 'T, _, 'TError> =
-        fun next ctx ->
-            next
-                {
-                    Request = ctx.Request
-                    Response = ctx.Response.Replace(res)
-                }
+    member _.Return(res: 'TSource): HttpHandler<'TSource> =
+        fun next ->
+            { new IHttpFunc<'TSource> with
+                member _.SendAsync ctx =
+                    next.SendAsync
+                        {
+                            Request = ctx.Request
+                            Response = ctx.Response.Replace(res)
+                        }
 
-    member _.ReturnFrom(req: HttpHandler<'T, 'TNext, 'TResult, 'TError>): HttpHandler<'T, 'TNext, 'TResult, 'TError> =
-        req
+                member _.ThrowAsync exn = next.ThrowAsync exn
+            }
+
+    member _.ReturnFrom(req: HttpHandler<'T, 'TNext>): HttpHandler<'T, 'TNext> = req
 
     member _.Delay(fn) = fn ()
 
-    member _.For(source: 'T seq, func: 'T -> HttpHandler<'T, 'TNext, 'TNext, 'TError>)
-                 : HttpHandler<'T, 'TNext list, 'TResult, 'TError> =
-        source |> Seq.map func |> sequential
+    // member _.For(source: 'T seq, func: 'T -> HttpHandler<'T, 'TNext>): HttpHandler<'T, 'TNext list> =
+    //     let handlers = source |> Seq.map func
+    //     handlers |> sequential
 
     /// Binds value of 'TValue for let! All handlers runs in same context within the builder.
-    member _.Bind(source: HttpHandler<'T, 'TValue, 'TResult, 'TError>,
-                  fn: 'TValue -> HttpHandler<'T, 'TNext, 'TResult, 'TError>)
-                  : HttpHandler<'T, 'TNext, 'TResult, 'TError> =
+    member _.Bind
+        (
+            source: HttpHandler<'TSource, 'TValue>,
+            fn: 'TValue -> HttpHandler<'TValue, 'TResult>
+        ): HttpHandler<'TSource, 'TResult> =
 
-        fun next ctx ->
-            let next' (ctx': Context<'TValue>) =
-                fn
-                    ctx'.Response.Content
-                    next
-                    { ctx with
-                        // Preserve headers and status-code from previous response.
-                        Response = ctx'.Response.Replace(ctx.Response.Content)
+        fun next ->
+            { new IHttpFunc<'TValue> with
+                member _.SendAsync ctx =
+                    task {
+                        let inner =
+                            { new IHttpFunc<'TResult> with
+                                member _.SendAsync ctx' =
+                                    next.SendAsync
+                                        { ctx' with
+                                            // Preserve headers and status-code from previous response.
+                                            Response = ctx.Response.Replace(ctx'.Response.Content)
+                                        }
+
+                                member _.ThrowAsync exn = next.ThrowAsync exn
+                            }
+
+                        let content = ctx.Response.Content
+                        let res = fn content
+                        do! res inner |> (fun h -> h.SendAsync ctx)
                     }
 
-            source next' ctx // Run source is context
+                member _.ThrowAsync exn = next.ThrowAsync exn
+            }
+            |> source
+
 
 [<AutoOpen>]
 module Builder =

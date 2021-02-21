@@ -10,35 +10,37 @@ open FSharp.Control.Tasks.V2.ContextInsensitive
 [<AutoOpen>]
 module Error =
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
-    let catch
-        (errorHandler: HandlerError<'TError> -> HttpFunc<'T, 'TResult, 'TError>)
-        (next: HttpFunc<'T, 'TResult, 'TError>)
-        (ctx: Context<'T>)
-        : HttpFuncResult<'TResult, 'TError>
-        =
-        task {
-            let! result = next ctx
+    let catch (errorHandler: exn -> HttpHandler<'TSource>): HttpHandler<'TSource> =
+        fun next ->
+            let rec obv =
+                { new IHttpFunc<'TSource> with
+                    member _.SendAsync ctx = next.SendAsync ctx
 
-            match result with
-            | Ok ctx -> return Ok ctx
-            | Error err -> return! errorHandler err ctx
-        }
+                    member _.ThrowAsync err =
+                        task {
+                            let next = errorHandler err
+                            next obv |> ignore
+                        }
+                }
+
+            obv
 
     /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
-    let withError<'T, 'TResult, 'TError>
-        (errorHandler: HttpResponse<HttpContent> -> Task<HandlerError<'TError>>)
-        (next: HttpFunc<HttpContent, 'TResult, 'TError>)
-        (ctx: Context<HttpContent>)
-        : HttpFuncResult<'TResult, 'TError>
-        =
-        task {
-            let response = ctx.Response
+    let withError (errorHandler: HttpResponse<HttpContent> -> Task<exn>): HttpHandler<HttpContent, HttpContent> =
+        fun next ->
+            { new IHttpFunc<HttpContent> with
+                member _.SendAsync ctx =
+                    task {
+                        let response = ctx.Response
 
-            match response.IsSuccessStatusCode with
-            | true -> return! next ctx
-            | false ->
-                ctx.Request.Metrics.Counter Metric.FetchErrorInc Map.empty 1L
+                        match response.IsSuccessStatusCode with
+                        | true -> return! next.SendAsync ctx
+                        | false ->
+                            ctx.Request.Metrics.Counter Metric.FetchErrorInc Map.empty 1L
 
-                let! err = errorHandler response
-                return err |> Error
-        }
+                            let! err = errorHandler response
+                            return! next.ThrowAsync err
+                    }
+
+                member _.ThrowAsync err = next.ThrowAsync err
+            }

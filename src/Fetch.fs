@@ -25,7 +25,7 @@ module Fetch =
             content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded"
             content :> HttpContent
 
-    let buildRequest (client: HttpClient) (ctx: HttpContext): HttpRequestMessage =
+    let buildRequest (client: HttpClient) (ctx: Context<'T>): HttpRequestMessage =
         let query = ctx.Request.Query
 
         let url =
@@ -49,8 +49,8 @@ module Fetch =
             | Protobuf -> "Accept", "application/protobuf"
 
         for KeyValue (header, value) in ctx.Request.Headers.Add(acceptHeader) do
-            if not (client.DefaultRequestHeaders.Contains header)
-            then request.Headers.Add(header, value)
+            if not (client.DefaultRequestHeaders.Contains header) then
+                request.Headers.Add(header, value)
 
         let content =
             ctx.Request.ContentBuilder
@@ -64,49 +64,59 @@ module Fetch =
 
     /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{RequestContent}` and `{Elapsed}`
     /// to the log format.
-    let fetch<'T, 'TError> (next: HttpFunc<HttpContent, 'T, 'TError>) (ctx: HttpContext): HttpFuncResult<'T, 'TError> =
-        let timer = Stopwatch()
-        let client = ctx.Request.HttpClient()
-        let cancellationToken = ctx.Request.CancellationToken
+    let fetch<'TSource> : HttpHandler<'TSource, HttpContent> =
+        fun next ->
+            { new IHttpFunc<'TSource> with
+                member _.SendAsync ctx =
+                    task {
+                        let timer = Stopwatch()
+                        let client = ctx.Request.HttpClient()
+                        let cancellationToken = ctx.Request.CancellationToken
 
-        task {
-            try
-                use request = buildRequest client ctx
-                timer.Start()
-                ctx.Request.Metrics.Counter Metric.FetchInc Map.empty 1L
+                        try
+                            use request = buildRequest client ctx
+                            timer.Start()
+                            ctx.Request.Metrics.Counter Metric.FetchInc Map.empty 1L
 
-                let! response = client.SendAsync(request, ctx.Request.CompletionMode, cancellationToken)
-                timer.Stop()
-                ctx.Request.Metrics.Gauge Metric.FetchLatencyUpdate Map.empty (float timer.ElapsedMilliseconds)
+                            let! response = client.SendAsync(request, ctx.Request.CompletionMode, cancellationToken)
+                            timer.Stop()
 
-                let items =
-                    ctx
-                        .Request
-                        .Items
-                        .Add(PlaceHolder.Url, Url request.RequestUri)
-                        .Add(PlaceHolder.Elapsed, Number timer.ElapsedMilliseconds)
+                            ctx.Request.Metrics.Gauge
+                                Metric.FetchLatencyUpdate
+                                Map.empty
+                                (float timer.ElapsedMilliseconds)
 
-                let headers =
-                    Map [
-                        for KeyValue (k, v) in response.Headers do
-                            k, v
-                    ]
+                            let items =
+                                ctx
+                                    .Request
+                                    .Items
+                                    .Add(PlaceHolder.Url, Url request.RequestUri)
+                                    .Add(PlaceHolder.Elapsed, Number timer.ElapsedMilliseconds)
 
-                let! result =
-                    next
-                        {
-                            Request = { ctx.Request with Items = items }
-                            Response =
-                                {
-                                    Content = response.Content
-                                    StatusCode = response.StatusCode
-                                    IsSuccessStatusCode = response.IsSuccessStatusCode
-                                    ReasonPhrase = response.ReasonPhrase
-                                    Headers = headers
-                                }
-                        }
+                            let headers =
+                                Map [
+                                    for KeyValue (k, v) in response.Headers do
+                                        k, v
+                                ]
 
-                response.Dispose()
-                return result
-            with ex -> return Panic ex |> Error
-        }
+                            let! result =
+                                next.SendAsync
+                                    {
+                                        Request = { ctx.Request with Items = items }
+                                        Response =
+                                            {
+                                                Content = response.Content
+                                                StatusCode = response.StatusCode
+                                                IsSuccessStatusCode = response.IsSuccessStatusCode
+                                                ReasonPhrase = response.ReasonPhrase
+                                                Headers = headers
+                                            }
+                                    }
+
+                            response.Dispose()
+                            return result
+                        with ex -> return! next.ThrowAsync ex
+                    }
+
+                member _.ThrowAsync exn = next.ThrowAsync exn
+            }

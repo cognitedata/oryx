@@ -12,15 +12,15 @@ module ResponseReader =
     /// </summary>
     /// <param name="decoder">Decoder to use. </param>
     /// <returns>Decoded context.</returns>
-    let json<'T, 'TResult, 'TError> : HttpHandler<HttpContent, 'T, 'TResult, 'TError> =
+    let json<'TResult> : HttpHandler<HttpContent, 'TResult> =
 
-        let parser (stream: Stream): 'T =
+        let parser (stream: Stream) =
             use sr = new StreamReader(stream)
             let serializer = JsonSerializer()
 
             use jtr =
                 new JsonTextReader(sr, DateParseHandling = DateParseHandling.None)
 
-            serializer.Deserialize<'T>(jtr)
+            serializer.Deserialize<'TResult>(jtr)
 
         parse parser

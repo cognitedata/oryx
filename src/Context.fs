@@ -34,7 +34,6 @@ type Value =
         | Number num -> num.ToString()
         | Url uri -> uri.ToString()
 
-
 module PlaceHolder =
     [<Literal>]
     let HttpMethod = "HttpMethod"
@@ -113,19 +112,35 @@ type HttpResponse<'T> =
             ReasonPhrase = x.ReasonPhrase
         }
 
-type Context<'T> =
+[<Struct>]
+type Context<'TSource> =
     {
         Request: HttpRequest
-        Response: HttpResponse<'T>
+        Response: HttpResponse<'TSource>
     }
 
-/// Empty context (without response content)
-type HttpContext = Context<unit>
-
+[<RequireQualifiedAccess>]
 module Context =
+    let mapRequest (mapper: HttpRequest -> HttpRequest) (source: Context<'TSource>): Context<'TSource> =
+        {
+            Request = mapper source.Request
+            Response = source.Response
+        }
+
+    let mapResponse
+        (mapper: HttpResponse<'TSource> -> HttpResponse<'TResult>)
+        (source: Context<'TSource>)
+        : Context<'TResult> =
+        {
+            Request = source.Request
+            Response = mapper source.Response
+        }
+
     let private fileVersion =
         FileVersionInfo
-            .GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+            .GetVersionInfo(
+                Assembly.GetExecutingAssembly().Location
+            )
             .FileVersion
 
     let defaultLogFormat =
@@ -163,14 +178,10 @@ module Context =
         }
 
     /// The default context.
-    let defaultContext: HttpContext =
-        {
-            Request = defaultRequest
-            Response = defaultResponse
-        }
+    let defaultContext: Context<unit> = { Request=defaultRequest; Response=defaultResponse }
 
     /// Add HTTP header to context.
-    let withHeader (header: string * string) (context: HttpContext) =
+    let withHeader (header: string * string) (context: Context<'TSource>) =
         { context with
             Request =
                 { context.Request with
@@ -179,7 +190,7 @@ module Context =
         }
 
     /// Replace all headers in the context.
-    let withHeaders (headers: Map<string, string>) (context: HttpContext) =
+    let withHeaders (headers: Map<string, string>) (context: Context<'TSource>) =
         { context with
             Request =
                 { context.Request with
@@ -188,7 +199,7 @@ module Context =
         }
 
     /// Helper for setting Bearer token as Authorization header.
-    let withBearerToken (token: string) (context: HttpContext) =
+    let withBearerToken (token: string) (context: Context<'TSource>) =
         let header = ("Authorization", sprintf "Bearer %s" token)
 
         { context with
@@ -199,7 +210,7 @@ module Context =
         }
 
     /// Set the HTTP client to use for the requests.
-    let withHttpClient (client: HttpClient) (context: HttpContext) =
+    let withHttpClient (client: HttpClient) (context: Context<'TSource>) =
         { context with
             Request =
                 { context.Request with
@@ -208,7 +219,7 @@ module Context =
         }
 
     /// Set the HTTP client factory to use for the requests.
-    let withHttpClientFactory (factory: unit -> HttpClient) (context: HttpContext) =
+    let withHttpClientFactory (factory: unit -> HttpClient) (context: Context<'TSource>) =
         { context with
             Request =
                 { context.Request with
@@ -217,7 +228,7 @@ module Context =
         }
 
     /// Set the URL builder to use.
-    let withUrlBuilder (builder: HttpRequest -> string) (context: HttpContext) =
+    let withUrlBuilder (builder: HttpRequest -> string) (context: Context<'TSource>) =
         { context with
             Request =
                 { context.Request with
@@ -226,7 +237,7 @@ module Context =
         }
 
     /// Set a cancellation token to use for the requests.
-    let withCancellationToken (token: CancellationToken) (context: HttpContext) =
+    let withCancellationToken (token: CancellationToken) (context: Context<'TSource>) =
         { context with
             Request =
                 { context.Request with
@@ -235,7 +246,7 @@ module Context =
         }
 
     /// Set the logger (ILogger) to use.
-    let withLogger (logger: ILogger) (context: HttpContext) =
+    let withLogger (logger: ILogger) (context: Context<'TSource>) =
         { context with
             Request =
                 { context.Request with
@@ -244,7 +255,7 @@ module Context =
         }
 
     /// Set the log level to use (default is LogLevel.None).
-    let withLogLevel (logLevel: LogLevel) (context: HttpContext) =
+    let withLogLevel (logLevel: LogLevel) (context: Context<'TSource>) =
         { context with
             Request =
                 { context.Request with
@@ -253,7 +264,7 @@ module Context =
         }
 
     /// Set the log format to use.
-    let withLogFormat (format: string) (context: HttpContext) =
+    let withLogFormat (format: string) (context: Context<'TSource>) =
         { context with
             Request =
                 { context.Request with
@@ -262,7 +273,7 @@ module Context =
         }
 
     /// Set the log message to use (normally you would like to use the withLogMessage handler instead)
-    let withLogMessage (msg: string) (context: HttpContext) =
+    let withLogMessage (msg: string) (context: Context<'TSource>) =
         { context with
             Request =
                 { context.Request with
@@ -271,7 +282,7 @@ module Context =
         }
 
     /// Set the metrics (IMetrics) to use.
-    let withMetrics (metrics: IMetrics) (context: HttpContext) =
+    let withMetrics (metrics: IMetrics) (context: Context<'TSource>) =
         { context with
             Request =
                 { context.Request with

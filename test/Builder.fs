@@ -40,8 +40,7 @@ let ``Simple unit handler in builder is Ok`` () =
 
         match result with
         | Ok value -> test <@ value = 42 @>
-        | Error (Panic err) -> raise err
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> raise err
     }
 
 [<Fact>]
@@ -50,7 +49,7 @@ let ``Simple return from unit handler in builder is Ok`` () =
         // Arrange
         let ctx = Context.defaultContext
 
-        let a = unit 42 finishEarly
+        let a = unit 42 |> runAsync ctx
 
         // Act
         let! result = req { return! unit 42 } |> runAsync ctx
@@ -60,8 +59,7 @@ let ``Simple return from unit handler in builder is Ok`` () =
 
         match result with
         | Ok value -> test <@ value = 42 @>
-        | Error (Panic err) -> raise err
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> raise err
     }
 
 [<Fact>]
@@ -85,6 +83,5 @@ let ``Multiple handlers in builder is Ok`` () =
 
         match result with
         | Ok value -> test <@ value = 30 @>
-        | Error (Panic err) -> raise err
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> raise err
     }
