@@ -22,13 +22,13 @@ let ``Simple unit handler is Ok`` () =
         let ctx = Context.defaultContext
 
         // Act
-        let! result = unit 42 |> runAsync ctx
+        let! result = unit 42 >=> unit 43 |> runAsync ctx
 
         // Assert
         test <@ Result.isOk result @>
 
         match result with
-        | Ok content -> test <@ content = 42 @>
+        | Ok content -> test <@ content = 43 @>
         | Error err -> raise err
     }
 
@@ -92,8 +92,8 @@ let ``Catching ok is Ok`` () =
 
         let req =
             unit 42
-            >=> catch errorHandler
             >=> map (fun a -> a * 10)
+            >=> catch errorHandler
 
         // Act
         let! result = req |> runAsync ctx
@@ -111,7 +111,7 @@ let ``Catching errors is Ok`` () =
         let ctx = Context.defaultContext
         let errorHandler = badRequestHandler 420
 
-        let req = unit 42 >=> catch errorHandler >=> error "failed"
+        let req = unit 42 >=> error "failed" >=> catch errorHandler
 
         // Act
         let! result = req |> runAsync ctx
@@ -129,10 +129,7 @@ let ``Not catching errors is Error`` () =
         let ctx = Context.defaultContext
         let errorHandler = badRequestHandler 420
 
-        let req =
-            unit 42
-            >=> catch errorHandler
-            >=> error "failed"
+        let req = unit 42 >=> catch errorHandler >=> error "failed"
 
         // Act
         let! result = req |> runAsync ctx
@@ -236,28 +233,28 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
     }
     |> fun x -> x.Result
 
-[<Fact>]
-let ``Request with token renewer sets Authorization header`` () =
-    task {
-        // Arrange
-        let renewer _ = Ok "token" |> Task.FromResult
-        let ctx = Context.defaultContext
+// [<Fact>]
+// let ``Request with token renewer sets Authorization header`` () =
+//     task {
+//         // Arrange
+//         let renewer _ = Ok "token" |> Task.FromResult
+//         let ctx = Context.defaultContext
 
-        let req = withTokenRenewer renewer >=> unit 42
+//         let req = withTokenRenewer renewer >=> unit 42
 
-        // Act
-        let! result = req |> runAsync' ctx
+//         // Act
+//         let! result = req |> runAsync' ctx
 
-        // Assert
-        match result with
-        | Ok ctx ->
-            let found =
-                ctx.Request.Headers.TryGetValue "Authorization"
-                |> (fun (found, value) -> found && value.Contains "token")
+//         // Assert
+//         match result with
+//         | Ok ctx ->
+//             let found =
+//                 ctx.Request.Headers.TryGetValue "Authorization"
+//                 |> (fun (found, value) -> found && value.Contains "token")
 
-            test <@ found @>
-        | Error err -> raise err
-    }
+//             test <@ found @>
+//         | Error err -> raise err
+//     }
 
 [<Fact>]
 let ``Request with token renewer without token gives error`` () =

@@ -29,11 +29,13 @@ let ``Simple unit handler in builder is Ok`` () =
 
         // Act
         let! result =
-            req {
-                let! value = unit 42
-                return value
-            }
-            |> runAsync ctx
+            let a =
+                req {
+                    let! value = unit 42
+                    return value
+                }
+
+            a |> runAsync ctx
 
         // Assert
         test <@ Result.isOk result @>

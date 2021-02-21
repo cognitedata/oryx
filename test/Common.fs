@@ -7,13 +7,14 @@ open System.Net.Http
 open System.Net
 open System.Net.Http.Headers
 open System.Text
+open System.Text.Json
 open System.Threading
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2
 
 open Oryx
-open Oryx.Retry
+open Oryx.SystemTextJson.ResponseReader
 open Microsoft.Extensions.Logging
 
 type StringableContent (content: string) =
@@ -25,6 +26,8 @@ type PushStreamContent (content: string) =
     let _content = content
     let mutable _disposed = false
     do base.Headers.ContentType <- MediaTypeHeaderValue "application/json"
+
+    override this.ToString() = content
 
     override this.SerializeToStreamAsync(stream: Stream, context: TransportContext): Task =
         task {
@@ -58,9 +61,9 @@ type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationTok
         ): Task<HttpResponseMessage> =
         task { return! sendAsync.Invoke(request, cancellationToken) }
 
-let unit<'TResult> (value: 'TResult): HttpHandler<unit, 'TResult> =
+let unit<'TSource, 'TResult> (value: 'TResult): HttpHandler<'TSource, 'TResult> =
     fun next ->
-        { new IHttpFunc<unit> with
+        { new IHttpFunc<'TSource> with
             member _.SendAsync ctx =
                 next.SendAsync
                     {
@@ -118,32 +121,9 @@ let shouldRetry (error: exn): bool =
     | _ -> false
 
 let errorHandler (response: HttpResponse<HttpContent>) =
-    task {
-        return
-            {
-                Code = int response.StatusCode
-                Message = "Got error"
-            }
-            |> ResponseError
-    }
+    task { return TestException(code = int response.StatusCode, message = "Got error") }
 
-let json<'TResult> : HttpHandler<HttpContent, 'TResult> =
-    fun next ->
-        { new IHttpFunc<HttpContent> with
-            member _.SendAsync ctx =
-                task {
-                    let! res = parseAsync (fun _ -> ctx.Response.Content.ReadAsStringAsync())
-
-                    return!
-                        next.SendAsync
-                            {
-                                Request = ctx.Request
-                                Response = ctx.Response.Replace(res)
-                            }
-                }
-
-            member _.ThrowAsync exn = next.ThrowAsync exn
-        }
+let options = JsonSerializerOptions()
 
 let get () =
     GET
@@ -152,7 +132,7 @@ let get () =
     >=> fetch
     >=> log
     >=> withError errorHandler
-    >=> json
+    >=> json options
 
 let post content =
     POST
@@ -161,10 +141,10 @@ let post content =
     >=> fetch
     >=> log
     >=> withError errorHandler
-    >=> json
+    >=> json options
 
-let retryCount = 5
-let retry next ctx = retry shouldRetry 500<ms> retryCount next ctx
+//let retryCount = 5
+//let retry next ctx = retry shouldRetry 500<ms> retryCount next ctx
 
 type TestLogger<'a> () =
     member val Output: string = String.Empty with get, set

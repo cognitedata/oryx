@@ -17,9 +17,11 @@ module Error =
                     member _.SendAsync ctx = next.SendAsync ctx
 
                     member _.ThrowAsync err =
+                        printfn "Got error"
+
                         task {
                             let next = errorHandler err
-                            next obv |> ignore
+                            next obv |> (fun obv -> obv.SendAsync)
                         }
                 }
 

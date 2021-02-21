@@ -69,7 +69,7 @@ module Handler =
 
     /// Compose two HTTP handlers into one.
     let inline compose (first: HttpHandler<'T1, 'T2>) (second: HttpHandler<'T2, 'T3>): HttpHandler<'T1, 'T3> =
-        first << second
+        second >> first
 
     /// Composes two HTTP handlers.
     let (>=>) = compose
@@ -210,8 +210,7 @@ module Handler =
             { new IHttpFunc<'TSource> with
                 member _.SendAsync ctx =
                     task {
-                        let res =
-                            ResizeArray<Result<Context<'TResult>, exn>>(Seq.length handlers)
+                        let res : Result<Context<'TResult>, exn> array = Array.zeroCreate (Seq.length handlers)
 
                         let obv n =
                             { new IHttpFunc<'TResult> with
