@@ -22,14 +22,10 @@ let ``Simple unit handler is Ok`` () =
         let ctx = Context.defaultContext
 
         // Act
-        let! result = unit 42 >=> unit 43 |> runAsync ctx
+        let! content = unit 42 >=> unit 43 |> runUnsafeAsync ctx
 
         // Assert
-        test <@ Result.isOk result @>
-
-        match result with
-        | Ok content -> test <@ content = 43 @>
-        | Error err -> raise err
+        test <@ content = 43 @>
     }
 
 [<Fact>]
@@ -96,12 +92,10 @@ let ``Catching ok is Ok`` () =
             >=> catch errorHandler
 
         // Act
-        let! result = req |> runAsync ctx
+        let! content = req |> runUnsafeAsync ctx
 
         // Assert
-        match result with
-        | Ok content -> test <@ content = 420 @>
-        | Error err -> raise err
+        test <@ content = 420 @>
     }
 
 [<Fact>]
@@ -114,12 +108,10 @@ let ``Catching errors is Ok`` () =
         let req = unit 42 >=> error "failed" >=> catch errorHandler
 
         // Act
-        let! result = req |> runAsync ctx
+        let! content = req |> runUnsafeAsync ctx
 
         // Assert
-        match result with
-        | Ok content -> test <@ content = 420 @>
-        | Error err -> raise err
+        test <@ content = 420 @>
     }
 
 [<Fact>]
@@ -148,14 +140,10 @@ let ``Sequential handlers is Ok`` () =
         let req = sequential [ unit 1; unit 2; unit 3; unit 4; unit 5 ]
 
         // Act
-        let! result = req |> runAsync ctx
+        let! content = req |> runUnsafeAsync ctx
 
         // Assert
-        test <@ Result.isOk result @>
-
-        match result with
-        | Ok content -> test <@ content = [ 1; 2; 3; 4; 5 ] @>
-        | Error err -> failwith "error"
+        test <@ content = [ 1; 2; 3; 4; 5 ] @>
     }
 
 [<Fact>]
@@ -190,7 +178,7 @@ let ``Concurrent handlers is Ok`` () =
         test <@ Result.isOk result @>
 
         match result with
-        | Ok content -> test <@ content = [ 1; 2; 3; 4; 5 ] @>
+        | Ok content -> test <@ content = Some [ 1; 2; 3; 4; 5 ] @>
         | Error err -> failwith "error"
     }
 
@@ -222,14 +210,8 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
             chunk<unit, int, int> chunkSize maxConcurrency unit [ 1; 2; 3; 4; 5 ]
 
         // Act
-        let! result = req |> runAsync ctx
-
-        // Assert
-        test <@ Result.isOk result @>
-
-        match result with
-        | Ok content -> test <@ Seq.toList content = [ 1; 2; 3; 4; 5 ] @>
-        | Error err -> failwith "error"
+        let! result = req |> runUnsafeAsync ctx
+        test <@ Seq.toList result = [ 1; 2; 3; 4; 5 ] @>
     }
     |> fun x -> x.Result
 

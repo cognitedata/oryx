@@ -35,14 +35,10 @@ let ``Simple unit handler in builder is Ok`` () =
                     return value
                 }
 
-            a |> runAsync ctx
+            a |> runUnsafeAsync ctx
 
         // Assert
-        test <@ Result.isOk result @>
-
-        match result with
-        | Ok value -> test <@ value = 42 @>
-        | Error err -> raise err
+        test <@ result = 42 @>
     }
 
 [<Fact>]
@@ -54,14 +50,10 @@ let ``Simple return from unit handler in builder is Ok`` () =
         let a = unit 42 |> runAsync ctx
 
         // Act
-        let! result = req { return! unit 42 } |> runAsync ctx
+        let! result = req { return! unit 42 } |> runUnsafeAsync ctx
 
         // Assert
-        test <@ Result.isOk result @>
-
-        match result with
-        | Ok value -> test <@ value = 42 @>
-        | Error err -> raise err
+        test <@ result = 42 @>
     }
 
 [<Fact>]
@@ -78,12 +70,8 @@ let ``Multiple handlers in builder is Ok`` () =
                 return! add a b
             }
 
-        let! result = request |> runAsync ctx
+        let! result = request |> runUnsafeAsync ctx
 
         // Assert
-        test <@ Result.isOk result @>
-
-        match result with
-        | Ok value -> test <@ value = 30 @>
-        | Error err -> raise err
+        test <@ result = 30 @>
     }

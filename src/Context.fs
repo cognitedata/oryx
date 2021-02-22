@@ -88,10 +88,8 @@ and HttpRequest =
         CompletionMode: HttpCompletionOption
     }
 
-type HttpResponse<'T> =
+type HttpResponse =
     {
-        /// Response content
-        Content: 'T
         /// Map of received headers
         Headers: Map<string, seq<string>>
         /// Http status code
@@ -102,35 +100,22 @@ type HttpResponse<'T> =
         ReasonPhrase: string
     }
 
-    /// Replaces the content of the HTTP response.
-    member x.Replace<'TResult>(content: 'TResult): HttpResponse<'TResult> =
-        {
-            Content = content
-            StatusCode = x.StatusCode
-            IsSuccessStatusCode = x.IsSuccessStatusCode
-            Headers = x.Headers
-            ReasonPhrase = x.ReasonPhrase
-        }
-
 [<Struct>]
-type Context<'TSource> =
+type Context =
     {
         Request: HttpRequest
-        Response: HttpResponse<'TSource>
+        Response: HttpResponse
     }
 
 [<RequireQualifiedAccess>]
 module Context =
-    let mapRequest (mapper: HttpRequest -> HttpRequest) (source: Context<'TSource>): Context<'TSource> =
+    let mapRequest (mapper: HttpRequest -> HttpRequest) (source: Context): Context =
         {
             Request = mapper source.Request
             Response = source.Response
         }
 
-    let mapResponse
-        (mapper: HttpResponse<'TSource> -> HttpResponse<'TResult>)
-        (source: Context<'TSource>)
-        : Context<'TResult> =
+    let mapResponse (mapper: HttpResponse -> HttpResponse) (source: Context): Context =
         {
             Request = source.Request
             Response = mapper source.Response
@@ -170,7 +155,6 @@ module Context =
     /// Default response to use.
     let defaultResponse =
         {
-            Content = ()
             StatusCode = HttpStatusCode.NotFound
             IsSuccessStatusCode = false
             Headers = Map.empty
@@ -178,10 +162,14 @@ module Context =
         }
 
     /// The default context.
-    let defaultContext: Context<unit> = { Request=defaultRequest; Response=defaultResponse }
+    let defaultContext: Context =
+        {
+            Request = defaultRequest
+            Response = defaultResponse
+        }
 
     /// Add HTTP header to context.
-    let withHeader (header: string * string) (context: Context<'TSource>) =
+    let withHeader (header: string * string) (context: Context) =
         { context with
             Request =
                 { context.Request with
@@ -190,7 +178,7 @@ module Context =
         }
 
     /// Replace all headers in the context.
-    let withHeaders (headers: Map<string, string>) (context: Context<'TSource>) =
+    let withHeaders (headers: Map<string, string>) (context: Context) =
         { context with
             Request =
                 { context.Request with
@@ -199,7 +187,7 @@ module Context =
         }
 
     /// Helper for setting Bearer token as Authorization header.
-    let withBearerToken (token: string) (context: Context<'TSource>) =
+    let withBearerToken (token: string) (context: Context) =
         let header = ("Authorization", sprintf "Bearer %s" token)
 
         { context with
@@ -210,7 +198,7 @@ module Context =
         }
 
     /// Set the HTTP client to use for the requests.
-    let withHttpClient (client: HttpClient) (context: Context<'TSource>) =
+    let withHttpClient (client: HttpClient) (context: Context) =
         { context with
             Request =
                 { context.Request with
@@ -219,7 +207,7 @@ module Context =
         }
 
     /// Set the HTTP client factory to use for the requests.
-    let withHttpClientFactory (factory: unit -> HttpClient) (context: Context<'TSource>) =
+    let withHttpClientFactory (factory: unit -> HttpClient) (context: Context) =
         { context with
             Request =
                 { context.Request with
@@ -228,7 +216,7 @@ module Context =
         }
 
     /// Set the URL builder to use.
-    let withUrlBuilder (builder: HttpRequest -> string) (context: Context<'TSource>) =
+    let withUrlBuilder (builder: HttpRequest -> string) (context: Context) =
         { context with
             Request =
                 { context.Request with
@@ -237,7 +225,7 @@ module Context =
         }
 
     /// Set a cancellation token to use for the requests.
-    let withCancellationToken (token: CancellationToken) (context: Context<'TSource>) =
+    let withCancellationToken (token: CancellationToken) (context: Context) =
         { context with
             Request =
                 { context.Request with
@@ -246,7 +234,7 @@ module Context =
         }
 
     /// Set the logger (ILogger) to use.
-    let withLogger (logger: ILogger) (context: Context<'TSource>) =
+    let withLogger (logger: ILogger) (context: Context) =
         { context with
             Request =
                 { context.Request with
@@ -255,7 +243,7 @@ module Context =
         }
 
     /// Set the log level to use (default is LogLevel.None).
-    let withLogLevel (logLevel: LogLevel) (context: Context<'TSource>) =
+    let withLogLevel (logLevel: LogLevel) (context: Context) =
         { context with
             Request =
                 { context.Request with
@@ -264,7 +252,7 @@ module Context =
         }
 
     /// Set the log format to use.
-    let withLogFormat (format: string) (context: Context<'TSource>) =
+    let withLogFormat (format: string) (context: Context) =
         { context with
             Request =
                 { context.Request with
@@ -273,7 +261,7 @@ module Context =
         }
 
     /// Set the log message to use (normally you would like to use the withLogMessage handler instead)
-    let withLogMessage (msg: string) (context: Context<'TSource>) =
+    let withLogMessage (msg: string) (context: Context) =
         { context with
             Request =
                 { context.Request with
@@ -282,7 +270,7 @@ module Context =
         }
 
     /// Set the metrics (IMetrics) to use.
-    let withMetrics (metrics: IMetrics) (context: Context<'TSource>) =
+    let withMetrics (metrics: IMetrics) (context: Context) =
         { context with
             Request =
                 { context.Request with
@@ -290,15 +278,8 @@ module Context =
                 }
         }
 
-    /// Set the response content.
-    let withResponseContent<'TSource, 'TResult> (content: 'TResult) (context: Context<'TSource>) =
-        {
-            Request = context.Request
-            Response = context.Response.Replace(content)
-        }
-
     /// Merge the responses in the list of context objects. Used by the sequential and concurrent HTTP handlers.
-    let mergeResponses (context: List<Context<'TSource>>): Context<List<'TSource>> =
+    let mergeResponses (context: List<Context>): Context =
         // Use the max status code.
         let statusCode =
             let codes =
@@ -316,11 +297,6 @@ module Context =
             |> List.map (fun ctx -> ctx.Response.ReasonPhrase)
             |> List.distinct
             |> String.concat ", "
-
-        // List of content
-        let content =
-            context
-            |> List.map (fun ctx -> ctx.Response.Content)
 
         let merge (a: Map<'a, 'b>) (b: Map<'a, 'b>) (f: 'a -> 'b * 'b -> 'b) =
             Map.fold
@@ -347,7 +323,6 @@ module Context =
                 |> Option.defaultValue defaultRequest
             Response =
                 {
-                    Content = content
                     Headers = headers
                     StatusCode = statusCode
                     IsSuccessStatusCode = true

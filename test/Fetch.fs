@@ -53,7 +53,7 @@ let ``Get with return expression is Ok`` () =
         let retries' = retries
 
         match result with
-        | Ok response ->
+        | Ok (Some response) ->
             test <@ response.StatusCode = HttpStatusCode.OK @>
 
             test
@@ -325,10 +325,10 @@ let ``Multiple post with logging is OK`` () =
             |> runAsync ctx
 
         // Assert
+        test <@ Result.isOk result @>
         test <@ logger.Output.Contains(json 41) @>
         test <@ logger.Output.Contains "first" @>
         test <@ logger.Output.Contains "http://testing.org" @>
-        test <@ Result.isOk result @>
     }
 
 [<Fact>]

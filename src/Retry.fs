@@ -33,7 +33,7 @@ module Retry =
 //     : IHttpFunc<'TSource>
 //     =
 //     { new IHttpFunc<'TSource> with
-//         member _.SendAsync ctx =
+//         member _.NextAsync ctx =
 //              task {
 //                 let exponentialDelay =
 //                     min (secondsInMilliseconds * DefaultMaxBackoffDelay / 2) (initialDelay * 2)
@@ -45,7 +45,7 @@ module Retry =
 //                     rand.Next(int randomDelayScale) * 1<ms>
 //                     + exponentialDelay
 
-//                 let! result = next.SendAsync ctx
+//                 let! result = next.NextAsync ctx
 
 //                 match result with
 //                 | Ok _ -> return result

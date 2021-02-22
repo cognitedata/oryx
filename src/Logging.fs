@@ -13,8 +13,8 @@ open System.Net.Http
 module Logging =
 
     /// Set the logger (ILogger) to use. Usually you would use `Context.withLogger` instead to set the logger for all requests.
-    let withLogger (logger: ILogger) (next: IHttpFunc<'T>) (context: Context<'T>) =
-        next.SendAsync
+    let withLogger (logger: ILogger) (next: IHttpFunc<'T>) (context: Context) =
+        next.NextAsync
             { context with
                 Request =
                     { context.Request with
@@ -23,8 +23,8 @@ module Logging =
             }
 
     /// Set the log level to use (default is LogLevel.None).
-    let withLogLevel (logLevel: LogLevel) (next: IHttpFunc<'T>) (context: Context<'T>) =
-        next.SendAsync
+    let withLogLevel (logLevel: LogLevel) (next: IHttpFunc<'T>) (context: Context) =
+        next.NextAsync
             { context with
                 Request =
                     { context.Request with
@@ -36,31 +36,30 @@ module Logging =
     let withLogMessage<'TSource> (msg: string): HttpHandler<'TSource> =
         fun next ->
             { new IHttpFunc<'TSource> with
-                member _.SendAsync ctx =
-                    next.SendAsync
+                member _.NextAsync(ctx, ?content) =
+                    next.NextAsync(
                         { ctx with
                             Request =
                                 { ctx.Request with
                                     Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg)
                                 }
-                        }
+                        },
+                        ?content = content
+                    )
 
-                member _.ThrowAsync exn = next.ThrowAsync exn
+                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
             }
 
     // Pre-compiled
     let private reqex =
         Regex(@"\{(.+?)\}", RegexOptions.Multiline ||| RegexOptions.Compiled)
 
-    [<Obsolete("Do not use. Use log / withLogMessage instead.")>]
-    let logWithMessage (next: IHttpFunc<'T>) (ctx: Context<'T>): HttpFuncResult = next.SendAsync ctx
-
     /// Logger handler with message. Should be composed in pipeline after the `fetch` handler, but before `withError` in
     /// order to log both requests, responses and errors.
     let log: HttpHandler<HttpContent, HttpContent> =
         fun next ->
             { new IHttpFunc<HttpContent> with
-                member _.SendAsync ctx =
+                member _.NextAsync(ctx, ?content) =
                     task {
                         match ctx.Request.Logger, ctx.Request.LogLevel with
                         | _, LogLevel.None -> ()
@@ -97,12 +96,12 @@ module Logging =
                             logger.Log(LogLevel.Error, format, values)
                         | _ -> ()
 
-                        do! next.SendAsync ctx
+                        return! next.NextAsync(ctx, ?content = content)
                     }
 
-                member _.ThrowAsync exn =
+                member _.ThrowAsync(ctx, exn) =
                     task {
                         //logger.Log(LogLevel.Error, format, values)
-                        return! next.ThrowAsync exn
+                        return! next.ThrowAsync(ctx, exn)
                     }
             }

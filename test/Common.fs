@@ -50,28 +50,22 @@ type PushStreamContent (content: string) =
         _disposed <- true
 
 
-type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
+type HttpMessageHandlerStub (NextAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
     inherit HttpMessageHandler ()
-    let sendAsync = sendAsync
+    let NextAsync = NextAsync
 
     override self.SendAsync
         (
             request: HttpRequestMessage,
             cancellationToken: CancellationToken
         ): Task<HttpResponseMessage> =
-        task { return! sendAsync.Invoke(request, cancellationToken) }
+        task { return! NextAsync.Invoke(request, cancellationToken) }
 
 let unit<'TSource, 'TResult> (value: 'TResult): HttpHandler<'TSource, 'TResult> =
     fun next ->
         { new IHttpFunc<'TSource> with
-            member _.SendAsync ctx =
-                next.SendAsync
-                    {
-                        Request = ctx.Request
-                        Response = ctx.Response.Replace(value)
-                    }
-
-            member _.ThrowAsync exn = next.ThrowAsync exn
+            member _.NextAsync(ctx, ?content) = next.NextAsync(ctx, value)
+            member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
         }
 
 
@@ -84,35 +78,32 @@ exception TestException of code: int * message: string with
 let error msg: HttpHandler<'TSource, 'TResult> =
     fun next ->
         { new IHttpFunc<'TSource> with
-            member _.SendAsync ctx =
-                TestException(code = 400, message = msg)
-                |> next.ThrowAsync
+            member _.NextAsync(ctx, ?content) =
+                task {
+                    let error = TestException(code = 400, message = msg)
+                    return! next.ThrowAsync(ctx, error)
+                }
 
-            member _.ThrowAsync exn = next.ThrowAsync exn
+            member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
         }
 
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
-let badRequestHandler<'TSource, 'TResult> (response: 'TResult) (error: exn): HttpHandler<'TSource, 'TResult> =
+let badRequestHandler<'TSource> (response: 'TSource) (error: exn): HttpHandler<'TSource> =
     fun next ->
         { new IHttpFunc<'TSource> with
-            member _.SendAsync ctx =
+            member _.NextAsync(ctx, _) =
                 task {
                     match error with
                     | :? TestException as ex ->
                         match enum<HttpStatusCode> (ex.code) with
-                        | HttpStatusCode.BadRequest ->
-                            return!
-                                next.SendAsync
-                                    {
-                                        Request = ctx.Request
-                                        Response = ctx.Response.Replace(response)
-                                    }
-                        | _ -> return! next.ThrowAsync error
-                    | _ -> return! next.ThrowAsync error
+                        | HttpStatusCode.BadRequest -> return! next.NextAsync(ctx, response)
+
+                        | _ -> return! next.ThrowAsync(ctx, error)
+                    | _ -> return! next.ThrowAsync(ctx, error)
                 }
 
-            member _.ThrowAsync exn = next.ThrowAsync exn
+            member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
         }
 
 let shouldRetry (error: exn): bool =
@@ -120,7 +111,7 @@ let shouldRetry (error: exn): bool =
     | :? TestException -> true
     | _ -> false
 
-let errorHandler (response: HttpResponse<HttpContent>) =
+let errorHandler (response: HttpResponse) (content: HttpContent option) =
     task { return TestException(code = int response.StatusCode, message = "Got error") }
 
 let options = JsonSerializerOptions()

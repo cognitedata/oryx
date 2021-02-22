@@ -14,35 +14,35 @@ module Error =
         fun next ->
             let rec obv =
                 { new IHttpFunc<'TSource> with
-                    member _.SendAsync ctx = next.SendAsync ctx
+                    member _.NextAsync(ctx, ?content) = next.NextAsync(ctx, ?content = content)
 
-                    member _.ThrowAsync err =
-                        printfn "Got error"
-
+                    member _.ThrowAsync(ctx, err) =
                         task {
-                            let next = errorHandler err
-                            next obv |> (fun obv -> obv.SendAsync)
+                            printfn "Got error"
+
+                            let handler = errorHandler err next
+                            return! handler.NextAsync(ctx)
                         }
                 }
 
             obv
 
     /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
-    let withError (errorHandler: HttpResponse<HttpContent> -> Task<exn>): HttpHandler<HttpContent, HttpContent> =
+    let withError (errorHandler: HttpResponse -> HttpContent option -> Task<exn>): HttpHandler<HttpContent, HttpContent> =
         fun next ->
             { new IHttpFunc<HttpContent> with
-                member _.SendAsync ctx =
+                member _.NextAsync(ctx, ?content) =
                     task {
                         let response = ctx.Response
 
                         match response.IsSuccessStatusCode with
-                        | true -> return! next.SendAsync ctx
+                        | true -> return! next.NextAsync(ctx, ?content=content)
                         | false ->
                             ctx.Request.Metrics.Counter Metric.FetchErrorInc Map.empty 1L
 
-                            let! err = errorHandler response
-                            return! next.ThrowAsync err
+                            let! err = errorHandler response content
+                            return! next.ThrowAsync(ctx, err)
                     }
 
-                member _.ThrowAsync err = next.ThrowAsync err
+                member _.ThrowAsync(ctx, err) = next.ThrowAsync(ctx, err)
             }

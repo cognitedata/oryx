@@ -8,17 +8,11 @@ open FSharp.Control.Tasks.V2.ContextInsensitive
 type RequestBuilder () =
     member _.Zero(): HttpHandler<unit, unit> = id
 
-    member _.Return(res: 'TSource): HttpHandler<'TSource> =
+    member _.Return(content: 'TSource): HttpHandler<'TSource> =
         fun next ->
             { new IHttpFunc<'TSource> with
-                member _.SendAsync ctx =
-                    next.SendAsync
-                        {
-                            Request = ctx.Request
-                            Response = ctx.Response.Replace(res)
-                        }
-
-                member _.ThrowAsync exn = next.ThrowAsync exn
+                member _.NextAsync(ctx, _) = next.NextAsync(ctx, content = content)
+                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
             }
 
     member _.ReturnFrom(req: HttpHandler<'T, 'TNext>): HttpHandler<'T, 'TNext> = req
@@ -38,25 +32,30 @@ type RequestBuilder () =
 
         fun next ->
             { new IHttpFunc<'TNext> with
-                member _.SendAsync ctx =
+                member _.NextAsync(ctx, ?content) =
                     task {
                         let obv =
                             { new IHttpFunc<'TResult> with
-                                member _.SendAsync ctx' = next.SendAsync ctx'
+                                member _.NextAsync(ctx', content) = next.NextAsync(ctx, ?content = content)
                                 // { ctx with
                                 //     // Preserve headers and status-code from previous response.
                                 //     Response = ctx.Response.Replace(ctx'.Response.Content)
                                 // }
 
-                                member _.ThrowAsync exn = next.ThrowAsync exn
+                                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
                             }
 
-                        let content = ctx.Response.Content
-                        let res = fn content
-                        do! res obv |> (fun obv -> obv.SendAsync ctx)
+                        match content with
+                        | Some content ->
+                            let res = fn content
+
+                            return!
+                                res obv
+                                |> (fun obv -> obv.NextAsync(ctx, content = content))
+                        | None -> return! obv.NextAsync(ctx)
                     }
 
-                member _.ThrowAsync exn = next.ThrowAsync exn
+                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
             }
             |> source // Subscribe source
 

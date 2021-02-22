@@ -25,7 +25,7 @@ module Fetch =
             content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded"
             content :> HttpContent
 
-    let buildRequest (client: HttpClient) (ctx: Context<'T>): HttpRequestMessage =
+    let buildRequest (client: HttpClient) (ctx: Context): HttpRequestMessage =
         let query = ctx.Request.Query
 
         let url =
@@ -67,7 +67,7 @@ module Fetch =
     let fetch<'TSource> : HttpHandler<'TSource, HttpContent> =
         fun next ->
             { new IHttpFunc<'TSource> with
-                member _.SendAsync ctx =
+                member _.NextAsync(ctx, content) =
                     task {
                         let timer = Stopwatch()
                         let client = ctx.Request.HttpClient()
@@ -100,23 +100,24 @@ module Fetch =
                                 ]
 
                             let! result =
-                                next.SendAsync
+                                next.NextAsync(
                                     {
                                         Request = { ctx.Request with Items = items }
                                         Response =
                                             {
-                                                Content = response.Content
                                                 StatusCode = response.StatusCode
                                                 IsSuccessStatusCode = response.IsSuccessStatusCode
                                                 ReasonPhrase = response.ReasonPhrase
                                                 Headers = headers
                                             }
-                                    }
+                                    },
+                                    content = response.Content
+                                )
 
                             response.Dispose()
                             return result
-                        with ex -> return! next.ThrowAsync ex
+                        with ex -> return! next.ThrowAsync(ctx, ex)
                     }
 
-                member _.ThrowAsync exn = next.ThrowAsync exn
+                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
             }
