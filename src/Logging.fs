@@ -13,23 +13,36 @@ open System.Net.Http
 module Logging =
 
     /// Set the logger (ILogger) to use. Usually you would use `Context.withLogger` instead to set the logger for all requests.
-    let withLogger (logger: ILogger) (next: IHttpFunc<'T>) (context: Context) =
-        next.NextAsync
-            { context with
-                Request =
-                    { context.Request with
-                        Logger = Some logger
-                    }
+    let withLogger (logger: ILogger): HttpHandler<'TSource, 'TSource> =
+        fun next ->
+            { new IHttpFunc<'TSource> with
+                member _.NextAsync(ctx, ?content) =
+                    next.NextAsync(
+                        { ctx with
+                            Request =
+                                { ctx.Request with
+                                    Logger = Some logger
+                                }
+                        },
+                        ?content = content
+                    )
+
+                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
             }
 
     /// Set the log level to use (default is LogLevel.None).
-    let withLogLevel (logLevel: LogLevel) (next: IHttpFunc<'T>) (context: Context) =
-        next.NextAsync
-            { context with
-                Request =
-                    { context.Request with
-                        LogLevel = logLevel
-                    }
+    let withLogLevel (logLevel: LogLevel): HttpHandler<'TSource, 'TSource> =
+        fun next ->
+            { new IHttpFunc<'TSource> with
+                member _.NextAsync(ctx, ?content) =
+                    next.NextAsync(
+                        { ctx with
+                            Request = { ctx.Request with LogLevel = logLevel }
+                        },
+                        ?content = content
+                    )
+
+                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
             }
 
     /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
