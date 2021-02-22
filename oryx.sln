@@ -7,8 +7,6 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Oryx", "src\Oryx.fsproj", "
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Tests", "test\Tests.fsproj", "{708710D0-07E1-4CDB-AB4C-B86E90A74426}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "benchmark", "benchmark\benchmark.fsproj", "{218FB8E8-EBE7-4B37-98A4-F455151073E0}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "extensions", "extensions", "{C9E10FD9-70B4-421A-BDB1-421F5901CB7C}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Oryx.Protobuf", "extensions\Oryx.Protobuf\Oryx.Protobuf.fsproj", "{EDBBC8E4-1CAF-41BA-B945-6AC59717D720}"

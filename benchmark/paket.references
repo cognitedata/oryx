@@ -1,7 +1,0 @@
-group Benchmark
-
-BenchmarkDotNet
-Newtonsoft.Json
-Thoth.Json.Net
-Utf8Json
-Ply

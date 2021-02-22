@@ -63,16 +63,6 @@ group Test
     nuget FsCheck.Xunit
     nuget Thoth.Json.Net
 
-group Benchmark
-    source https://www.nuget.org/api/v2
-    storage: none
-
-    nuget BenchmarkDotNet
-    nuget Newtonsoft.Json
-    nuget Thoth.Json.Net
-    nuget Utf8Json
-    nuget Ply
-
 group Examples
     source https://www.nuget.org/api/v2
     storage: none
