@@ -21,7 +21,7 @@ let ``Get with return expression is Ok`` () =
     task {
         // Arrange
         let mutable retries = 0
-        let json = """{ "value": 42 }"""
+        let json = """42"""
 
         let stub =
             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
@@ -46,19 +46,14 @@ let ``Get with return expression is Ok`` () =
         let request =
             req {
                 let! result = get ()
-                return result
+                return result + 1
             }
 
         let! result = request |> runAsync' ctx
         let retries' = retries
 
         match result with
-        | Ok (Some response) ->
-            test <@ response.StatusCode = HttpStatusCode.OK @>
-
-            test
-                <@ Map.tryFind "X-Request-ID" response.Headers
-                   |> Option.isSome @>
+        | Ok (Some response) -> test <@ response = 43 @>
         | _ -> ()
 
         // Assert

@@ -83,7 +83,10 @@ module Logging =
                                             |> Option.map (fun builder -> builder ())
                                             |> Option.toObj
                                             :> _
-                                        | PlaceHolder.ResponseContent -> response :> _
+                                        | PlaceHolder.ResponseContent ->
+                                            match response with
+                                            | Some content -> content :> _
+                                            | None -> null
                                         | key ->
                                             // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
                                             // placeholders to the format string.
@@ -92,7 +95,7 @@ module Logging =
                                             | _ -> String.Empty :> _)
                                 |> Array.ofSeq
 
-                            let level, values = request.LogLevel, getValues ctx.Response
+                            let level, values = request.LogLevel, getValues content
                             logger.Log(LogLevel.Error, format, values)
                         | _ -> ()
 

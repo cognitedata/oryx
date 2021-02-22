@@ -35,6 +35,11 @@ module Handler =
             member __.ThrowAsync(_, error) = task { tcs.SetException error }
         }
 
+    let handler (cont: (int -> unit)) = task { cont 42 }
+
+    handler (fun result -> printfn "Got %A" result)
+    |> ignore
+
     /// Run the HTTP handler in the given context. Returns HttpResponse with headers and status-code etc.
     let runAsync' (ctx: Context) (handler: HttpHandler<'TSource, 'TResult>): Task<Result<'TResult option, exn>> =
         let tcs = TaskCompletionSource<'TResult option>()
@@ -86,6 +91,37 @@ module Handler =
     /// Composes two HTTP handlers.
     let (>=>) = compose
 
+    /// Thrown if no choice found.
+    exception NoChoiceException of unit
+
+    /// Choose a list of handlers to use. The first handler that succeeds will be used.
+    let choose (handlers: HttpHandler<'TSource, 'TResult> list): HttpHandler<'TSource, 'TResult> =
+        fun next ->
+            { new IHttpFunc<'TSource> with
+                member _.NextAsync(ctx, ?content) =
+                    let mutable found = false
+
+                    task {
+                        let obv =
+                            { new IHttpFunc<'TResult> with
+                                member _.NextAsync(ctx, ?content) =
+                                    found <- true
+                                    next.NextAsync(ctx, ?content = content)
+
+                                member _.ThrowAsync(ctx, exn) = Task.FromResult()
+                            }
+
+                        for handler in handlers do
+                            if not found then
+                                do! (handler obv).NextAsync(ctx, ?content = content)
+
+                        if not found then
+                            return! next.ThrowAsync(ctx, NoChoiceException())
+                    }
+
+                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
+            }
+
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
     let withQuery (query: seq<struct (string * string)>): HttpHandler<'TSource> =
@@ -121,7 +157,6 @@ module Handler =
 
                 member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
             }
-
 
     /// HTTP handler for adding HTTP header to the context. The header
     /// will be added to the HTTP request when using the `fetch` HTTP
