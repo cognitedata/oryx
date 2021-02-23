@@ -564,12 +564,12 @@ type IHttpObserver<'TSource> =
     abstract member NextAsync: context: Context * ?content: 'TSource -> Task<unit>
     abstract member ErrorAsync: context: Context * error: exn -> Task<unit>
 
-type HttpHandler<'TSource, 'TResult> = IHttpFunc<'TResult> -> IHttpFunc<'TSource>
-type HttpHandler<'TSource> = IHttpFunc<'TSource> -> IHttpFunc<'TSource>
+type HttpHandler<'TSource, 'TResult> = IHttpObserver<'TResult> -> IHttpObserver<'TSource>
+type HttpHandler<'TSource> = IHttpObserver<'TSource> -> IHttpObserver<'TSource>
 ```
 
 The difference from observables is that the "subscribe" function (`HttpHandler`) returns another `Observer`
-(`IHttpFunc`) instead of a `Disposable` and this observable is the side-effect that injects values into the pipeline
+(`IHttpObserver`) instead of a `Disposable` and this observable is the side-effect that injects values into the pipeline
 (`Subject`). The composition stays exactly the same so all HTTP pipelines will works as before. The typing just gets
 simpler to handle.
 
