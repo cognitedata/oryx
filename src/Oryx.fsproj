@@ -18,7 +18,6 @@
     <Compile Include="Error.fs" />
     <Compile Include="Logging.fs" />
     <Compile Include="Fetch.fs" />
-    <Compile Include="Retry.fs" />
     <Compile Include="Builder.fs" />
     <Compile Include="Chunk.fs" />
   </ItemGroup>
