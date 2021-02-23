@@ -109,18 +109,6 @@ type Context =
 
 [<RequireQualifiedAccess>]
 module Context =
-    let mapRequest (mapper: HttpRequest -> HttpRequest) (source: Context): Context =
-        {
-            Request = mapper source.Request
-            Response = source.Response
-        }
-
-    let mapResponse (mapper: HttpResponse -> HttpResponse) (source: Context): Context =
-        {
-            Request = source.Request
-            Response = mapper source.Response
-        }
-
     let private fileVersion =
         FileVersionInfo
             .GetVersionInfo(

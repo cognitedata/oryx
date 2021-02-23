@@ -6,7 +6,7 @@ namespace Oryx
 open FSharp.Control.Tasks.V2.ContextInsensitive
 
 type RequestBuilder () =
-    member _.Zero(): HttpHandler<unit, unit> = id
+    member _.Zero(): HttpHandler<'TSource, 'TSource> = id
 
     member _.Return(content: 'TSource): HttpHandler<'TSource> =
         fun next ->
@@ -15,7 +15,7 @@ type RequestBuilder () =
                 member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
             }
 
-    member _.ReturnFrom(req: HttpHandler<'T, 'TNext>): HttpHandler<'T, 'TNext> = req
+    member _.ReturnFrom(req: HttpHandler<'TSource, 'TResult>): HttpHandler<'TSource, 'TResult> = req
 
     member _.Delay(fn) = fn ()
 
@@ -37,11 +37,6 @@ type RequestBuilder () =
                         let obv =
                             { new IHttpObserver<'TResult> with
                                 member _.NextAsync(ctx', content) = next.NextAsync(ctx, ?content = content)
-                                // { ctx with
-                                //     // Preserve headers and status-code from previous response.
-                                //     Response = ctx.Response.Replace(ctx'.Response.Content)
-                                // }
-
                                 member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
                             }
 
