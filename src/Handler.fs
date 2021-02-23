@@ -419,10 +419,7 @@ module Handler =
     ///
     /// In such cases, using `HttpCompletionOption.ResponseHeadersRead` can lead to faster response times overall, while
     /// not forcing the file stream to buffer in memory.
-    let withCompletion<'TSource>
-        (completionMode: HttpCompletionOption)
-        (source: HttpHandler<'TSource>)
-        : HttpHandler<'TSource> =
+    let withCompletion<'TSource> (completionMode: HttpCompletionOption): HttpHandler<'TSource> =
         fun next ->
             { new IHttpObserver<'TSource> with
                 member _.NextAsync(ctx, ?content) =
@@ -438,4 +435,3 @@ module Handler =
 
                 member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
             }
-            |> source
