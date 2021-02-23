@@ -266,8 +266,8 @@ module Context =
                 }
         }
 
-    /// Merge the responses in the list of context objects. Used by the sequential and concurrent HTTP handlers.
-    let mergeResponses (context: List<Context>): Context =
+    /// Merge the list of context objects. Used by the sequential and concurrent HTTP handlers.
+    let merge (context: List<Context>): Context =
         // Use the max status code.
         let statusCode =
             let codes =

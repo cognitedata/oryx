@@ -295,7 +295,7 @@ module Handler =
                         match result with
                         | Ok results ->
                             let results, contents = results |> List.unzip
-                            let bs = Context.mergeResponses results
+                            let bs = Context.merge results
                             return! next.NextAsync(bs, contents)
                         | Error err -> return! next.ErrorAsync(ctx, err)
                     }
@@ -333,7 +333,7 @@ module Handler =
                         match result with
                         | Ok results ->
                             let results, contents = results |> List.unzip
-                            let bs = Context.mergeResponses results
+                            let bs = Context.merge results
                             return! next.NextAsync(bs, contents)
                         | Error err -> return! next.ErrorAsync(ctx, err)
                     }
