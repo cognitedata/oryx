@@ -66,7 +66,7 @@ module Fetch =
     /// to the log format.
     let fetch<'TSource> : HttpHandler<'TSource, HttpContent> =
         fun next ->
-            { new IHttpFunc<'TSource> with
+            { new IHttpObserver<'TSource> with
                 member _.NextAsync(ctx, content) =
                     task {
                         let timer = Stopwatch()
@@ -116,8 +116,8 @@ module Fetch =
 
                             response.Dispose()
                             return result
-                        with ex -> return! next.ThrowAsync(ctx, ex)
+                        with ex -> return! next.ErrorAsync(ctx, ex)
                     }
 
-                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
+                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
             }

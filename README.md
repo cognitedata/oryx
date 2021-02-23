@@ -95,7 +95,7 @@ transformed by a series of asynchronous HTTP handlers.
 ```fs
 type IHttpFunc<'TSource> =
     abstract member NextAsync: context: Context * ?content: 'TSource -> Task<unit>
-    abstract member ThrowAsync: context: Context * error: exn -> Task<unit>
+    abstract member ErrorAsync: context: Context * error: exn -> Task<unit>
 
 type HttpHandler<'TSource, 'TResult> = IHttpFunc<'TResult> -> IHttpFunc<'TSource>
 ```
@@ -106,7 +106,7 @@ An `HttpHandler` is a function that takes one argument, the `IHttpFunc<'TResult>
 think of the `IHttpFunc` as the input and output observers (or continuations) of the `HttpHandler`.
 
 Each HttpHandler usually adds more info to the `HttpRequest` before passing it further down the pipeline by invoking the
-next `IHttpFunc` by calling it's `NextAsync` member or signal error by calling the `ThrowAsync` member to fail the
+next `IHttpFunc` by calling it's `NextAsync` member or signal error by calling the `ErrorAsync` member to fail the
 processing of the pipeline.
 
 The easiest way to get your head around a Oryx `HttpHandler` is to think of it as a functional web request processing
@@ -268,7 +268,7 @@ open a PR so we can include them in the library.
 
 ## Error handling
 
-Errors are handled by the main handler logic. Every `IHttpFunc` has a member `ThrowAsync` that takes the context and an exception.
+Errors are handled by the main handler logic. Every `IHttpFunc` has a member `ErrorAsync` that takes the context and an exception.
 Thus every stage in the pipeline may be short-circuited by calling the error handler.
 
 To produce a custom error response you can use the `withError` handler _after_ e.g `fetch`. The supplied `errorHandler`
@@ -516,7 +516,7 @@ let withResource (resource: string): HttpHandler<'TSource> =
                     ?content = content
                 )
 
-            member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
+            member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
         }
 
 let withVersion (version: ApiVersion): HttpHandler<'TSource> =
@@ -533,7 +533,7 @@ let withVersion (version: ApiVersion): HttpHandler<'TSource> =
                     ?content = content
                 )
 
-            member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
+            member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
         }
 ```
 

@@ -10,9 +10,9 @@ type RequestBuilder () =
 
     member _.Return(content: 'TSource): HttpHandler<'TSource> =
         fun next ->
-            { new IHttpFunc<'TSource> with
+            { new IHttpObserver<'TSource> with
                 member _.NextAsync(ctx, _) = next.NextAsync(ctx, content = content)
-                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
+                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
             }
 
     member _.ReturnFrom(req: HttpHandler<'T, 'TNext>): HttpHandler<'T, 'TNext> = req
@@ -31,18 +31,18 @@ type RequestBuilder () =
         ): HttpHandler<'TSource, 'TResult> =
 
         fun next ->
-            { new IHttpFunc<'TNext> with
+            { new IHttpObserver<'TNext> with
                 member _.NextAsync(ctx, ?content) =
                     task {
                         let obv =
-                            { new IHttpFunc<'TResult> with
+                            { new IHttpObserver<'TResult> with
                                 member _.NextAsync(ctx', content) = next.NextAsync(ctx, ?content = content)
                                 // { ctx with
                                 //     // Preserve headers and status-code from previous response.
                                 //     Response = ctx.Response.Replace(ctx'.Response.Content)
                                 // }
 
-                                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
+                                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
                             }
 
                         match content with
@@ -55,7 +55,7 @@ type RequestBuilder () =
                         | None -> return! obv.NextAsync(ctx)
                     }
 
-                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
+                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
             }
             |> source // Subscribe source
 

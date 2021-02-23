@@ -58,5 +58,5 @@ module Retry =
 //                         return result
 //             }
 
-//         member _.ThrowAsync exn = next.ThrowAsync exn
+//         member _.ErrorAsync exn = next.ErrorAsync exn
 //     }

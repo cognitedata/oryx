@@ -63,9 +63,9 @@ type HttpMessageHandlerStub (NextAsync: Func<HttpRequestMessage, CancellationTok
 
 let unit<'TSource, 'TResult> (value: 'TResult): HttpHandler<'TSource, 'TResult> =
     fun next ->
-        { new IHttpFunc<'TSource> with
+        { new IHttpObserver<'TSource> with
             member _.NextAsync(ctx, ?content) = next.NextAsync(ctx, value)
-            member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
+            member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
         }
 
 
@@ -77,21 +77,21 @@ exception TestException of code: int * message: string with
 
 let error msg: HttpHandler<'TSource, 'TResult> =
     fun next ->
-        { new IHttpFunc<'TSource> with
+        { new IHttpObserver<'TSource> with
             member _.NextAsync(ctx, ?content) =
                 task {
                     let error = TestException(code = 400, message = msg)
-                    return! next.ThrowAsync(ctx, error)
+                    return! next.ErrorAsync(ctx, error)
                 }
 
-            member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
+            member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
         }
 
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
 let badRequestHandler<'TSource> (response: 'TSource) (error: exn): HttpHandler<'TSource> =
     fun next ->
-        { new IHttpFunc<'TSource> with
+        { new IHttpObserver<'TSource> with
             member _.NextAsync(ctx, _) =
                 task {
                     match error with
@@ -99,11 +99,11 @@ let badRequestHandler<'TSource> (response: 'TSource) (error: exn): HttpHandler<'
                         match enum<HttpStatusCode> (ex.code) with
                         | HttpStatusCode.BadRequest -> return! next.NextAsync(ctx, response)
 
-                        | _ -> return! next.ThrowAsync(ctx, error)
-                    | _ -> return! next.ThrowAsync(ctx, error)
+                        | _ -> return! next.ErrorAsync(ctx, error)
+                    | _ -> return! next.ErrorAsync(ctx, error)
                 }
 
-            member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
+            member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
         }
 
 let shouldRetry (error: exn): bool =

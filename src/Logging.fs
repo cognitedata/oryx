@@ -15,7 +15,7 @@ module Logging =
     /// Set the logger (ILogger) to use. Usually you would use `Context.withLogger` instead to set the logger for all requests.
     let withLogger (logger: ILogger): HttpHandler<'TSource, 'TSource> =
         fun next ->
-            { new IHttpFunc<'TSource> with
+            { new IHttpObserver<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
@@ -27,13 +27,13 @@ module Logging =
                         ?content = content
                     )
 
-                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
+                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
             }
 
     /// Set the log level to use (default is LogLevel.None).
     let withLogLevel (logLevel: LogLevel): HttpHandler<'TSource, 'TSource> =
         fun next ->
-            { new IHttpFunc<'TSource> with
+            { new IHttpObserver<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
@@ -42,13 +42,13 @@ module Logging =
                         ?content = content
                     )
 
-                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
+                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
             }
 
     /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
     let withLogMessage<'TSource> (msg: string): HttpHandler<'TSource> =
         fun next ->
-            { new IHttpFunc<'TSource> with
+            { new IHttpObserver<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
@@ -60,7 +60,7 @@ module Logging =
                         ?content = content
                     )
 
-                member _.ThrowAsync(ctx, exn) = next.ThrowAsync(ctx, exn)
+                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
             }
 
     // Pre-compiled
@@ -71,7 +71,7 @@ module Logging =
     /// order to log both requests, responses and errors.
     let log: HttpHandler<HttpContent, HttpContent> =
         fun next ->
-            { new IHttpFunc<HttpContent> with
+            { new IHttpObserver<HttpContent> with
                 member _.NextAsync(ctx, ?content) =
                     task {
                         match ctx.Request.Logger, ctx.Request.LogLevel with
@@ -115,9 +115,9 @@ module Logging =
                         return! next.NextAsync(ctx, ?content = content)
                     }
 
-                member _.ThrowAsync(ctx, exn) =
+                member _.ErrorAsync(ctx, exn) =
                     task {
                         //logger.Log(LogLevel.Error, format, values)
-                        return! next.ThrowAsync(ctx, exn)
+                        return! next.ErrorAsync(ctx, exn)
                     }
             }
