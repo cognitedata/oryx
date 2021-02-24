@@ -189,19 +189,9 @@ The HTTP verbs are convenience functions using the `withMethod` under the hood:
 
 The real magic of Oryx is composition. The fact that everything is an `HttpHandler` makes it easy to compose HTTP
 handlers together. You can think of them as lego bricks that you can fit together. Two or more `HttpHandler` functions
-may be composed together using Kleisli composition, i.e using the fish operator `>=>`.
-
-```fs
-let compose = second >> first
-
-let (>=>) a b = compose a b
-```
-
-One really amazing thing with Oryx is that the composition of the handlers is basic functional compose (reversed) that we
-alias using the fish operator (`>=>`):
-
-This enables you to compose your web requests and decode the response, e.g as we do when listing Assets in the
-[Cognite Data Fusion SDK](https://github.com/cognitedata/cognite-sdk-dotnet/blob/master/Oryx.Cognite/src/Handler.fs):
+may be composed together using Kleisli composition, i.e using the fish operator `>=>`. This enables you to compose your
+web requests and decode the response, e.g as we do when listing Assets in the [Cognite Data Fusion
+SDK](https://github.com/cognitedata/cognite-sdk-dotnet/blob/master/Oryx.Cognite/src/Handler.fs):
 
 ```fs
     let list (query: AssetQuery) : HttpHandler<unit, ItemsWithCursor<AssetReadDto>> =
