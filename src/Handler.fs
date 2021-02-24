@@ -11,43 +11,33 @@ open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2.ContextInsensitive
 
-type HttpFuncResult = Task<unit>
-
-type IHttpObserver<'TSource> =
+type IHttpNext<'TSource> =
     abstract member NextAsync: context: Context * ?content: 'TSource -> Task<unit>
     abstract member ErrorAsync: context: Context * error: exn -> Task<unit>
 
-///  abstract member Subscribe: IObserver<'TResult> -> IObserver<'TSource>
-type HttpHandler<'TSource, 'TResult> = IHttpObserver<'TResult> -> IHttpObserver<'TSource>
-type HttpHandler<'TSource> = IHttpObserver<'TSource> -> IHttpObserver<'TSource>
+type HttpHandler<'TSource, 'TResult> =
+    | HttpHandler of subscribe: (IHttpNext<'TResult> -> IHttpNext<'TSource>)
+
+    member this.Subscribe(next: IHttpNext<'TResult>): IHttpNext<'TSource> =
+        let (HttpHandler handler) = this
+        handler next
+
+type HttpHandler<'TSource> = HttpHandler<'TSource, 'TSource>
 
 [<AutoOpen>]
 module Handler =
-    let finish (tcs: TaskCompletionSource<'TResult option>) =
-        { new IHttpObserver<'TResult> with
-            member __.NextAsync(_, ?response) =
-                task {
-                    match response with
-                    | Some response -> tcs.SetResult(Some response)
-                    | None -> tcs.SetResult None
-                }
-
+    let result (tcs: TaskCompletionSource<'TResult option>) =
+        { new IHttpNext<'TResult> with
+            member __.NextAsync(_, ?response) = task { tcs.SetResult response }
             member __.ErrorAsync(_, error) = task { tcs.SetException error }
         }
-
-    let handler (cont: (int -> unit)) = task { cont 42 }
-
-    handler (fun result -> printfn "Got %A" result)
-    |> ignore
 
     /// Run the HTTP handler in the given context. Returns HttpResponse with headers and status-code etc.
     let runAsync' (ctx: Context) (handler: HttpHandler<'TSource, 'TResult>): Task<Result<'TResult option, exn>> =
         let tcs = TaskCompletionSource<'TResult option>()
 
-        let next = finish tcs
-
         task {
-            do! (handler next).NextAsync(ctx)
+            do! handler.Subscribe(result tcs).NextAsync(ctx)
 
             try
                 let! result = tcs.Task
@@ -55,13 +45,14 @@ module Handler =
             with err -> return Error err
         }
 
-    /// Run the HTTP handler in the given context. Returns content only.
+    /// Run the HTTP handler in the given context. Returns content as result type.
     let runAsync (ctx: Context) (handler: HttpHandler<'T, 'TResult>): Task<Result<'TResult option, exn>> =
         task {
             let! result = runAsync' ctx handler
             return result
         }
 
+    /// Run th HTTP handler in the given context. Returns content and throws exception if any error occured.
     let runUnsafeAsync (ctx: Context) (handler: HttpHandler<'T, 'TResult>): Task<'TResult> =
         task {
             let! result = runAsync' ctx handler
@@ -74,8 +65,9 @@ module Handler =
 
     /// Map the content of the HTTP handler.
     let map<'TSource, 'TResult> (mapper: 'TSource -> 'TResult): HttpHandler<'TSource, 'TResult> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     match content with
                     | Some content -> next.NextAsync(ctx, mapper content)
@@ -85,8 +77,11 @@ module Handler =
             }
 
     /// Compose two HTTP handlers into one.
-    let inline compose (first: HttpHandler<'T1, 'T2>) (second: HttpHandler<'T2, 'T3>): HttpHandler<'T1, 'T3> =
-        second >> first
+    let inline compose
+        ((HttpHandler first): HttpHandler<'T1, 'T2>)
+        ((HttpHandler second): HttpHandler<'T2, 'T3>)
+        : HttpHandler<'T1, 'T3> =
+        HttpHandler(second >> first)
 
     /// Composes two HTTP handlers.
     let (>=>) = compose
@@ -96,14 +91,15 @@ module Handler =
 
     /// Choose a list of handlers to use. The first handler that succeeds will be used.
     let choose (handlers: HttpHandler<'TSource, 'TResult> list): HttpHandler<'TSource, 'TResult> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     let mutable found = false
 
                     task {
                         let obv =
-                            { new IHttpObserver<'TResult> with
+                            { new IHttpNext<'TResult> with
                                 member _.NextAsync(ctx, ?content) =
                                     found <- true
                                     next.NextAsync(ctx, ?content = content)
@@ -113,7 +109,10 @@ module Handler =
 
                         for handler in handlers do
                             if not found then
-                                do! (handler obv).NextAsync(ctx, ?content = content)
+                                do!
+                                    handler
+                                        .Subscribe(obv)
+                                        .NextAsync(ctx, ?content = content)
 
                         if not found then
                             return! next.ErrorAsync(ctx, NoChoiceException())
@@ -125,8 +124,9 @@ module Handler =
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
     let withQuery (query: seq<struct (string * string)>): HttpHandler<'TSource> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
@@ -142,8 +142,9 @@ module Handler =
     /// content will be added to the HTTP body of requests that uses
     /// this context.
     let withContent<'TSource> (builder: unit -> HttpContent): HttpHandler<'TSource> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
@@ -162,8 +163,9 @@ module Handler =
     /// will be added to the HTTP request when using the `fetch` HTTP
     /// handler.
     let withHeader<'TSource> (name: string) (value: string): HttpHandler<'TSource> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
@@ -180,8 +182,9 @@ module Handler =
 
     /// HTTP handler for setting the expected response type.
     let withResponseType<'TSource> (respType: ResponseType): HttpHandler<'TSource> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
@@ -201,8 +204,9 @@ module Handler =
     /// `POST`, `PUT`, `DELETE`, or `OPTIONS` HTTP handlers instead of
     /// this one.
     let withMethod<'TSource> (method: HttpMethod): HttpHandler<'TSource> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, content) =
                     next.NextAsync(
                         { ctx with
@@ -216,8 +220,9 @@ module Handler =
 
     /// HTTP handler for building the URL.
     let withUrlBuilder<'TSource> (builder: UrlBuilder): HttpHandler<'TSource> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
@@ -237,8 +242,9 @@ module Handler =
 
     /// HTTP GET request. Also clears any content set in the context.
     let GET<'TSource> : HttpHandler<'TSource> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
@@ -267,14 +273,15 @@ module Handler =
     let concurrent<'TSource, 'TResult>
         (handlers: seq<HttpHandler<'TSource, 'TResult>>)
         : HttpHandler<'TSource, 'TResult list> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, _) =
                     task {
                         let res: Result<Context * 'TResult, exn> array = Array.zeroCreate (Seq.length handlers)
 
                         let obv n =
-                            { new IHttpObserver<'TResult> with
+                            { new IHttpNext<'TResult> with
                                 member _.NextAsync(ctx, content) =
                                     task {
                                         match content with
@@ -287,7 +294,7 @@ module Handler =
 
                         let! _ =
                             handlers
-                            |> Seq.mapi (fun n handler -> (handler (obv n)).NextAsync ctx)
+                            |> Seq.mapi (fun n handler -> handler.Subscribe(obv n).NextAsync ctx)
                             |> Task.WhenAll
 
                         let result = res |> List.ofSeq |> Result.sequenceList
@@ -307,14 +314,15 @@ module Handler =
     let sequential<'TSource, 'TResult>
         (handlers: seq<HttpHandler<'TSource, 'TResult>>)
         : HttpHandler<'TSource, 'TResult list> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, _) =
                     task {
                         let res = ResizeArray<Result<Context * 'TResult, exn>>()
 
                         let obv =
-                            { new IHttpObserver<'TResult> with
+                            { new IHttpNext<'TResult> with
                                 member _.NextAsync(ctx, content) =
                                     task {
                                         match content with
@@ -326,7 +334,9 @@ module Handler =
                             }
 
                         for handler in handlers do
-                            do! handler obv |> (fun obv -> obv.NextAsync ctx)
+                            do!
+                                handler.Subscribe(obv)
+                                |> (fun obv -> obv.NextAsync ctx)
 
                         let result = res |> List.ofSeq |> Result.sequenceList
 
@@ -343,8 +353,9 @@ module Handler =
 
     /// Parse response stream to a user specified type synchronously.
     let parse<'TResult> (parser: Stream -> 'TResult): HttpHandler<HttpContent, 'TResult> =
-        fun next ->
-            { new IHttpObserver<HttpContent> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<HttpContent> with
                 member _.NextAsync(ctx, content) =
                     task {
                         match content with
@@ -365,8 +376,9 @@ module Handler =
 
     /// Parse response stream to a user specified type asynchronously.
     let parseAsync<'TResult> (parser: Stream -> Task<'TResult>): HttpHandler<HttpContent, 'TResult> =
-        fun next ->
-            { new IHttpObserver<HttpContent> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<HttpContent> with
                 member _.NextAsync(ctx, ?content) =
                     task {
                         match content with
@@ -390,8 +402,9 @@ module Handler =
     let withTokenRenewer<'TSource>
         (tokenProvider: CancellationToken -> Task<Result<string, exn>>)
         : HttpHandler<'TSource> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, _) =
                     task {
                         let! result =
@@ -420,8 +433,9 @@ module Handler =
     /// In such cases, using `HttpCompletionOption.ResponseHeadersRead` can lead to faster response times overall, while
     /// not forcing the file stream to buffer in memory.
     let withCompletion<'TSource> (completionMode: HttpCompletionOption): HttpHandler<'TSource> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with

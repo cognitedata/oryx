@@ -52,7 +52,6 @@ type PushStreamContent (content: string) =
 
 type HttpMessageHandlerStub (NextAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
     inherit HttpMessageHandler ()
-    let NextAsync = NextAsync
 
     override self.SendAsync
         (
@@ -62,8 +61,9 @@ type HttpMessageHandlerStub (NextAsync: Func<HttpRequestMessage, CancellationTok
         task { return! NextAsync.Invoke(request, cancellationToken) }
 
 let unit<'TSource, 'TResult> (value: 'TResult): HttpHandler<'TSource, 'TResult> =
-    fun next ->
-        { new IHttpObserver<'TSource> with
+    HttpHandler
+    <| fun next ->
+        { new IHttpNext<'TSource> with
             member _.NextAsync(ctx, ?content) = next.NextAsync(ctx, value)
             member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
         }
@@ -76,8 +76,9 @@ exception TestException of code: int * message: string with
     override this.ToString() = this.message
 
 let error msg: HttpHandler<'TSource, 'TResult> =
-    fun next ->
-        { new IHttpObserver<'TSource> with
+    HttpHandler
+    <| fun next ->
+        { new IHttpNext<'TSource> with
             member _.NextAsync(ctx, ?content) =
                 task {
                     let error = TestException(code = 400, message = msg)
@@ -87,11 +88,11 @@ let error msg: HttpHandler<'TSource, 'TResult> =
             member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
         }
 
-
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
 let badRequestHandler<'TSource> (response: 'TSource) (error: exn): HttpHandler<'TSource> =
-    fun next ->
-        { new IHttpObserver<'TSource> with
+    HttpHandler
+    <| fun next ->
+        { new IHttpNext<'TSource> with
             member _.NextAsync(ctx, _) =
                 task {
                     match error with
