@@ -8,7 +8,7 @@ open FSharp.Control.Tasks.V2.ContextInsensitive
 type RequestBuilder () =
     member _.Zero(): HttpHandler<'TSource, 'TSource> = id
 
-    member _.Return(content: 'TSource): HttpHandler<'TSource> =
+    member _.Return(content: 'TResult): HttpHandler<'TSource, 'TResult> =
         fun next ->
             { new IHttpObserver<'TSource> with
                 member _.NextAsync(ctx, _) = next.NextAsync(ctx, content = content)
@@ -19,7 +19,7 @@ type RequestBuilder () =
 
     member _.Delay(fn) = fn ()
 
-    member _.For(source: 'T seq, func: 'T -> HttpHandler<'T, 'TNext>): HttpHandler<'T, 'TNext list> =
+    member _.For(source: 'TSource seq, func: 'TSource -> HttpHandler<'TSource, 'TResult>): HttpHandler<'TSource, 'TResult list> =
         let handlers = source |> Seq.map func
         handlers |> sequential
 
