@@ -638,35 +638,6 @@ There is now also a `runAsync'` overload that returns the full `HttpResponse` re
 response-headers etc even after decoding of the content. This is great when using Oryx for a web-proxy or protocol
 converter where you need to pass on any response-headers.
 
-## Differences from Giraffe
-
-Oryx and Giraffe is build on the same ideas of using HTTP handlers. The difference is that Oryx is for clients while
-Giraffe is for servers.
-
-In addition:
-
-The Oryx `HttpHandler` is generic both on the response and error types. This means that you may decode the response or
-the error response to a user-defined type within the pipeline itself.
-
-```fs
-type HttpHandler<'a, 'b, 'r, 'err> = HttpFunc<'b, 'r, 'err> -> Context<'a> -> HttpFuncResult<'r, 'err>
-```
-
-So an `HttpHandler` takes a context of `'T`. The handler itself transforms the context from `'T` to `'TNext`. Then the
-next handler continuation transforms from `'TNext` to `'TResult`, and the handler will return a result of `'TResult`.
-The types makes the pipeline a bit more challenging to work with but makes it easier to stay within the pipeline for the
-full processing of the request.
-
-If you are using a fixed error type with your SDK you may pin the error type using shadow types to simplify the handlers
-e.g:
-
-```fs
-type HttpFuncResult<'TResult> = Task<Result<Context<'TResult>, HandlerError<ResponseException>>>
-type HttpFunc<'T, 'TResult> = Context<'T> -> HttpFuncResult<'TResult, ResponseException>
-type HttpFunc<'T, 'TResult> = HttpFunc<'T, 'TReszult, ResponseException>
-type HttpHandler<'T, 'TNext, 'TResult> = HttpFunc<'TNext, 'TResult, ResponseException> -> Context<'T> -> HttpFuncResult<'TResult, ResponseException>
-```
-
 ## Using Oryx with Giraffe
 
 You can use Oryx within your Giraffe server if you need to make HTTP requests to other services. But then you must be
