@@ -65,8 +65,9 @@ module Fetch =
     /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{RequestContent}` and `{Elapsed}`
     /// to the log format.
     let fetch<'TSource> : HttpHandler<'TSource, HttpContent> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, content) =
                     task {
                         let timer = Stopwatch()

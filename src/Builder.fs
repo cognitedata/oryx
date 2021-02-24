@@ -6,11 +6,12 @@ namespace Oryx
 open FSharp.Control.Tasks.V2.ContextInsensitive
 
 type RequestBuilder () =
-    member _.Zero(): HttpHandler<'TSource, 'TSource> = id
+    member _.Zero(): HttpHandler<'TSource, 'TSource> = HttpHandler id
 
-    member _.Return(content: 'TSource): HttpHandler<'TSource> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+    member _.Return(content: 'TResult): HttpHandler<'TSource, 'TResult> =
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, _) = next.NextAsync(ctx, content = content)
                 member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
             }
@@ -19,7 +20,11 @@ type RequestBuilder () =
 
     member _.Delay(fn) = fn ()
 
-    member _.For(source: 'T seq, func: 'T -> HttpHandler<'T, 'TNext>): HttpHandler<'T, 'TNext list> =
+    member _.For
+        (
+            source: 'TSource seq,
+            func: 'TSource -> HttpHandler<'TSource, 'TResult>
+        ): HttpHandler<'TSource, 'TResult list> =
         let handlers = source |> Seq.map func
         handlers |> sequential
 
@@ -30,29 +35,33 @@ type RequestBuilder () =
             fn: 'TNext -> HttpHandler<'TNext, 'TResult>
         ): HttpHandler<'TSource, 'TResult> =
 
-        fun next ->
-            { new IHttpObserver<'TNext> with
-                member _.NextAsync(ctx, ?content) =
-                    task {
-                        let obv =
-                            { new IHttpObserver<'TResult> with
-                                member _.NextAsync(ctx', content) = next.NextAsync(ctx, ?content = content)
-                                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
-                            }
+        let subscribe (next: IHttpNext<'TResult>) =
+            let (next: IHttpNext<'TNext>) =
+                { new IHttpNext<'TNext> with
+                    member _.NextAsync(ctx, ?content) =
+                        task {
+                            let obv =
+                                { new IHttpNext<'TResult> with
+                                    member _.NextAsync(ctx', content) = next.NextAsync(ctx, ?content = content)
+                                    member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
+                                }
 
-                        match content with
-                        | Some content ->
-                            let res = fn content
+                            match content with
+                            | Some content ->
+                                let res = fn content
 
-                            return!
-                                res obv
-                                |> (fun obv -> obv.NextAsync(ctx, content = content))
-                        | None -> return! obv.NextAsync(ctx)
-                    }
+                                return!
+                                    res.Subscribe(obv)
+                                    |> (fun obv -> obv.NextAsync(ctx, content = content))
+                            | None -> return! obv.NextAsync(ctx)
+                        }
 
-                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
-            }
-            |> source // Subscribe source
+                    member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
+                }
+
+            source.Subscribe(next)
+
+        HttpHandler subscribe
 
 [<AutoOpen>]
 module Builder =

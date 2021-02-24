@@ -14,8 +14,9 @@ module Logging =
 
     /// Set the logger (ILogger) to use. Usually you would use `Context.withLogger` instead to set the logger for all requests.
     let withLogger (logger: ILogger): HttpHandler<'TSource, 'TSource> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
@@ -32,8 +33,9 @@ module Logging =
 
     /// Set the log level to use (default is LogLevel.None).
     let withLogLevel (logLevel: LogLevel): HttpHandler<'TSource, 'TSource> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
@@ -47,8 +49,9 @@ module Logging =
 
     /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
     let withLogMessage<'TSource> (msg: string): HttpHandler<'TSource> =
-        fun next ->
-            { new IHttpObserver<'TSource> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
@@ -70,8 +73,9 @@ module Logging =
     /// Logger handler with message. Should be composed in pipeline after the `fetch` handler, but before `withError` in
     /// order to log both requests, responses and errors.
     let log: HttpHandler<HttpContent, HttpContent> =
-        fun next ->
-            { new IHttpObserver<HttpContent> with
+        HttpHandler
+        <| fun next ->
+            { new IHttpNext<HttpContent> with
                 member _.NextAsync(ctx, ?content) =
                     task {
                         match ctx.Request.Logger, ctx.Request.LogLevel with
