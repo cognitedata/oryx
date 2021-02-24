@@ -18,8 +18,8 @@ module ResponseReader =
     /// </summary>
     /// <param name="decoder">Decoder to use. </param>
     /// <returns>Decoded context.</returns>
-    let json<'T, 'TResult, 'TError> (decoder: Decoder<'T>): HttpHandler<HttpContent, 'T, 'TResult, 'TError> =
-        let parser (stream: Stream): Task<'T> =
+    let json<'TResult> (decoder: Decoder<'TResult>): HttpHandler<HttpContent, 'TResult> =
+        let parser (stream: Stream): Task<'TResult> =
             task {
                 let! ret = decodeStreamAsync decoder stream
 

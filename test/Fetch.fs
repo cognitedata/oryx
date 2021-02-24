@@ -21,7 +21,7 @@ let ``Get with return expression is Ok`` () =
     task {
         // Arrange
         let mutable retries = 0
-        let json = """{ "value": 42 }"""
+        let json = """42"""
 
         let stub =
             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
@@ -46,19 +46,14 @@ let ``Get with return expression is Ok`` () =
         let request =
             req {
                 let! result = get ()
-                return result
+                return result + 1
             }
 
         let! result = request |> runAsync' ctx
         let retries' = retries
 
         match result with
-        | Ok response ->
-            test <@ response.StatusCode = HttpStatusCode.OK @>
-
-            test
-                <@ Map.tryFind "X-Request-ID" response.Headers
-                   |> Option.isSome @>
+        | Ok (Some response) -> test <@ response = 43 @>
         | _ -> ()
 
         // Assert
@@ -110,92 +105,92 @@ let ``Post url encoded with return expression is Ok`` () =
         test <@ urldecoded'.Contains "foo=bar" @>
     }
 
-[<Fact>]
-let ``Fetch with retry is Ok`` () =
-    task {
-        // Arrange
-        let metrics = TestMetrics()
-        let json = """{ "value": 42 }"""
+// [<Fact>]
+// let ``Fetch with retry is Ok`` () =
+//     task {
+//         // Arrange
+//         let metrics = TestMetrics()
+//         let json = """{ "value": 42 }"""
 
-        let stub =
-            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
-                (fun request token ->
-                    (task {
-                        let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-                        responseMessage.Content <- new StringContent(json)
-                        return responseMessage
-                     }))
+//         let stub =
+//             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
+//                 (fun request token ->
+//                     (task {
+//                         let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+//                         responseMessage.Content <- new StringContent(json)
+//                         return responseMessage
+//                      }))
 
-        let client = new HttpClient(new HttpMessageHandlerStub(stub))
+//         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
-        let ctx =
-            Context.defaultContext
-            |> Context.withHttpClient client
-            |> Context.withUrlBuilder (fun _ -> "http://test.org/")
-            |> Context.withHeader ("api-key", "test-key")
-            |> Context.withMetrics metrics
+//         let ctx =
+//             Context.defaultContext
+//             |> Context.withHttpClient client
+//             |> Context.withUrlBuilder (fun _ -> "http://test.org/")
+//             |> Context.withHeader ("api-key", "test-key")
+//             |> Context.withMetrics metrics
 
-        // Act
-        let request =
-            req {
-                let! result = retry >=> get ()
-                return result
-            }
+//         // Act
+//         let request =
+//             req {
+//                 let! result = retry >=> get ()
+//                 return result
+//             }
 
-        let! result = request |> runAsync ctx
+//         let! result = request |> runAsync ctx
 
-        // Assert
-        test <@ Result.isOk result @>
-        test <@ metrics.Retries = 0L @>
-        test <@ metrics.Fetches = 1L @>
-        test <@ metrics.Errors = 0L @>
-    }
+//         // Assert
+//         test <@ Result.isOk result @>
+//         test <@ metrics.Retries = 0L @>
+//         test <@ metrics.Fetches = 1L @>
+//         test <@ metrics.Errors = 0L @>
+//     }
 
-[<Fact>]
-let ``Fetch with retry on internal error will retry`` () =
-    task {
-        // Arrange
-        let metrics = TestMetrics()
-        let json = """{ "code": 500, "message": "failed" }"""
+// [<Fact>]
+// let ``Fetch with retry on internal error will retry`` () =
+//     task {
+//         // Arrange
+//         let metrics = TestMetrics()
+//         let json = """{ "code": 500, "message": "failed" }"""
 
-        let stub =
-            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
-                (fun request token ->
-                    (task {
-                        let responseMessage = new HttpResponseMessage(HttpStatusCode.InternalServerError)
-                        responseMessage.Content <- new StringableContent(json)
-                        return responseMessage
-                     }))
+//         let stub =
+//             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
+//                 (fun request token ->
+//                     (task {
+//                         let responseMessage = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+//                         responseMessage.Content <- new StringableContent(json)
+//                         return responseMessage
+//                      }))
 
-        let client = new HttpClient(new HttpMessageHandlerStub(stub))
+//         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
-        let ctx =
-            Context.defaultContext
-            |> Context.withHttpClient client
-            |> Context.withUrlBuilder (fun _ -> "http://test.org/")
-            |> Context.withHeader ("api-key", "test-key")
-            |> Context.withMetrics metrics
+//         let ctx =
+//             Context.defaultContext
+//             |> Context.withHttpClient client
+//             |> Context.withUrlBuilder (fun _ -> "http://test.org/")
+//             |> Context.withHeader ("api-key", "test-key")
+//             |> Context.withMetrics metrics
 
-        // Act
-        let request =
-            let content = new PushStreamContent("testing")
+//         // Act
+//         let request =
+//             let content = new PushStreamContent("testing")
 
-            req {
-                let! result =
-                    retry
-                    >=> post (fun _ -> new PushStreamContent("testing") :> HttpContent)
+//             req {
+//                 let! result =
+//                     retry
+//                     >=> post (fun _ -> new PushStreamContent("testing") :> HttpContent)
 
-                return result
-            }
+//                 return result
+//             }
 
-        let! result = request |> runAsync ctx
+//         let! result = request |> runAsync ctx
 
-        // Assert
-        test <@ Result.isError result @>
-        test <@ metrics.Retries = int64 retryCount @>
-        test <@ metrics.Fetches = int64 retryCount + 1L @>
-        test <@ metrics.Errors = int64 retryCount + 1L @>
-    }
+//         // Assert
+//         test <@ Result.isError result @>
+//         test <@ metrics.Retries = int64 retryCount @>
+//         test <@ metrics.Fetches = int64 retryCount + 1L @>
+//         test <@ metrics.Errors = int64 retryCount + 1L @>
+//     }
 
 [<Fact>]
 let ``Get with logging is OK`` () =
@@ -203,14 +198,13 @@ let ``Get with logging is OK`` () =
         // Arrange
         let metrics = TestMetrics()
         let logger = new TestLogger<string>()
-        let json = """{ "value": 42 }"""
 
         let stub =
             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
                 (fun request token ->
                     (task {
                         let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-                        responseMessage.Content <- new PushStreamContent(json)
+                        responseMessage.Content <- new PushStreamContent("42")
                         return responseMessage
                      }))
 
@@ -229,13 +223,13 @@ let ``Get with logging is OK`` () =
         let request =
             req {
                 let! result = get ()
-                return result
+                return result + 2
             }
 
         let! result = request |> runAsync ctx
 
         // Assert
-        test <@ logger.Output.Contains json @>
+        test <@ logger.Output.Contains "42" @>
         test <@ logger.Output.Contains "http://test.org" @>
         test <@ Result.isOk result @>
         test <@ metrics.Retries = 0L @>
@@ -300,7 +294,7 @@ let ``Multiple post with logging is OK`` () =
                 (fun request token ->
                     (task {
                         let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-                        responseMessage.Content <- new PushStreamContent("""{ "pong": 42 }""")
+                        responseMessage.Content <- new PushStreamContent("42")
                         return responseMessage
                      }))
 
@@ -326,10 +320,10 @@ let ``Multiple post with logging is OK`` () =
             |> runAsync ctx
 
         // Assert
+        test <@ Result.isOk result @>
         test <@ logger.Output.Contains(json 41) @>
         test <@ logger.Output.Contains "first" @>
         test <@ logger.Output.Contains "http://testing.org" @>
-        test <@ Result.isOk result @>
     }
 
 [<Fact>]
@@ -347,7 +341,7 @@ let ``Post with disabled logging does not log`` () =
                     (task {
                         retries <- retries + 1
                         let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-                        responseMessage.Content <- new PushStreamContent("")
+                        responseMessage.Content <- new PushStreamContent(json)
                         return responseMessage
                      }))
 
@@ -418,5 +412,5 @@ let ``Fetch with internal error will log error`` () =
 
         // Assert
         test <@ Result.isError result @>
-        test <@ logger.Output.Contains "Got error" @>
+        test <@ logger.Output.Contains "failed" @>
     }

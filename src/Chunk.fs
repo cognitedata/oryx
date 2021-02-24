@@ -3,17 +3,14 @@
 
 namespace Oryx
 
-open System.Net.Http
-
 module Chunk =
 
-    let chunk<'T1, 'TNext, 'TResult, 'TError>
+    let chunk<'TSource, 'TNext, 'TResult>
         (chunkSize: int)
         (maxConcurrency: int)
-        (handler: seq<'T1> -> HttpHandler<unit, seq<'TNext>, seq<'TNext>, 'TError>)
-        (items: seq<'T1>)
-        : HttpHandler<unit, seq<'TNext>, 'TResult, 'TError>
-        =
+        (handler: seq<'TNext> -> HttpHandler<'TSource, seq<'TResult>>)
+        (items: seq<'TNext>)
+        : HttpHandler<'TSource, seq<'TResult>> =
         items
         |> Seq.chunkBySize chunkSize
         |> Seq.chunkBySize maxConcurrency

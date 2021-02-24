@@ -8,9 +8,8 @@
     <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../src/Oryx.fsproj">
-      <Name>Oryx.fsproj</Name>
-    </ProjectReference>
+    <ProjectReference Include="../src/Oryx.fsproj" />
+    <ProjectReference Include="../extensions/Oryx.SystemTextJson/Oryx.SystemTextJson.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common.fs" />

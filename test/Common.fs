@@ -7,24 +7,27 @@ open System.Net.Http
 open System.Net
 open System.Net.Http.Headers
 open System.Text
+open System.Text.Json
 open System.Threading
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2
 
 open Oryx
-open Oryx.Retry
+open Oryx.SystemTextJson.ResponseReader
 open Microsoft.Extensions.Logging
 
 type StringableContent (content: string) =
-    inherit StringContent(content)
+    inherit StringContent (content)
     override this.ToString() = content
 
 type PushStreamContent (content: string) =
-    inherit HttpContent()
+    inherit HttpContent ()
     let _content = content
     let mutable _disposed = false
     do base.Headers.ContentType <- MediaTypeHeaderValue "application/json"
+
+    override this.ToString() = content
 
     override this.SerializeToStreamAsync(stream: Stream, context: TransportContext): Task =
         task {
@@ -47,75 +50,71 @@ type PushStreamContent (content: string) =
         _disposed <- true
 
 
-type HttpMessageHandlerStub (sendAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
-    inherit HttpMessageHandler()
-    let sendAsync = sendAsync
+type HttpMessageHandlerStub (NextAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
+    inherit HttpMessageHandler ()
+    let NextAsync = NextAsync
 
-    override self.SendAsync(request: HttpRequestMessage, cancellationToken: CancellationToken)
-                            : Task<HttpResponseMessage> =
-        task { return! sendAsync.Invoke(request, cancellationToken) }
+    override self.SendAsync
+        (
+            request: HttpRequestMessage,
+            cancellationToken: CancellationToken
+        ): Task<HttpResponseMessage> =
+        task { return! NextAsync.Invoke(request, cancellationToken) }
 
-let unit (value: 'a) (next: HttpFunc<'a, 'r, 'err>) (context: HttpContext): HttpFuncResult<'r, 'err> =
-    next
-        {
-            Request = context.Request
-            Response = context.Response.Replace(value)
+let unit<'TSource, 'TResult> (value: 'TResult): HttpHandler<'TSource, 'TResult> =
+    fun next ->
+        { new IHttpObserver<'TSource> with
+            member _.NextAsync(ctx, ?content) = next.NextAsync(ctx, value)
+            member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
         }
 
-let add (a: int) (b: int) (next: HttpFunc<int, 'b, 'err>) (context: HttpContext): HttpFuncResult<'b, 'err> =
-    unit (a + b) next context
 
-exception TestException of string with
-    override this.ToString() = this.Data0
+let add (a: int) (b: int) = unit (a + b)
 
-type TestError = { Code: int; Message: string }
 
-let apiError msg (next: HttpFunc<'b, 'c, 'err>) (_: Context<'a>): HttpFuncResult<'c, TestError> =
-    { Code = 400; Message = msg }
-    |> ResponseError
-    |> Error
-    |> Task.FromResult
+exception TestException of code: int * message: string with
+    override this.ToString() = this.message
 
-let error msg (next: HttpFunc<'b, 'c, 'err>) (_: Context<'a>): HttpFuncResult<'c, TestError> =
-    TestException msg
-    |> Panic
-    |> Error
-    |> Task.FromResult
+let error msg: HttpHandler<'TSource, 'TResult> =
+    fun next ->
+        { new IHttpObserver<'TSource> with
+            member _.NextAsync(ctx, ?content) =
+                task {
+                    let error = TestException(code = 400, message = msg)
+                    return! next.ErrorAsync(ctx, error)
+                }
+
+            member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
+        }
+
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
-let badRequestHandler<'a, 'b> (response: 'b) (error: HandlerError<TestError>) (ctx: Context<'a>) =
-    task {
-        match error with
-        | ResponseError api ->
-            match enum<HttpStatusCode> (api.Code) with
-            | HttpStatusCode.BadRequest ->
-                return
-                    Ok
-                        {
-                            Request = ctx.Request
-                            Response = ctx.Response.Replace(response)
-                        }
-            | _ -> return Error error
-        | _ -> return Error error
-    }
+let badRequestHandler<'TSource> (response: 'TSource) (error: exn): HttpHandler<'TSource> =
+    fun next ->
+        { new IHttpObserver<'TSource> with
+            member _.NextAsync(ctx, _) =
+                task {
+                    match error with
+                    | :? TestException as ex ->
+                        match enum<HttpStatusCode> (ex.code) with
+                        | HttpStatusCode.BadRequest -> return! next.NextAsync(ctx, response)
 
-let shouldRetry (error: HandlerError<TestError>): bool =
+                        | _ -> return! next.ErrorAsync(ctx, error)
+                    | _ -> return! next.ErrorAsync(ctx, error)
+                }
+
+            member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
+        }
+
+let shouldRetry (error: exn): bool =
     match error with
-    | ResponseError error -> true
-    | Panic _ -> false
+    | :? TestException -> true
+    | _ -> false
 
-let errorHandler (response: HttpResponse<HttpContent>) =
-    task {
-        return
-            {
-                Code = int response.StatusCode
-                Message = "Got error"
-            }
-            |> ResponseError
-    }
+let errorHandler (response: HttpResponse) (content: HttpContent option) =
+    task { return TestException(code = int response.StatusCode, message = "Got error") }
 
-let json (next: HttpFunc<string, 'c, 'err>) (ctx: Context<HttpContent>): HttpFuncResult<'c, 'err> =
-    parseAsync (fun _ -> task { return! ctx.Response.Content.ReadAsStringAsync() }) next ctx
+let options = JsonSerializerOptions()
 
 let get () =
     GET
@@ -124,7 +123,7 @@ let get () =
     >=> fetch
     >=> log
     >=> withError errorHandler
-    >=> json
+    >=> json options
 
 let post content =
     POST
@@ -133,10 +132,10 @@ let post content =
     >=> fetch
     >=> log
     >=> withError errorHandler
-    >=> json
+    >=> json options
 
-let retryCount = 5
-let retry next ctx = retry shouldRetry 500<ms> retryCount next ctx
+//let retryCount = 5
+//let retry next ctx = retry shouldRetry 500<ms> retryCount next ctx
 
 type TestLogger<'a> () =
     member val Output: string = String.Empty with get, set
@@ -150,12 +149,14 @@ type TestLogger<'a> () =
         member this.Dispose() = ()
 
     interface ILogger<'a> with
-        member this.Log<'TState>(logLevel: LogLevel,
-                                 eventId: EventId,
-                                 state: 'TState,
-                                 exception': exn,
-                                 formatter: Func<'TState, exn, string>)
-                                 : unit =
+        member this.Log<'TState>
+            (
+                logLevel: LogLevel,
+                eventId: EventId,
+                state: 'TState,
+                exception': exn,
+                formatter: Func<'TState, exn, string>
+            ): unit =
             this.Output <- this.Output + formatter.Invoke(state, exception')
             this.LoggerLevel <- logLevel
 

@@ -22,15 +22,10 @@ let ``Simple unit handler is Ok`` () =
         let ctx = Context.defaultContext
 
         // Act
-        let! result = unit 42 finishEarly ctx
+        let! content = unit 42 >=> unit 43 |> runUnsafeAsync ctx
 
         // Assert
-        test <@ Result.isOk result @>
-
-        match result with
-        | Ok ctx -> test <@ ctx.Response.Content = 42 @>
-        | Error (Panic err) -> raise err
-        | Error (ResponseError err) -> failwith (err.ToString())
+        test <@ content = 43 @>
     }
 
 [<Fact>]
@@ -40,15 +35,14 @@ let ``Simple error handler is Error`` () =
         let ctx = Context.defaultContext
 
         // Act
-        let! result = error "failed" finishEarly ctx
+        let! result = error "failed" |> runAsync ctx
 
         // Assert
         test <@ Result.isError result @>
 
         match result with
         | Ok _ -> failwith "error"
-        | Error (Panic err) -> test <@ err.ToString() = "failed" @>
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> test <@ err.ToString() = "failed" @>
     }
 
 [<Fact>]
@@ -59,15 +53,14 @@ let ``Simple error then ok is Error`` () =
         let req = error "failed" >=> unit 42
 
         // Act
-        let! result = req finishEarly ctx
+        let! result = req |> runAsync ctx
 
         // Assert
         test <@ Result.isError result @>
 
         match result with
         | Ok _ -> failwith "error"
-        | Error (Panic err) -> test <@ err.ToString() = "failed" @>
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> test <@ err.ToString() = "failed" @>
     }
 
 [<Fact>]
@@ -78,13 +71,12 @@ let ``Simple ok then error is Error`` () =
         let req = unit 42 >=> error "failed"
 
         // Act
-        let! result = req finishEarly ctx
+        let! result = req |> runAsync ctx
 
         // Assert
         match result with
         | Ok _ -> failwith "error"
-        | Error (Panic err) -> test <@ err.ToString() = "failed" @>
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> test <@ err.ToString() = "failed" @>
     }
 
 [<Fact>]
@@ -96,17 +88,14 @@ let ``Catching ok is Ok`` () =
 
         let req =
             unit 42
-            >=> catch errorHandler
             >=> map (fun a -> a * 10)
+            >=> catch errorHandler
 
         // Act
-        let! result = req finishEarly ctx
+        let! content = req |> runUnsafeAsync ctx
 
         // Assert
-        match result with
-        | Ok ctx -> test <@ ctx.Response.Content = 420 @>
-        | Error (Panic err) -> raise err
-        | Error (ResponseError err) -> failwith (err.ToString())
+        test <@ content = 420 @>
     }
 
 [<Fact>]
@@ -116,19 +105,13 @@ let ``Catching errors is Ok`` () =
         let ctx = Context.defaultContext
         let errorHandler = badRequestHandler 420
 
-        let req =
-            unit 42
-            >=> catch errorHandler
-            >=> apiError "failed"
+        let req = unit 42 >=> error "failed" >=> catch errorHandler
 
         // Act
-        let! result = req finishEarly ctx
+        let! content = req |> runUnsafeAsync ctx
 
         // Assert
-        match result with
-        | Ok ctx -> test <@ ctx.Response.Content = 420 @>
-        | Error (Panic err) -> raise err
-        | Error (ResponseError err) -> failwith (err.ToString())
+        test <@ content = 420 @>
     }
 
 [<Fact>]
@@ -138,19 +121,15 @@ let ``Not catching errors is Error`` () =
         let ctx = Context.defaultContext
         let errorHandler = badRequestHandler 420
 
-        let req =
-            unit 42
-            >=> catch (fun ctx next -> Task.FromResult(Error ctx))
-            >=> error "failed"
+        let req = unit 42 >=> catch errorHandler >=> error "failed"
 
         // Act
-        let! result = req finishEarly ctx
+        let! result = req |> runAsync ctx
 
         // Assert
         match result with
         | Ok _ -> failwith "error"
-        | Error (Panic err) -> test <@ err.ToString() = "failed" @>
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> test <@ err.ToString() = "failed" @>
     }
 
 [<Fact>]
@@ -161,14 +140,10 @@ let ``Sequential handlers is Ok`` () =
         let req = sequential [ unit 1; unit 2; unit 3; unit 4; unit 5 ]
 
         // Act
-        let! result = req finishEarly ctx
+        let! content = req |> runUnsafeAsync ctx
 
         // Assert
-        test <@ Result.isOk result @>
-
-        match result with
-        | Ok ctx -> test <@ ctx.Response.Content = [ 1; 2; 3; 4; 5 ] @>
-        | Error err -> failwith "error"
+        test <@ content = [ 1; 2; 3; 4; 5 ] @>
     }
 
 [<Fact>]
@@ -179,15 +154,14 @@ let ``Sequential handlers with an Error is Error`` () =
         let req = sequential [ unit 1; unit 2; error "fail"; unit 4; unit 5 ]
 
         // Act
-        let! result = req finishEarly ctx
+        let! result = req |> runAsync ctx
 
         // Assert
         test <@ Result.isError result @>
 
         match result with
         | Ok _ -> failwith "expected failure"
-        | Error (Panic err) -> test <@ err.ToString() = "fail" @>
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> test <@ err.ToString() = "fail" @>
     }
 
 [<Fact>]
@@ -198,13 +172,13 @@ let ``Concurrent handlers is Ok`` () =
         let req = concurrent [ unit 1; unit 2; unit 3; unit 4; unit 5 ]
 
         // Act
-        let! result = req finishEarly ctx
+        let! result = req |> runAsync ctx
 
         // Assert
         test <@ Result.isOk result @>
 
         match result with
-        | Ok ctx -> test <@ ctx.Response.Content = [ 1; 2; 3; 4; 5 ] @>
+        | Ok content -> test <@ content = Some [ 1; 2; 3; 4; 5 ] @>
         | Error err -> failwith "error"
     }
 
@@ -216,15 +190,14 @@ let ``Concurrent handlers with an Error is Error`` () =
         let req = concurrent [ unit 1; unit 2; error "fail"; unit 4; unit 5 ]
 
         // Act
-        let! result = req finishEarly ctx
+        let! result = req |> runAsync ctx
 
         // Assert
         test <@ Result.isError result @>
 
         match result with
         | Ok _ -> failwith "expected failure"
-        | Error (Panic err) -> test <@ err.ToString() = "fail" @>
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> test <@ err.ToString() = "fail" @>
     }
 
 [<Property>]
@@ -232,60 +205,55 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
     task {
         // Arrange
         let ctx = Context.defaultContext
-        let req = chunk chunkSize maxConcurrency unit [ 1; 2; 3; 4; 5 ]
+
+        let req =
+            chunk<unit, int, int> chunkSize maxConcurrency unit [ 1; 2; 3; 4; 5 ]
 
         // Act
-        let! result = req finishEarly ctx
-
-        // Assert
-        test <@ Result.isOk result @>
-
-        match result with
-        | Ok ctx -> test <@ Seq.toList ctx.Response.Content = [ 1; 2; 3; 4; 5 ] @>
-        | Error err -> failwith "error"
+        let! result = req |> runUnsafeAsync ctx
+        test <@ Seq.toList result = [ 1; 2; 3; 4; 5 ] @>
     }
     |> fun x -> x.Result
 
-[<Fact>]
-let ``Request with token renewer sets Authorization header`` () =
-    task {
-        // Arrange
-        let renewer _ = Ok "token" |> Task.FromResult
-        let ctx = Context.defaultContext
+// [<Fact>]
+// let ``Request with token renewer sets Authorization header`` () =
+//     task {
+//         // Arrange
+//         let renewer _ = Ok "token" |> Task.FromResult
+//         let ctx = Context.defaultContext
 
-        let req = withTokenRenewer renewer >=> unit 42
+//         let req = withTokenRenewer renewer >=> unit 42
 
-        // Act
-        let! result = req finishEarly ctx
-        // Assert
-        match result with
-        | Ok ctx ->
-            let found =
-                ctx.Request.Headers.TryGetValue "Authorization"
-                |> (fun (found, value) -> found && value.Contains "token")
+//         // Act
+//         let! result = req |> runAsync' ctx
 
-            test <@ found @>
-        | Error (Panic err) -> raise err
-        | Error (ResponseError err) -> failwith (err.ToString())
-    }
+//         // Assert
+//         match result with
+//         | Ok ctx ->
+//             let found =
+//                 ctx.Request.Headers.TryGetValue "Authorization"
+//                 |> (fun (found, value) -> found && value.Contains "token")
+
+//             test <@ found @>
+//         | Error err -> raise err
+//     }
 
 [<Fact>]
 let ``Request with token renewer without token gives error`` () =
     task {
         // Arrange
         let err = Exception "Unable to authenticate"
-        let renewer _ = Panic err |> Error |> Task.FromResult
+        let renewer _ = err |> Error |> Task.FromResult
         let ctx = Context.defaultContext
 
         let req = withTokenRenewer renewer >=> unit 42
 
         // Act
-        let! result = req finishEarly ctx
+        let! result = req |> runAsync ctx
         // Assert
         match result with
         | Ok ctx -> failwith "Request should fail"
-        | Error (Panic err) -> test <@ err.ToString().Contains("Unable to authenticate") @>
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> test <@ err.ToString().Contains("Unable to authenticate") @>
     }
 
 [<Fact>]
@@ -299,10 +267,9 @@ let ``Request with token renewer throws exception gives error`` () =
         let req = withTokenRenewer renewer >=> unit 42
 
         // Act
-        let! result = req finishEarly ctx
+        let! result = req |> runAsync ctx
         // Assert
         match result with
         | Ok ctx -> failwith "Request should fail"
-        | Error (Panic err) -> test <@ err.ToString().Contains("failing") @>
-        | Error (ResponseError err) -> failwith (err.ToString())
+        | Error err -> test <@ err.ToString().Contains("failing") @>
     }

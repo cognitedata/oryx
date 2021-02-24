@@ -13,13 +13,10 @@ type WikiSearchHit =
 
 type WikiSearchHits = WikiSearchHits of WikiSearchHit list
 
-let wikiDataItemDecoder : Decoder<WikiSearchHit> =
-    Decode.oneOf [
-        Decode.string |> Decode.map SearchTerm
-        Decode.list Decode.string |> Decode.map SearchHits
-    ]
+let wikiDataItemDecoder: Decoder<WikiSearchHit> =
+    Decode.oneOf [ Decode.string |> Decode.map SearchTerm; Decode.list Decode.string |> Decode.map SearchHits ]
 
-let wikiDataItemsDecoders : Decoder<WikiSearchHits> =
+let wikiDataItemsDecoders: Decoder<WikiSearchHits> =
     Decode.list wikiDataItemDecoder
     |> Decode.map WikiSearchHits
 
@@ -28,10 +25,7 @@ let Url = "https://en.wikipedia.org/w/api.php"
 
 let options = JsonSerializerOptions()
 
-let query term = [
-    struct ("action", "opensearch")
-    struct ("search", term)
-]
+let query term = [ struct ("action", "opensearch"); struct ("search", term) ]
 
 let request term =
     GET
@@ -40,15 +34,17 @@ let request term =
     >=> fetch
     >=> json wikiDataItemsDecoders
 
-let asyncMain argv = task {
-    use client = new HttpClient ()
-    let ctx =
-        Context.defaultContext
-        |> Context.withHttpClient client
+let asyncMain argv =
+    task {
+        use client = new HttpClient()
 
-    let! result = request "F#" |> runAsync ctx
-    printfn "Result: %A" result
-}
+        let ctx =
+            Context.defaultContext
+            |> Context.withHttpClient client
+
+        let! result = request "F#" |> runAsync ctx
+        printfn "Result: %A" result
+    }
 
 [<EntryPoint>]
 let main argv =
