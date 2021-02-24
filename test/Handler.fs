@@ -215,6 +215,18 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
     }
     |> fun x -> x.Result
 
+let ``Choose handlers is Ok`` =
+    task {
+        // Arrange
+        let ctx = Context.defaultContext
+
+        let req = choose [ error "1"; unit 2; error "3"; unit 4 ]
+
+        // Act
+        let! result = req |> runUnsafeAsync ctx
+        test <@ result = 2 @>
+    }
+
 // [<Fact>]
 // let ``Request with token renewer sets Authorization header`` () =
 //     task {
