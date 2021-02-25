@@ -29,7 +29,6 @@ type RequestBuilder () =
         handlers |> sequential
 
     /// Binds value of 'TValue for let! All handlers runs in same context within the builder.
-    /// Binds value of 'TValue for let! All handlers runs in same context within the builder.
     member _.Bind
         (
             source: HttpHandler<'TSource, 'TValue>,
@@ -37,11 +36,11 @@ type RequestBuilder () =
         ): HttpHandler<'TSource, 'TResult> =
 
         let subscribe (next: IHttpNext<'TResult>) =
-            let (next: IHttpNext<'TValue>) =
+            let next =
                 { new IHttpNext<'TValue> with
                     member _.NextAsync(ctx, ?content) =
                         task {
-                            let obv =
+                            let resultObv =
                                 { new IHttpNext<'TResult> with
                                     member _.NextAsync(ctx', content) =
                                         next.NextAsync(Context.merge [ ctx; ctx' ], ?content = content)
@@ -51,10 +50,10 @@ type RequestBuilder () =
 
                             match content with
                             | Some content ->
-                                let res: HttpHandler<'TSource, 'TResult> = fn content
+                                let bound: HttpHandler<'TSource, 'TResult> = fn content
 
-                                return! res.Subscribe(obv).NextAsync(ctx)
-                            | None -> return! obv.NextAsync(ctx)
+                                return! bound.Subscribe(resultObv).NextAsync(ctx)
+                            | None -> return! resultObv.NextAsync(ctx)
                         }
 
                     member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
