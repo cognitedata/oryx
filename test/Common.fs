@@ -60,16 +60,16 @@ type HttpMessageHandlerStub (NextAsync: Func<HttpRequestMessage, CancellationTok
         ): Task<HttpResponseMessage> =
         task { return! NextAsync.Invoke(request, cancellationToken) }
 
-let unit<'TSource, 'TResult> (value: 'TResult): HttpHandler<'TSource, 'TResult> =
+let singleton<'TSource, 'TResult> (value: 'TResult): HttpHandler<'TSource, 'TResult> =
     HttpHandler
     <| fun next ->
         { new IHttpNext<'TSource> with
-            member _.NextAsync(ctx, ?content) = next.NextAsync(ctx, value)
+            member _.NextAsync(ctx, _) = next.NextAsync(ctx, value)
             member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
         }
 
 
-let add (a: int) (b: int) = unit (a + b)
+let add (a: int) (b: int) = singleton (a + b)
 
 
 exception TestException of code: int * message: string with

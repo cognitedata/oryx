@@ -31,29 +31,20 @@ type RequestBuilder () =
     /// Binds value of 'TValue for let! All handlers runs in same context within the builder.
     member _.Bind
         (
-            source: HttpHandler<'TSource, 'TNext>,
-            fn: 'TNext -> HttpHandler<'TNext, 'TResult>
+            source: HttpHandler<'TSource, 'TValue>,
+            fn: 'TValue -> HttpHandler<'TSource, 'TResult>
         ): HttpHandler<'TSource, 'TResult> =
 
         let subscribe (next: IHttpNext<'TResult>) =
-            let (next: IHttpNext<'TNext>) =
-                { new IHttpNext<'TNext> with
+            let next =
+                { new IHttpNext<'TValue> with
                     member _.NextAsync(ctx, ?content) =
                         task {
-                            let obv =
-                                { new IHttpNext<'TResult> with
-                                    member _.NextAsync(ctx', content) = next.NextAsync(ctx, ?content = content)
-                                    member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
-                                }
-
                             match content with
                             | Some content ->
-                                let res = fn content
-
-                                return!
-                                    res.Subscribe(obv)
-                                    |> (fun obv -> obv.NextAsync(ctx, content = content))
-                            | None -> return! obv.NextAsync(ctx)
+                                let bound: HttpHandler<'TSource, 'TResult> = fn content
+                                return! bound.Subscribe(next).NextAsync(ctx)
+                            | None -> return! next.NextAsync(ctx)
                         }
 
                     member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)

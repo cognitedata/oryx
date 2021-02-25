@@ -267,21 +267,21 @@ module Context =
         }
 
     /// Merge the list of context objects. Used by the sequential and concurrent HTTP handlers.
-    let merge (context: List<Context>): Context =
+    let merge (ctxs: List<Context>): Context =
+        let ctxs =
+            match ctxs with
+            | [] -> [ defaultContext ]
+            | _ -> ctxs
+
         // Use the max status code.
         let statusCode =
-            let codes =
-                context
-                |> List.map (fun ctx -> ctx.Response.StatusCode)
-
-            if codes.IsEmpty then
-                HttpStatusCode.NotFound
-            else
-                List.max codes
+            ctxs
+            |> List.map (fun ctx -> ctx.Response.StatusCode)
+            |> List.max
 
         // Concat the reason phrases (if they are different)
         let reasonPhrase =
-            context
+            ctxs
             |> List.map (fun ctx -> ctx.Response.ReasonPhrase)
             |> List.distinct
             |> String.concat ", "
@@ -297,7 +297,7 @@ module Context =
 
         // Merge headers
         let headers =
-            context
+            ctxs
             |> List.map (fun ctx -> ctx.Response.Headers)
             |> List.fold
                 (fun state hdr -> merge state hdr (fun k (a, b) -> if a = b then a else Seq.append a b))
@@ -305,10 +305,9 @@ module Context =
 
         {
             Request =
-                context
-                |> List.tryHead
-                |> Option.map (fun ctx -> ctx.Request)
-                |> Option.defaultValue defaultRequest
+                ctxs
+                |> Seq.map (fun ctx -> ctx.Request)
+                |> Seq.head
             Response =
                 {
                     Headers = headers
