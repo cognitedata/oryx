@@ -31,7 +31,7 @@ let ``Simple unit handler in builder is Ok`` () =
         let! result =
             let a =
                 req {
-                    let! value = unit 42
+                    let! value = singleton 42
                     return value
                 }
 
@@ -47,10 +47,10 @@ let ``Simple return from unit handler in builder is Ok`` () =
         // Arrange
         let ctx = Context.defaultContext
 
-        let a = unit 42 |> runAsync ctx
+        let a = singleton 42 |> runAsync ctx
 
         // Act
-        let! result = req { return! unit 42 } |> runUnsafeAsync ctx
+        let! result = req { return! singleton 42 } |> runUnsafeAsync ctx
 
         // Assert
         test <@ result = 42 @>
@@ -65,8 +65,8 @@ let ``Multiple handlers in builder is Ok`` () =
         // Act
         let request =
             req {
-                let! a = unit 10
-                let! b = unit 20
+                let! a = singleton 10
+                let! b = singleton 20
                 return! add a b
             }
 

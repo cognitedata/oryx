@@ -40,20 +40,11 @@ type RequestBuilder () =
                 { new IHttpNext<'TValue> with
                     member _.NextAsync(ctx, ?content) =
                         task {
-                            let resultObv =
-                                { new IHttpNext<'TResult> with
-                                    member _.NextAsync(ctx', content) =
-                                        next.NextAsync(Context.merge [ ctx; ctx' ], ?content = content)
-
-                                    member _.ErrorAsync(ctx', exn) = next.ErrorAsync(Context.merge [ ctx; ctx' ], exn)
-                                }
-
                             match content with
                             | Some content ->
                                 let bound: HttpHandler<'TSource, 'TResult> = fn content
-
-                                return! bound.Subscribe(resultObv).NextAsync(ctx)
-                            | None -> return! resultObv.NextAsync(ctx)
+                                return! bound.Subscribe(next).NextAsync(ctx)
+                            | None -> return! next.NextAsync(ctx)
                         }
 
                     member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)

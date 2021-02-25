@@ -22,7 +22,7 @@ let ``Simple unit handler is Ok`` () =
         let ctx = Context.defaultContext
 
         // Act
-        let! content = unit 42 >=> unit 43 |> runUnsafeAsync ctx
+        let! content = singleton 42 >=> singleton 43 |> runUnsafeAsync ctx
 
         // Assert
         test <@ content = 43 @>
@@ -50,7 +50,7 @@ let ``Simple error then ok is Error`` () =
     task {
         // Arrange
         let ctx = Context.defaultContext
-        let req = error "failed" >=> unit 42
+        let req = error "failed" >=> singleton 42
 
         // Act
         let! result = req |> runAsync ctx
@@ -68,7 +68,7 @@ let ``Simple ok then error is Error`` () =
     task {
         // Arrange
         let ctx = Context.defaultContext
-        let req = unit 42 >=> error "failed"
+        let req = singleton 42 >=> error "failed"
 
         // Act
         let! result = req |> runAsync ctx
@@ -87,7 +87,7 @@ let ``Catching ok is Ok`` () =
         let errorHandler = badRequestHandler 420
 
         let req =
-            unit 42
+            singleton 42
             >=> map (fun a -> a * 10)
             >=> catch errorHandler
 
@@ -105,7 +105,7 @@ let ``Catching errors is Ok`` () =
         let ctx = Context.defaultContext
         let errorHandler = badRequestHandler 420
 
-        let req = unit 42 >=> error "failed" >=> catch errorHandler
+        let req = singleton 42 >=> error "failed" >=> catch errorHandler
 
         // Act
         let! content = req |> runUnsafeAsync ctx
@@ -121,7 +121,7 @@ let ``Not catching errors is Error`` () =
         let ctx = Context.defaultContext
         let errorHandler = badRequestHandler 420
 
-        let req = unit 42 >=> catch errorHandler >=> error "failed"
+        let req = singleton 42 >=> catch errorHandler >=> error "failed"
 
         // Act
         let! result = req |> runAsync ctx
@@ -137,7 +137,7 @@ let ``Sequential handlers is Ok`` () =
     task {
         // Arrange
         let ctx = Context.defaultContext
-        let req = sequential [ unit 1; unit 2; unit 3; unit 4; unit 5 ]
+        let req = sequential [ singleton 1; singleton 2; singleton 3; singleton 4; singleton 5 ]
 
         // Act
         let! content = req |> runUnsafeAsync ctx
@@ -151,7 +151,7 @@ let ``Sequential handlers with an Error is Error`` () =
     task {
         // Arrange
         let ctx = Context.defaultContext
-        let req = sequential [ unit 1; unit 2; error "fail"; unit 4; unit 5 ]
+        let req = sequential [ singleton 1; singleton 2; error "fail"; singleton 4; singleton 5 ]
 
         // Act
         let! result = req |> runAsync ctx
@@ -169,7 +169,7 @@ let ``Concurrent handlers is Ok`` () =
     task {
         // Arrange
         let ctx = Context.defaultContext
-        let req = concurrent [ unit 1; unit 2; unit 3; unit 4; unit 5 ]
+        let req = concurrent [ singleton 1; singleton 2; singleton 3; singleton 4; singleton 5 ]
 
         // Act
         let! result = req |> runAsync ctx
@@ -187,7 +187,7 @@ let ``Concurrent handlers with an Error is Error`` () =
     task {
         // Arrange
         let ctx = Context.defaultContext
-        let req = concurrent [ unit 1; unit 2; error "fail"; unit 4; unit 5 ]
+        let req = concurrent [ singleton 1; singleton 2; error "fail"; singleton 4; singleton 5 ]
 
         // Act
         let! result = req |> runAsync ctx
@@ -207,7 +207,7 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
         let ctx = Context.defaultContext
 
         let req =
-            chunk<unit, int, int> chunkSize maxConcurrency unit [ 1; 2; 3; 4; 5 ]
+            chunk<unit, int, int> chunkSize maxConcurrency singleton [ 1; 2; 3; 4; 5 ]
 
         // Act
         let! result = req |> runUnsafeAsync ctx
@@ -220,7 +220,7 @@ let ``Choose handlers is Ok`` =
         // Arrange
         let ctx = Context.defaultContext
 
-        let req = choose [ error "1"; unit 2; error "3"; unit 4 ]
+        let req = choose [ error "1"; singleton 2; error "3"; singleton 4 ]
 
         // Act
         let! result = req |> runUnsafeAsync ctx
@@ -258,7 +258,7 @@ let ``Request with token renewer without token gives error`` () =
         let renewer _ = err |> Error |> Task.FromResult
         let ctx = Context.defaultContext
 
-        let req = withTokenRenewer renewer >=> unit 42
+        let req = withTokenRenewer renewer >=> singleton 42
 
         // Act
         let! result = req |> runAsync ctx
@@ -276,7 +276,7 @@ let ``Request with token renewer throws exception gives error`` () =
         let renewer _ = failwith "failing" |> Task.FromResult
         let ctx = Context.defaultContext
 
-        let req = withTokenRenewer renewer >=> unit 42
+        let req = withTokenRenewer renewer >=> singleton 42
 
         // Act
         let! result = req |> runAsync ctx
