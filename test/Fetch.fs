@@ -49,11 +49,11 @@ let ``Get with return expression is Ok`` () =
                 return result + 1
             }
 
-        let! result = request |> runAsync' ctx
+        let! result = request |> runAsync ctx
         let retries' = retries
 
         match result with
-        | Ok (Some response) -> test <@ response = 43 @>
+        | Ok response -> test <@ response = 43 @>
         | _ -> ()
 
         // Assert
