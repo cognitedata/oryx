@@ -18,7 +18,7 @@ let ``Zero builder is Ok`` () =
         let! result = req { () } |> runAsync ctx
 
         // Assert
-        test <@ Result.isOk result @>
+        test <@ Result.isError result @>
     }
 
 [<Fact>]
