@@ -75,18 +75,7 @@ let add (a: int) (b: int) = singleton (a + b)
 exception TestException of code: int * message: string with
     override this.ToString() = this.message
 
-let error msg: HttpHandler<'TSource, 'TResult> =
-    HttpHandler
-    <| fun next ->
-        { new IHttpNext<'TSource> with
-            member _.NextAsync(ctx, ?content) =
-                task {
-                    let error = TestException(code = 400, message = msg)
-                    return! next.ErrorAsync(ctx, error)
-                }
-
-            member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
-        }
+let error msg: HttpHandler<'TSource, 'TResult> = throw <| TestException(code = 400, message = msg)
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
 let badRequestHandler<'TSource> (response: 'TSource) (error: exn): HttpHandler<'TSource> =
