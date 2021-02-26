@@ -158,6 +158,7 @@ are like lego bricks and may be composed into more complex HTTP handlers. The HT
 - `parse` - Parse response stream to a user-specified type synchronously.
 - `parseAsync` - Parse response stream to a user-specified type asynchronously.
 - `sequential` - Runs a sequence of HTTP handlers sequentially.
+- `throw`- Fails the pipeline and pushes an exception downstream.
 - `withContent` - Add HTTP content to the fetch request
 - `withLogMessage` - Log information about the given request supplying a user-specified message.
 - `withMethod` - with HTTP method. You can use GET, PUT, POST instead.
