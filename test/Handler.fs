@@ -22,7 +22,9 @@ let ``Simple unit handler is Ok`` () =
         let ctx = Context.defaultContext
 
         // Act
-        let! content = singleton 42 >=> singleton 43 |> runUnsafeAsync ctx
+        let! content =
+            singleton 42 >=> singleton 43
+            |> runUnsafeAsync ctx
 
         // Assert
         test <@ content = 43 @>
@@ -105,7 +107,10 @@ let ``Catching errors is Ok`` () =
         let ctx = Context.defaultContext
         let errorHandler = badRequestHandler 420
 
-        let req = singleton 42 >=> error "failed" >=> catch errorHandler
+        let req =
+            singleton 42
+            >=> error "failed"
+            >=> catch errorHandler
 
         // Act
         let! content = req |> runUnsafeAsync ctx
@@ -121,7 +126,10 @@ let ``Not catching errors is Error`` () =
         let ctx = Context.defaultContext
         let errorHandler = badRequestHandler 420
 
-        let req = singleton 42 >=> catch errorHandler >=> error "failed"
+        let req =
+            singleton 42
+            >=> catch errorHandler
+            >=> error "failed"
 
         // Act
         let! result = req |> runAsync ctx
@@ -137,7 +145,9 @@ let ``Sequential handlers is Ok`` () =
     task {
         // Arrange
         let ctx = Context.defaultContext
-        let req = sequential [ singleton 1; singleton 2; singleton 3; singleton 4; singleton 5 ]
+
+        let req =
+            sequential [ singleton 1; singleton 2; singleton 3; singleton 4; singleton 5 ]
 
         // Act
         let! content = req |> runUnsafeAsync ctx
@@ -151,7 +161,9 @@ let ``Sequential handlers with an Error is Error`` () =
     task {
         // Arrange
         let ctx = Context.defaultContext
-        let req = sequential [ singleton 1; singleton 2; error "fail"; singleton 4; singleton 5 ]
+
+        let req =
+            sequential [ singleton 1; singleton 2; error "fail"; singleton 4; singleton 5 ]
 
         // Act
         let! result = req |> runAsync ctx
@@ -169,7 +181,9 @@ let ``Concurrent handlers is Ok`` () =
     task {
         // Arrange
         let ctx = Context.defaultContext
-        let req = concurrent [ singleton 1; singleton 2; singleton 3; singleton 4; singleton 5 ]
+
+        let req =
+            concurrent [ singleton 1; singleton 2; singleton 3; singleton 4; singleton 5 ]
 
         // Act
         let! result = req |> runAsync ctx
@@ -178,7 +192,7 @@ let ``Concurrent handlers is Ok`` () =
         test <@ Result.isOk result @>
 
         match result with
-        | Ok content -> test <@ content = Some [ 1; 2; 3; 4; 5 ] @>
+        | Ok content -> test <@ content = [ 1; 2; 3; 4; 5 ] @>
         | Error err -> failwith "error"
     }
 
@@ -187,7 +201,9 @@ let ``Concurrent handlers with an Error is Error`` () =
     task {
         // Arrange
         let ctx = Context.defaultContext
-        let req = concurrent [ singleton 1; singleton 2; error "fail"; singleton 4; singleton 5 ]
+
+        let req =
+            concurrent [ singleton 1; singleton 2; error "fail"; singleton 4; singleton 5 ]
 
         // Act
         let! result = req |> runAsync ctx

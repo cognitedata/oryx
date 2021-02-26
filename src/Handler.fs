@@ -32,34 +32,27 @@ module Handler =
             member __.ErrorAsync(_, error) = task { tcs.SetException error }
         }
 
-    /// Run the HTTP handler in the given context. Returns HttpResponse with headers and status-code etc.
-    let runAsync' (ctx: Context) (handler: HttpHandler<'TSource, 'TResult>): Task<Result<'TResult option, exn>> =
+    /// Run the HTTP handler in the given context. Returns content as result type.
+    let runAsync (ctx: Context) (handler: HttpHandler<'TSource, 'TResult>): Task<Result<'TResult, exn>> =
         let tcs = TaskCompletionSource<'TResult option>()
 
         task {
             do! handler.Subscribe(result tcs).NextAsync(ctx)
 
             try
-                let! result = tcs.Task
-                return Ok result
+                match! tcs.Task with
+                | Some value -> return Ok value
+                | _ -> return OperationCanceledException() :> Exception |> Error
             with err -> return Error err
-        }
-
-    /// Run the HTTP handler in the given context. Returns content as result type.
-    let runAsync (ctx: Context) (handler: HttpHandler<'T, 'TResult>): Task<Result<'TResult option, exn>> =
-        task {
-            let! result = runAsync' ctx handler
-            return result
         }
 
     /// Run th HTTP handler in the given context. Returns content and throws exception if any error occured.
     let runUnsafeAsync (ctx: Context) (handler: HttpHandler<'T, 'TResult>): Task<'TResult> =
         task {
-            let! result = runAsync' ctx handler
+            let! result = runAsync ctx handler
 
             match result with
-            | Ok (Some result) -> return result
-            | Ok (None) -> return raise <| OperationCanceledException()
+            | Ok value -> return value
             | Error err -> return raise err
         }
 

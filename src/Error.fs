@@ -13,20 +13,15 @@ module Error =
     let catch (errorHandler: exn -> HttpHandler<'TSource>): HttpHandler<'TSource> =
         HttpHandler
         <| fun next ->
-            let rec obv =
-                { new IHttpNext<'TSource> with
-                    member _.NextAsync(ctx, ?content) = next.NextAsync(ctx, ?content = content)
+            { new IHttpNext<'TSource> with
+                member _.NextAsync(ctx, ?content) = next.NextAsync(ctx, ?content = content)
 
-                    member _.ErrorAsync(ctx, err) =
-                        task {
-                            printfn "Got error"
-
-                            let handler = (errorHandler err).Subscribe(next)
-                            return! handler.NextAsync(ctx)
-                        }
-                }
-
-            obv
+                member _.ErrorAsync(ctx, err) =
+                    task {
+                        let handler = (errorHandler err).Subscribe(next)
+                        return! handler.NextAsync(ctx)
+                    }
+            }
 
     /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
     let withError
