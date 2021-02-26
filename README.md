@@ -379,7 +379,7 @@ To run a handler you can use the `runAsync` function.
 val runAsync:
    ctx    : Context ->
    handler: HttpHandler<'T,'TResult>
-         -> Task<Result<option<'TResult>,exn>>
+         -> Task<Result<'TResult,exn>>
 ```
 
 or the unsafe version that may throw exceptions:
@@ -603,9 +603,6 @@ type Context<'T> =
         Response: HttpResponse<'T>
     }
 ```
-
-The `runAsync` function to run a handler chain still returns a result of the content `'T`, but there is also a variant
-that returns the full `HttpResponse` called `runAsync'`.
 
 ## Upgrade from Oryx v1 to v2
 
