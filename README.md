@@ -378,7 +378,7 @@ To run a handler you can use the `runAsync` function.
 val runAsync:
    ctx    : Context ->
    handler: HttpHandler<'T,'TResult>
-         -> Task<Result<option<'TResult>,exn>>
+         -> Task<Result'TResult,exn>>
 ```
 
 or the unsafe version that may throw exceptions:
