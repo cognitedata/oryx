@@ -82,8 +82,8 @@ module Handler =
     /// Thrown if no choice found.
     exception NoChoiceException of unit
 
-    /// Choose a list of handlers to use. The first handler that succeeds will be used.
-    let choose (handlers: HttpHandler<'TSource, 'TResult> list): HttpHandler<'TSource, 'TResult> =
+    /// Choose from a list of handlers to use. The first handler that succeeds will be used.
+    let choose (handlers: HttpHandler<'TSource, 'TResult> seq): HttpHandler<'TSource, 'TResult> =
         HttpHandler
         <| fun next ->
             { new IHttpNext<'TSource> with
