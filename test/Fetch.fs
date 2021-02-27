@@ -14,6 +14,7 @@ open Xunit
 
 open Oryx
 
+open Tests
 open Tests.Common
 
 [<Fact>]

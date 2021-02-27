@@ -13,10 +13,10 @@ type WikiSearchHit =
 
 type WikiSearchHits = WikiSearchHits of WikiSearchHit list
 
-let wikiDataItemDecoder: Decoder<WikiSearchHit> =
+let wikiDataItemDecoder : Decoder<WikiSearchHit> =
     Decode.oneOf [ Decode.string |> Decode.map SearchTerm; Decode.list Decode.string |> Decode.map SearchHits ]
 
-let wikiDataItemsDecoders: Decoder<WikiSearchHits> =
+let wikiDataItemsDecoders : Decoder<WikiSearchHits> =
     Decode.list wikiDataItemDecoder
     |> Decode.map WikiSearchHits
 

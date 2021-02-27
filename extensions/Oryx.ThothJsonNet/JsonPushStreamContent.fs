@@ -18,7 +18,7 @@ type JsonPushStreamContent (content: JsonValue) =
     let _content = content
     do base.Headers.ContentType <- MediaTypeHeaderValue "application/json"
 
-    override this.SerializeToStreamAsync(stream: Stream, context: TransportContext): Task =
+    override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
         task {
             use sw = new StreamWriter(stream, UTF8Encoding(false), 1024, true)
             use jtw = new JsonTextWriter(sw, Formatting = Formatting.None)
@@ -27,6 +27,6 @@ type JsonPushStreamContent (content: JsonValue) =
         }
         :> _
 
-    override this.TryComputeLength(length: byref<int64>): bool =
+    override this.TryComputeLength(length: byref<int64>) : bool =
         length <- -1L
         false

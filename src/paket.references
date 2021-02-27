@@ -3,3 +3,4 @@ group Main
 FSharp.Core
 Ply
 Microsoft.Extensions.Logging
+FsToolkit.ErrorHandling

@@ -13,6 +13,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common.fs" />
+    <Compile Include="Result.fs" />
     <Compile Include="Context.fs" />
     <Compile Include="Handler.fs" />
     <Compile Include="Builder.fs" />
