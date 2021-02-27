@@ -5,11 +5,11 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\src\Oryx.fsproj" />
-    <ProjectReference Include="..\extensions\Oryx.ThothJsonNet\Oryx.ThothJsonNet.fsproj" />
+    <ProjectReference Include="..\..\src\Oryx.fsproj" />
+    <ProjectReference Include="..\..\extensions\Oryx.ThothJsonNet\Oryx.ThothJsonNet.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.fs" />
   </ItemGroup>
-  <Import Project="..\.paket\Paket.Restore.targets" />
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

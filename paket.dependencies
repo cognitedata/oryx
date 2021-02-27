@@ -67,4 +67,5 @@ group Examples
     source https://www.nuget.org/api/v2
     storage: none
 
+    nuget Taskbuilder.fs ~> 2
     nuget Thoth.Json.Net
