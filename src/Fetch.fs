@@ -25,7 +25,7 @@ module Fetch =
             content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded"
             content :> HttpContent
 
-    let buildRequest (client: HttpClient) (ctx: Context): HttpRequestMessage =
+    let buildRequest (client: HttpClient) (ctx: Context) : HttpRequestMessage =
         let query = ctx.Request.Query
 
         let url =
@@ -102,16 +102,12 @@ module Fetch =
 
                             let! result =
                                 next.NextAsync(
-                                    {
-                                        Request = { ctx.Request with Items = items }
-                                        Response =
-                                            {
-                                                StatusCode = response.StatusCode
-                                                IsSuccessStatusCode = response.IsSuccessStatusCode
-                                                ReasonPhrase = response.ReasonPhrase
-                                                Headers = headers
-                                            }
-                                    },
+                                    { Request = { ctx.Request with Items = items }
+                                      Response =
+                                          { StatusCode = response.StatusCode
+                                            IsSuccessStatusCode = response.IsSuccessStatusCode
+                                            ReasonPhrase = response.ReasonPhrase
+                                            Headers = headers } },
                                     content = response.Content
                                 )
 
@@ -120,5 +116,4 @@ module Fetch =
                         with ex -> return! next.ErrorAsync(ctx, ex)
                     }
 
-                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
-            }
+                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) }

@@ -13,7 +13,7 @@ module Encode =
     let inline stringify encoder = Encode.toString 0 encoder
 
     /// Encode int64 to Json number (not to string as Thoth.Json.Net)
-    let inline int53 (value: int64): JsonValue = JValue(value) :> JsonValue
+    let inline int53 (value: int64) : JsonValue = JValue(value) :> JsonValue
 
     /// Encode int64 seq to Json number array.
     let inline int53seq (items: seq<int64>) = Seq.map int53 items |> Encode.seq
@@ -25,7 +25,7 @@ module Encode =
     let int53listStringify = int53list >> stringify
 
     /// Encode URI.
-    let inline uri (value: Uri): JsonValue = Encode.string (value.ToString())
+    let inline uri (value: Uri) : JsonValue = Encode.string (value.ToString())
 
     /// Encode a string/string Map.
     let inline propertyBag (values: Map<string, string>) =
@@ -35,4 +35,5 @@ module Encode =
 
     /// Encode optional property.
     let optionalProperty<'T> (name: string) (encoder: 'T -> JsonValue) (value: 'T option) =
-        [ if value.IsSome then name, encoder value.Value ]
+        [ if value.IsSome then
+              name, encoder value.Value ]
