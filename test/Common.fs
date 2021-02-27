@@ -117,6 +117,7 @@ let post content =
     POST
     >=> withResponseType JsonValue
     >=> withContent content
+    >=> withCompletion HttpCompletionOption.ResponseHeadersRead
     >=> fetch
     >=> log
     >=> withError errorHandler
