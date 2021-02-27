@@ -40,7 +40,7 @@ Or [directly in Visual Studio](https://docs.microsoft.com/en-us/nuget/quickstart
 open System.Net.Http
 open System.Text.Json
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
+open FSharp.Control.Tasks
 
 open Oryx
 open Oryx.SystemTextJson.ResponseReader

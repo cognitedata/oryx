@@ -6,7 +6,8 @@ group Main
 
     nuget Microsoft.Extensions.Logging
     nuget FSharp.Core >= 4.7
-    nuget Taskbuilder.fs ~> 2.1
+    nuget Ply
+    nuget FsToolkit.ErrorHandling.TaskResult ~> 2
 
 
 group Json
@@ -16,7 +17,7 @@ group Json
     framework: netstandard2.0
     nuget FSharp.Core >= 4.7
     nuget System.Text.Json
-    nuget Taskbuilder.fs ~> 2
+    nuget Ply
     nuget Oryx
 
 group Newtonsoft
@@ -26,7 +27,7 @@ group Newtonsoft
     framework: netstandard2.0
     nuget FSharp.Core >= 4.7
     nuget Newtonsoft.Json
-    nuget Taskbuilder.fs ~> 2
+    nuget Ply
     nuget Oryx
 
 group Thoth
@@ -36,7 +37,7 @@ group Thoth
     framework: netstandard2.0
     nuget FSharp.Core >= 4.7
     nuget Thoth.Json.Net
-    nuget Taskbuilder.fs ~> 2
+    nuget Ply
     nuget Oryx
 
 group Google
@@ -46,7 +47,7 @@ group Google
     framework: netstandard2.0
     nuget FSharp.Core >= 4.7
     nuget Google.Protobuf ~> 3
-    nuget Taskbuilder.fs ~> 2
+    nuget Ply
     nuget Oryx
 
 group Test
@@ -54,7 +55,7 @@ group Test
     storage: none
 
     nuget FSharp.Core >= 4.7
-    nuget coverlet.msbuild 2.5.1
+    nuget coverlet.msbuild ~> 3
     nuget Unquote ~> 5
     nuget xunit ~> 2
     nuget xunit.runner.visualstudio ~> 2
@@ -67,5 +68,5 @@ group Examples
     source https://www.nuget.org/api/v2
     storage: none
 
-    nuget Taskbuilder.fs ~> 2
+    nuget Ply
     nuget Thoth.Json.Net

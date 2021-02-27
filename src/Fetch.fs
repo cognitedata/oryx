@@ -10,7 +10,7 @@ open System.Net.Http
 open System.Net.Http.Headers
 open System.Web
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
+open FSharp.Control.Tasks
 
 [<AutoOpen>]
 module Fetch =
@@ -25,7 +25,7 @@ module Fetch =
             content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded"
             content :> HttpContent
 
-    let buildRequest (client: HttpClient) (ctx: Context) : HttpRequestMessage =
+    let buildRequest (client: HttpClient) (ctx: Context): HttpRequestMessage =
         let query = ctx.Request.Query
 
         let url =

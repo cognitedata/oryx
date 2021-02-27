@@ -6,7 +6,7 @@ open System.Net
 open System.Net.Http.Headers
 open System.Threading.Tasks
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
+open FSharp.Control.Tasks
 
 open System.Text.Json
 
@@ -21,14 +21,14 @@ type JsonPushStreamContent<'T> (content: 'T, options: JsonSerializerOptions) =
         let options = JsonSerializerOptions()
         new JsonPushStreamContent<'T>(content, options)
 
-    override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
+    override this.SerializeToStreamAsync(stream: Stream, context: TransportContext): Task =
         task {
             do! JsonSerializer.SerializeAsync<'T>(stream, _content, _options)
             do! stream.FlushAsync()
         }
         :> _
 
-    override this.TryComputeLength(length: byref<int64>) : bool =
+    override this.TryComputeLength(length: byref<int64>): bool =
         length <- -1L
         false
 

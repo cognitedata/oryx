@@ -6,12 +6,12 @@ namespace Oryx
 open System
 open System.Net.Http
 open System.Threading.Tasks
-open FSharp.Control.Tasks.V2.ContextInsensitive
+open FSharp.Control.Tasks
 
 [<AutoOpen>]
 module Error =
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
-    let catch (errorHandler: exn -> HttpHandler<'TSource>) : HttpHandler<'TSource> =
+    let catch (errorHandler: exn -> HttpHandler<'TSource>): HttpHandler<'TSource> =
         HttpHandler
         <| fun next ->
             { new IHttpNext<'TSource> with
@@ -24,7 +24,7 @@ module Error =
                     } }
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
-    let throw<'TSource, 'TResult> (error: Exception) : HttpHandler<'TSource, 'TResult> =
+    let throw<'TSource, 'TResult> (error: Exception): HttpHandler<'TSource, 'TResult> =
         HttpHandler
         <| fun next ->
             { new IHttpNext<'TSource> with
