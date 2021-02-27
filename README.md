@@ -606,19 +606,21 @@ type Context<'T> =
 
 ## Upgrade from Oryx v2 to v3
 
-Oryx v3 is mostly backwards compatible with v2. You chains of operators will for most part look exactly the same.
+Oryx v3 is mostly backwards compatible with v2. Your chains of operators will for most part look and work exactly the
+same. There are however some notable changes:
 
 - The `retry` operator have been deprecated for now. Use [Polly](https://github.com/App-vNext/Polly) instead.
-- The `catch` operator needs to run after fetch (not before). This is because Oryx v3 pushes results "down" instead of
-  returning them "up" the chain of operators. The good thing is that a handler can now continue processing after
-  catching an error. This was not possible in v2 / v1 where the catch operator had to abort processing and produce a
-  result.
+- The `catch` operator needs to run __after__ the error producing operator e.g `fetch` (not before). This is because
+  Oryx v3 pushes results "down" instead of returning them "up" the chain of operators. The good thing with this change
+  is that a handler can now continue processing the rest of the pipeline after catching an error. This was not possible
+  in v2 / v1 where the `catch` operator had to abort processing and produce a result.
 - Http handlers take 2 generic types instead of 4. E.g `fetch<'TSource, 'TNext, 'TResult, 'TError>` now becomes
   `fetch<'TSource, 'TNext>` and the last two types can simply be removed from your code.
-- ResponseError is gone. You need to sub-class an exception instead. This means that the `'TError' type is gone from the handlers.
+- `ResponseError` is gone. You need to sub-class an exception instead. This means that the `'TError' type is also gone from the handlers.
 - Custom context builders do not need any changes
 - Custom HTTP handlers must be refactored. Instead of returning a result (Ok/Error) the handler needs to push down the
-  result either using the Ok path `next.NextAsync` or fail with an error `next.ErrorAsync` E.g:
+  result either using the Ok path `next.NextAsync()` or fail with an error `next.ErrorAsync()`. This is very similar to
+  e.g Reactive Extensions (Rx) `OnNext` / `OnError`. E.g:
 
 ```fs
  let withResource (resource: string) (next: NextFunc<_,_>) (context: HttpContext) =
