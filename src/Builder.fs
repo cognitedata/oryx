@@ -13,8 +13,7 @@ type RequestBuilder () =
         <| fun next ->
             { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, _) = next.NextAsync(ctx, content = content)
-                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
-            }
+                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) }
 
     member _.ReturnFrom(req: HttpHandler<'TSource, 'TResult>): HttpHandler<'TSource, 'TResult> = req
 
@@ -47,8 +46,7 @@ type RequestBuilder () =
                             | None -> return! next.NextAsync(ctx)
                         }
 
-                    member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
-                }
+                    member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) }
 
             source.Subscribe(next)
 

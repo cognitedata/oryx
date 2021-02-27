@@ -20,16 +20,13 @@ module Logging =
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
-                            Request =
-                                { ctx.Request with
-                                    Logger = Some logger
-                                }
-                        },
+                              Request =
+                                  { ctx.Request with
+                                        Logger = Some logger } },
                         ?content = content
                     )
 
-                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
-            }
+                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) }
 
     /// Set the log level to use (default is LogLevel.None).
     let withLogLevel (logLevel: LogLevel): HttpHandler<'TSource, 'TSource> =
@@ -39,13 +36,11 @@ module Logging =
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
-                            Request = { ctx.Request with LogLevel = logLevel }
-                        },
+                              Request = { ctx.Request with LogLevel = logLevel } },
                         ?content = content
                     )
 
-                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
-            }
+                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) }
 
     /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
     let withLogMessage<'TSource> (msg: string): HttpHandler<'TSource> =
@@ -55,16 +50,13 @@ module Logging =
                 member _.NextAsync(ctx, ?content) =
                     next.NextAsync(
                         { ctx with
-                            Request =
-                                { ctx.Request with
-                                    Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg)
-                                }
-                        },
+                              Request =
+                                  { ctx.Request with
+                                        Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } },
                         ?content = content
                     )
 
-                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
-            }
+                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) }
 
     // Pre-compiled
     let private reqex =
@@ -123,5 +115,4 @@ module Logging =
                     task {
                         //logger.Log(LogLevel.Error, format, values)
                         return! next.ErrorAsync(ctx, exn)
-                    }
-            }
+                    } }
