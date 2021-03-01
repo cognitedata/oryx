@@ -18,10 +18,8 @@ jobs:
         with:
           dotnet-version: 5.0.100
 
-      - name: Setup dotnet manifest
-        run: dotnet new tool-manifest
-      - name: Setup paket
-        run: dotnet tool install Paket
+      - name: Setup tools
+        run: dotnet tool restore
       - name: Dotnet Pack
         run: dotnet pack -c release -p:PackageVersion=${GITHUB_REF##*/v} -p:FileVersion=${GITHUB_REF##*/v}
 
