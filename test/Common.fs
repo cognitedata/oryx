@@ -11,7 +11,7 @@ open System.Text.Json
 open System.Threading
 open System.Threading.Tasks
 
-open FSharp.Control.Tasks.V2
+open FSharp.Control.Tasks
 
 open Oryx
 open Oryx.SystemTextJson.ResponseReader

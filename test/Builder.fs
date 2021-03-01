@@ -1,6 +1,6 @@
 module Tests.Builder
 
-open FSharp.Control.Tasks.V2
+open FSharp.Control.Tasks
 open Swensen.Unquote
 open Xunit
 

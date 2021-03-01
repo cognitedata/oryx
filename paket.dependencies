@@ -9,7 +9,6 @@ group Main
     nuget Ply
     nuget FsToolkit.ErrorHandling ~> 2
 
-
 group Json
     source https://www.nuget.org/api/v2
     storage: none
@@ -18,7 +17,7 @@ group Json
     nuget FSharp.Core >= 4.7
     nuget System.Text.Json
     nuget Ply
-    nuget Oryx
+    nuget Oryx >= 3 prerelease
 
 group Newtonsoft
     source https://www.nuget.org/api/v2
@@ -28,7 +27,7 @@ group Newtonsoft
     nuget FSharp.Core >= 4.7
     nuget Newtonsoft.Json
     nuget Ply
-    nuget Oryx
+    nuget Oryx >= 3 prerelease
 
 group Thoth
     source https://www.nuget.org/api/v2
@@ -38,7 +37,7 @@ group Thoth
     nuget FSharp.Core >= 4.7
     nuget Thoth.Json.Net
     nuget Ply
-    nuget Oryx
+    nuget Oryx >= 3 prerelease
 
 group Google
     source https://www.nuget.org/api/v2
@@ -48,7 +47,7 @@ group Google
     nuget FSharp.Core >= 4.7
     nuget Google.Protobuf ~> 3
     nuget Ply
-    nuget Oryx
+    nuget Oryx >= 3 prerelease
 
 group Test
     source https://www.nuget.org/api/v2
