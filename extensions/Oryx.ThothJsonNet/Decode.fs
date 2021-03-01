@@ -6,7 +6,7 @@ open System
 open System.IO
 
 open Thoth.Json.Net
-open FSharp.Control.Tasks.V2.ContextInsensitive
+open FSharp.Control.Tasks
 open Newtonsoft.Json
 
 [<AutoOpen>]

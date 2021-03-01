@@ -7,18 +7,18 @@ open System.Net.Http.Headers
 open System.Text
 open System.Threading.Tasks
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
+open FSharp.Control.Tasks
 
 open Newtonsoft.Json
 open Thoth.Json.Net
 
 /// HttpContent implementation to push a JsonValue directly to the output stream.
 type JsonPushStreamContent (content: JsonValue) =
-    inherit HttpContent()
+    inherit HttpContent ()
     let _content = content
     do base.Headers.ContentType <- MediaTypeHeaderValue "application/json"
 
-    override this.SerializeToStreamAsync(stream: Stream, context: TransportContext): Task =
+    override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
         task {
             use sw = new StreamWriter(stream, UTF8Encoding(false), 1024, true)
             use jtw = new JsonTextWriter(sw, Formatting = Formatting.None)
@@ -27,6 +27,6 @@ type JsonPushStreamContent (content: JsonValue) =
         }
         :> _
 
-    override this.TryComputeLength(length: byref<int64>): bool =
+    override this.TryComputeLength(length: byref<int64>) : bool =
         length <- -1L
         false

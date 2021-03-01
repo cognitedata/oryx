@@ -1,5 +1,6 @@
 module Tests.Handler
 
+open System
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks.V2
@@ -9,11 +10,9 @@ open FsCheck.Xunit
 open FsCheck
 open FsCheck.Arb
 
-
 open Oryx
 open Oryx.Chunk
 open Tests.Common
-open System
 
 [<Fact>]
 let ``Simple unit handler is Ok`` () =

@@ -62,7 +62,8 @@ and HttpRequest =
       HttpClient: unit -> HttpClient
       /// HTTP method to be used.
       Method: HttpMethod
-      /// Getter for content to be sent as body of the request. We use a getter so content may be re-created for retries.
+      /// Getter for content to be sent as body of the request. We use a getter so content may be re-created for
+      /// retries.
       ContentBuilder: (unit -> HttpContent) option
       /// Query parameters
       Query: seq<struct (string * string)>
@@ -82,9 +83,10 @@ and HttpRequest =
       LogFormat: string
       /// Optional Metrics for recording metrics.
       Metrics: IMetrics
-      /// Extra state used to e.g build the URL. Clients are free to utilize this property for adding extra information to
-      /// the context.
+      /// Extra state used to e.g build the URL. Clients are free to utilize this property for adding extra
+      /// information to the context.
       Items: Map<string, Value>
+      /// The given `HttpCompletionOption` to use for the request.
       CompletionMode: HttpCompletionOption }
 
 type HttpResponse =

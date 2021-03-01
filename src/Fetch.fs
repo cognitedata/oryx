@@ -10,7 +10,7 @@ open System.Net.Http
 open System.Net.Http.Headers
 open System.Web
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
+open FSharp.Control.Tasks
 
 [<AutoOpen>]
 module Fetch =

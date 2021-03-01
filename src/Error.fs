@@ -6,7 +6,7 @@ namespace Oryx
 open System
 open System.Net.Http
 open System.Threading.Tasks
-open FSharp.Control.Tasks.V2.ContextInsensitive
+open FSharp.Control.Tasks
 
 [<AutoOpen>]
 module Error =

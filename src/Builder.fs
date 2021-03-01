@@ -3,7 +3,7 @@
 
 namespace Oryx
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
+open FSharp.Control.Tasks
 
 type RequestBuilder () =
     member _.Zero() : HttpHandler<'TSource, 'TSource> = HttpHandler id

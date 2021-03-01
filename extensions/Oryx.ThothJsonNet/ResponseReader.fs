@@ -4,7 +4,7 @@ open System.IO
 open System.Net.Http
 open System.Threading.Tasks
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
+open FSharp.Control.Tasks
 open Thoth.Json.Net
 
 open Oryx
@@ -18,8 +18,8 @@ module ResponseReader =
     /// </summary>
     /// <param name="decoder">Decoder to use. </param>
     /// <returns>Decoded context.</returns>
-    let json<'TResult> (decoder: Decoder<'TResult>): HttpHandler<HttpContent, 'TResult> =
-        let parser (stream: Stream): Task<'TResult> =
+    let json<'TResult> (decoder: Decoder<'TResult>) : HttpHandler<HttpContent, 'TResult> =
+        let parser (stream: Stream) : Task<'TResult> =
             task {
                 let! ret = decodeStreamAsync decoder stream
 

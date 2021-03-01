@@ -2,5 +2,5 @@ group Thoth
 
 FSharp.Core
 Thoth.Json.Net
-Taskbuilder.fs
+Ply
 Oryx

@@ -4,10 +4,10 @@
 namespace Oryx
 
 open System
+open System.Net.Http
 open System.Text.RegularExpressions
 open Microsoft.Extensions.Logging
-open FSharp.Control.Tasks.V2.ContextInsensitive
-open System.Net.Http
+open FSharp.Control.Tasks
 
 [<AutoOpen>]
 module Logging =

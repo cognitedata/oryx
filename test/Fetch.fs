@@ -14,6 +14,7 @@ open Xunit
 
 open Oryx
 
+open Tests
 open Tests.Common
 
 [<Fact>]
@@ -104,93 +105,6 @@ let ``Post url encoded with return expression is Ok`` () =
         test <@ Result.isOk result @>
         test <@ urldecoded'.Contains "foo=bar" @>
     }
-
-// [<Fact>]
-// let ``Fetch with retry is Ok`` () =
-//     task {
-//         // Arrange
-//         let metrics = TestMetrics()
-//         let json = """{ "value": 42 }"""
-
-//         let stub =
-//             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
-//                 (fun request token ->
-//                     (task {
-//                         let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-//                         responseMessage.Content <- new StringContent(json)
-//                         return responseMessage
-//                      }))
-
-//         let client = new HttpClient(new HttpMessageHandlerStub(stub))
-
-//         let ctx =
-//             Context.defaultContext
-//             |> Context.withHttpClient client
-//             |> Context.withUrlBuilder (fun _ -> "http://test.org/")
-//             |> Context.withHeader ("api-key", "test-key")
-//             |> Context.withMetrics metrics
-
-//         // Act
-//         let request =
-//             req {
-//                 let! result = retry >=> get ()
-//                 return result
-//             }
-
-//         let! result = request |> runAsync ctx
-
-//         // Assert
-//         test <@ Result.isOk result @>
-//         test <@ metrics.Retries = 0L @>
-//         test <@ metrics.Fetches = 1L @>
-//         test <@ metrics.Errors = 0L @>
-//     }
-
-// [<Fact>]
-// let ``Fetch with retry on internal error will retry`` () =
-//     task {
-//         // Arrange
-//         let metrics = TestMetrics()
-//         let json = """{ "code": 500, "message": "failed" }"""
-
-//         let stub =
-//             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
-//                 (fun request token ->
-//                     (task {
-//                         let responseMessage = new HttpResponseMessage(HttpStatusCode.InternalServerError)
-//                         responseMessage.Content <- new StringableContent(json)
-//                         return responseMessage
-//                      }))
-
-//         let client = new HttpClient(new HttpMessageHandlerStub(stub))
-
-//         let ctx =
-//             Context.defaultContext
-//             |> Context.withHttpClient client
-//             |> Context.withUrlBuilder (fun _ -> "http://test.org/")
-//             |> Context.withHeader ("api-key", "test-key")
-//             |> Context.withMetrics metrics
-
-//         // Act
-//         let request =
-//             let content = new PushStreamContent("testing")
-
-//             req {
-//                 let! result =
-//                     retry
-//                     >=> post (fun _ -> new PushStreamContent("testing") :> HttpContent)
-
-//                 return result
-//             }
-
-//         let! result = request |> runAsync ctx
-
-//         // Assert
-//         test <@ Result.isError result @>
-//         test <@ metrics.Retries = int64 retryCount @>
-//         test <@ metrics.Fetches = int64 retryCount + 1L @>
-//         test <@ metrics.Errors = int64 retryCount + 1L @>
-//     }
 
 [<Fact>]
 let ``Get with logging is OK`` () =

@@ -2,7 +2,6 @@
 obj
 bin
 .vs
-.config
 BenchmarkDotNet.Artifacts
 benchmark/bin
 benchmark/obj

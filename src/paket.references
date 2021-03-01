@@ -1,5 +1,6 @@
 group Main
 
 FSharp.Core
-Taskbuilder.fs
+Ply
 Microsoft.Extensions.Logging
+FsToolkit.ErrorHandling

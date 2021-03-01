@@ -9,7 +9,8 @@ open System.Net.Http
 open System.Threading
 open System.Threading.Tasks
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
+open FSharp.Control.Tasks
+open FsToolkit.ErrorHandling
 
 type IHttpNext<'TSource> =
     abstract member NextAsync : context: Context * ?content: 'TSource -> Task<unit>
@@ -80,8 +81,8 @@ module Handler =
     /// Thrown if no choice found.
     exception NoChoiceException of unit
 
-    /// Choose a list of handlers to use. The first handler that succeeds will be used.
-    let choose (handlers: HttpHandler<'TSource, 'TResult> list) : HttpHandler<'TSource, 'TResult> =
+    /// Choose from a list of handlers to use. The first handler that succeeds will be used.
+    let choose (handlers: HttpHandler<'TSource, 'TResult> seq) : HttpHandler<'TSource, 'TResult> =
         HttpHandler
         <| fun next ->
             { new IHttpNext<'TSource> with
@@ -266,7 +267,7 @@ module Handler =
                             |> Seq.mapi (fun n handler -> handler.Subscribe(obv n).NextAsync ctx)
                             |> Task.WhenAll
 
-                        let result = res |> List.ofSeq |> Result.sequenceList
+                        let result = res |> List.ofSeq |> List.sequenceResultM
 
                         match result with
                         | Ok results ->
@@ -305,7 +306,7 @@ module Handler =
                                 handler.Subscribe(obv)
                                 |> (fun obv -> obv.NextAsync ctx)
 
-                        let result = res |> List.ofSeq |> Result.sequenceList
+                        let result = res |> List.ofSeq |> List.sequenceResultM
 
                         match result with
                         | Ok results ->

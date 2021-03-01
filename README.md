@@ -40,7 +40,7 @@ Or [directly in Visual Studio](https://docs.microsoft.com/en-us/nuget/quickstart
 open System.Net.Http
 open System.Text.Json
 
-open FSharp.Control.Tasks.V2.ContextInsensitive
+open FSharp.Control.Tasks
 
 open Oryx
 open Oryx.SystemTextJson.ResponseReader
@@ -270,10 +270,10 @@ val withError:
               -> IHttpNext<HttpContent>
 ```
 
-It's also possible to catch errors using the `catch` handler _before_ e.g `fetch`. The function takes an `errorHandler`
-that is given the returned error and produces a new `next` continuation that may then decide to return `Ok` instead of
-`Error`. This is very helpful when a failed request not necessarily means an error, e.g if you need to check if an
-object with a given id exists at the server.
+It's also possible to catch errors using the `catch` handler _after_ e.g `fetch`. The function takes an `errorHandler`
+that is given the returned error and produces a new `HttpHandler` that may then decide to transform the error and
+continue processing, or fail with an error. This is very helpful when a failed request not necessarily means an error,
+e.g if you need to check if an object with a given id exists at the server.
 
 ```fs
 val catch:
@@ -603,6 +603,52 @@ type Context<'T> =
         Response: HttpResponse<'T>
     }
 ```
+
+## Upgrade from Oryx v2 to v3
+
+Oryx v3 is mostly backwards compatible with v2. Your chains of operators will for most part look and work exactly the
+same. There are however some notable changes:
+
+- The `retry` operator has been deprecated for now. Use [Polly](https://github.com/App-vNext/Polly) instead.
+- The `catch` operator needs to run __after__ the error producing operator e.g `fetch` (not before). This is because
+  Oryx v3 pushes results "down" instead of returning them "up" the chain of operators. The good thing with this change
+  is that a handler can now continue processing the rest of the pipeline after catching an error. This was not possible
+  in v2 / v1 where the `catch` operator had to abort processing and produce a result.
+- Http handlers take 2 generic types instead of 4. E.g `fetch<'TSource, 'TNext, 'TResult, 'TError>` now becomes
+  `fetch<'TSource, 'TNext>` and the last two types can simply be removed from your code.
+- `ResponseError` is gone. You need to sub-class an exception instead. This means that the `'TError' type is also gone from the handlers.
+- Custom context builders do not need any changes
+- Custom HTTP handlers must be refactored. Instead of returning a result (Ok/Error) the handler needs to push down the
+  result either using the Ok path `next.NextAsync()` or fail with an error `next.ErrorAsync()`. This is very similar to
+  e.g Reactive Extensions (Rx) `OnNext` / `OnError`. E.g:
+
+```fs
+ let withResource (resource: string) (next: NextFunc<_,_>) (context: HttpContext) =
+        next { context with Request = { context.Request with Items = context.Request.Items.Add(PlaceHolder.Resource, String resource) } }
+```
+
+Needs to be refactored to:
+
+```fs
+let withResource (resource: string): HttpHandler<'TSource> =
+    HttpHandler <| fun next ->
+        { new IHttpNext<'TSource> with
+            member _.NextAsync(ctx, ?content) =
+                next.NextAsync(
+                    { ctx with
+                        Request =
+                            { ctx.Request with
+                                Items = ctx.Request.Items.Add(PlaceHolder.Resource, String resource)
+                            }
+                    },
+                    ?content = content
+                )
+
+            member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
+        }
+```
+
+It's a bit more verbose, but the inner part of the code is exactly the same.
 
 ## Upgrade from Oryx v1 to v2
 
