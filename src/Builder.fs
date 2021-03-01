@@ -6,16 +6,16 @@ namespace Oryx
 open FSharp.Control.Tasks
 
 type RequestBuilder () =
-    member _.Zero(): HttpHandler<'TSource, 'TSource> = HttpHandler id
+    member _.Zero() : HttpHandler<'TSource, 'TSource> = HttpHandler id
 
-    member _.Return(content: 'TResult): HttpHandler<'TSource, 'TResult> =
+    member _.Return(content: 'TResult) : HttpHandler<'TSource, 'TResult> =
         HttpHandler
         <| fun next ->
             { new IHttpNext<'TSource> with
                 member _.NextAsync(ctx, _) = next.NextAsync(ctx, content = content)
                 member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) }
 
-    member _.ReturnFrom(req: HttpHandler<'TSource, 'TResult>): HttpHandler<'TSource, 'TResult> = req
+    member _.ReturnFrom(req: HttpHandler<'TSource, 'TResult>) : HttpHandler<'TSource, 'TResult> = req
 
     member _.Delay(fn) = fn ()
 
@@ -23,7 +23,7 @@ type RequestBuilder () =
         (
             source: 'TSource seq,
             func: 'TSource -> HttpHandler<'TSource, 'TResult>
-        ): HttpHandler<'TSource, 'TResult list> =
+        ) : HttpHandler<'TSource, 'TResult list> =
         let handlers = source |> Seq.map func
         handlers |> sequential
 
@@ -32,7 +32,7 @@ type RequestBuilder () =
         (
             source: HttpHandler<'TSource, 'TValue>,
             fn: 'TValue -> HttpHandler<'TSource, 'TResult>
-        ): HttpHandler<'TSource, 'TResult> =
+        ) : HttpHandler<'TSource, 'TResult> =
 
         let subscribe (next: IHttpNext<'TResult>) =
             let next =
@@ -41,7 +41,7 @@ type RequestBuilder () =
                         task {
                             match content with
                             | Some content ->
-                                let bound: HttpHandler<'TSource, 'TResult> = fn content
+                                let bound : HttpHandler<'TSource, 'TResult> = fn content
                                 return! bound.Subscribe(next).NextAsync(ctx)
                             | None -> return! next.NextAsync(ctx)
                         }

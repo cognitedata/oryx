@@ -29,7 +29,7 @@ type PushStreamContent (content: string) =
 
     override this.ToString() = content
 
-    override this.SerializeToStreamAsync(stream: Stream, context: TransportContext): Task =
+    override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
         task {
             let bytes = Encoding.ASCII.GetBytes(_content)
             do! stream.AsyncWrite(bytes)
@@ -37,7 +37,7 @@ type PushStreamContent (content: string) =
         }
         :> _
 
-    override this.TryComputeLength(length: byref<int64>): bool =
+    override this.TryComputeLength(length: byref<int64>) : bool =
         length <- -1L
         false
 
@@ -57,10 +57,10 @@ type HttpMessageHandlerStub (NextAsync: Func<HttpRequestMessage, CancellationTok
         (
             request: HttpRequestMessage,
             cancellationToken: CancellationToken
-        ): Task<HttpResponseMessage> =
+        ) : Task<HttpResponseMessage> =
         task { return! NextAsync.Invoke(request, cancellationToken) }
 
-let singleton<'TSource, 'TResult> (value: 'TResult): HttpHandler<'TSource, 'TResult> =
+let singleton<'TSource, 'TResult> (value: 'TResult) : HttpHandler<'TSource, 'TResult> =
     HttpHandler
     <| fun next ->
         { new IHttpNext<'TSource> with
@@ -74,10 +74,10 @@ let add (a: int) (b: int) = singleton (a + b)
 exception TestException of code: int * message: string with
     override this.ToString() = this.message
 
-let error msg: HttpHandler<'TSource, 'TResult> = throw <| TestException(code = 400, message = msg)
+let error msg : HttpHandler<'TSource, 'TResult> = throw <| TestException(code = 400, message = msg)
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
-let badRequestHandler<'TSource> (response: 'TSource) (error: exn): HttpHandler<'TSource> =
+let badRequestHandler<'TSource> (response: 'TSource) (error: exn) : HttpHandler<'TSource> =
     HttpHandler
     <| fun next ->
         { new IHttpNext<'TSource> with
@@ -94,7 +94,7 @@ let badRequestHandler<'TSource> (response: 'TSource) (error: exn): HttpHandler<'
 
             member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) }
 
-let shouldRetry (error: exn): bool =
+let shouldRetry (error: exn) : bool =
     match error with
     | :? TestException -> true
     | _ -> false
@@ -145,12 +145,12 @@ type TestLogger<'a> () =
                 state: 'TState,
                 exception': exn,
                 formatter: Func<'TState, exn, string>
-            ): unit =
+            ) : unit =
             this.Output <- this.Output + formatter.Invoke(state, exception')
             this.LoggerLevel <- logLevel
 
-        member this.IsEnabled(logLevel: LogLevel): bool = true
-        member this.BeginScope<'TState>(state: 'TState): IDisposable = this :> IDisposable
+        member this.IsEnabled(logLevel: LogLevel) : bool = true
+        member this.BeginScope<'TState>(state: 'TState) : IDisposable = this :> IDisposable
 
 type TestMetrics () =
     member val Fetches = 0L with get, set
