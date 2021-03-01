@@ -3,7 +3,7 @@ module Tests.Handler
 open System
 open System.Threading.Tasks
 
-open FSharp.Control.Tasks.V2
+open FSharp.Control.Tasks
 open Swensen.Unquote
 open Xunit
 open FsCheck.Xunit
