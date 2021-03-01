@@ -58,54 +58,50 @@ type UrlBuilder = HttpRequest -> string
 
 and HttpRequest =
     {
-        /// HTTP client to use for sending the request.
-        HttpClient: unit -> HttpClient
-        /// HTTP method to be used.
-        Method: HttpMethod
-        /// Getter for content to be sent as body of the request. We use a getter so content may be re-created for retries.
-        ContentBuilder: (unit -> HttpContent) option
-        /// Query parameters
-        Query: seq<struct (string * string)>
-        /// Responsetype. JSON or Protobuf
-        ResponseType: ResponseType
-        /// Map of headers to be sent
-        Headers: Map<string, string>
-        /// A function that builds the request URL based on the collected extra info.
-        UrlBuilder: UrlBuilder
-        /// Optional CancellationToken for cancelling the request.
-        CancellationToken: CancellationToken
-        /// Optional Logger for logging requests.
-        Logger: ILogger option
-        /// The LogLevel to log at
-        LogLevel: LogLevel
-        /// Logging format string
-        LogFormat: string
-        /// Optional Metrics for recording metrics.
-        Metrics: IMetrics
-        /// Extra state used to e.g build the URL. Clients are free to utilize this property for adding extra information to
-        /// the context.
-        Items: Map<string, Value>
-        CompletionMode: HttpCompletionOption
-    }
+      /// HTTP client to use for sending the request.
+      HttpClient: unit -> HttpClient
+      /// HTTP method to be used.
+      Method: HttpMethod
+      /// Getter for content to be sent as body of the request. We use a getter so content may be re-created for retries.
+      ContentBuilder: (unit -> HttpContent) option
+      /// Query parameters
+      Query: seq<struct (string * string)>
+      /// Responsetype. JSON or Protobuf
+      ResponseType: ResponseType
+      /// Map of headers to be sent
+      Headers: Map<string, string>
+      /// A function that builds the request URL based on the collected extra info.
+      UrlBuilder: UrlBuilder
+      /// Optional CancellationToken for cancelling the request.
+      CancellationToken: CancellationToken
+      /// Optional Logger for logging requests.
+      Logger: ILogger option
+      /// The LogLevel to log at
+      LogLevel: LogLevel
+      /// Logging format string
+      LogFormat: string
+      /// Optional Metrics for recording metrics.
+      Metrics: IMetrics
+      /// Extra state used to e.g build the URL. Clients are free to utilize this property for adding extra information to
+      /// the context.
+      Items: Map<string, Value>
+      CompletionMode: HttpCompletionOption }
 
 type HttpResponse =
     {
-        /// Map of received headers
-        Headers: Map<string, seq<string>>
-        /// Http status code
-        StatusCode: HttpStatusCode
-        /// True if response is successful
-        IsSuccessStatusCode: bool
-        /// Reason phrase which typically is sent by servers together with the status code
-        ReasonPhrase: string
-    }
+      /// Map of received headers
+      Headers: Map<string, seq<string>>
+      /// Http status code
+      StatusCode: HttpStatusCode
+      /// True if response is successful
+      IsSuccessStatusCode: bool
+      /// Reason phrase which typically is sent by servers together with the status code
+      ReasonPhrase: string }
 
 [<Struct>]
 type Context =
-    {
-        Request: HttpRequest
-        Response: HttpResponse
-    }
+    { Request: HttpRequest
+      Response: HttpResponse }
 
 [<RequireQualifiedAccess>]
 module Context =
@@ -123,151 +119,121 @@ module Context =
     let defaultRequest =
         let ua = sprintf "Oryx / v%s (Cognite)" fileVersion
 
-        {
-            HttpClient = (fun () -> failwith "Must set HttpClient")
-            Method = HttpMethod.Get
-            ContentBuilder = None
-            Query = List.empty
-            ResponseType = JsonValue
-            Headers = [ "User-Agent", ua ] |> Map
-            UrlBuilder = fun _ -> String.Empty
-            CancellationToken = CancellationToken.None
-            Logger = None
-            LogLevel = LogLevel.None
-            LogFormat = defaultLogFormat
-            Metrics = EmptyMetrics()
-            Items = Map.empty
-            CompletionMode = HttpCompletionOption.ResponseContentRead
-        }
+        { HttpClient = (fun () -> failwith "Must set HttpClient")
+          Method = HttpMethod.Get
+          ContentBuilder = None
+          Query = List.empty
+          ResponseType = JsonValue
+          Headers = [ "User-Agent", ua ] |> Map
+          UrlBuilder = fun _ -> String.Empty
+          CancellationToken = CancellationToken.None
+          Logger = None
+          LogLevel = LogLevel.None
+          LogFormat = defaultLogFormat
+          Metrics = EmptyMetrics()
+          Items = Map.empty
+          CompletionMode = HttpCompletionOption.ResponseContentRead }
 
     /// Default response to use.
     let defaultResponse =
-        {
-            StatusCode = HttpStatusCode.NotFound
-            IsSuccessStatusCode = false
-            Headers = Map.empty
-            ReasonPhrase = String.Empty
-        }
+        { StatusCode = HttpStatusCode.NotFound
+          IsSuccessStatusCode = false
+          Headers = Map.empty
+          ReasonPhrase = String.Empty }
 
     /// The default context.
-    let defaultContext: Context =
-        {
-            Request = defaultRequest
-            Response = defaultResponse
-        }
+    let defaultContext : Context =
+        { Request = defaultRequest
+          Response = defaultResponse }
 
     /// Add HTTP header to context.
     let withHeader (header: string * string) (context: Context) =
         { context with
-            Request =
-                { context.Request with
-                    Headers = context.Request.Headers.Add header
-                }
-        }
+              Request =
+                  { context.Request with
+                        Headers = context.Request.Headers.Add header } }
 
     /// Replace all headers in the context.
     let withHeaders (headers: Map<string, string>) (context: Context) =
         { context with
-            Request =
-                { context.Request with
-                    Headers = headers
-                }
-        }
+              Request =
+                  { context.Request with
+                        Headers = headers } }
 
     /// Helper for setting Bearer token as Authorization header.
     let withBearerToken (token: string) (context: Context) =
         let header = ("Authorization", sprintf "Bearer %s" token)
 
         { context with
-            Request =
-                { context.Request with
-                    Headers = context.Request.Headers.Add header
-                }
-        }
+              Request =
+                  { context.Request with
+                        Headers = context.Request.Headers.Add header } }
 
     /// Set the HTTP client to use for the requests.
     let withHttpClient (client: HttpClient) (context: Context) =
         { context with
-            Request =
-                { context.Request with
-                    HttpClient = (fun () -> client)
-                }
-        }
+              Request =
+                  { context.Request with
+                        HttpClient = (fun () -> client) } }
 
     /// Set the HTTP client factory to use for the requests.
     let withHttpClientFactory (factory: unit -> HttpClient) (context: Context) =
         { context with
-            Request =
-                { context.Request with
-                    HttpClient = factory
-                }
-        }
+              Request =
+                  { context.Request with
+                        HttpClient = factory } }
 
     /// Set the URL builder to use.
     let withUrlBuilder (builder: HttpRequest -> string) (context: Context) =
         { context with
-            Request =
-                { context.Request with
-                    UrlBuilder = builder
-                }
-        }
+              Request =
+                  { context.Request with
+                        UrlBuilder = builder } }
 
     /// Set a cancellation token to use for the requests.
     let withCancellationToken (token: CancellationToken) (context: Context) =
         { context with
-            Request =
-                { context.Request with
-                    CancellationToken = token
-                }
-        }
+              Request =
+                  { context.Request with
+                        CancellationToken = token } }
 
     /// Set the logger (ILogger) to use.
     let withLogger (logger: ILogger) (context: Context) =
         { context with
-            Request =
-                { context.Request with
-                    Logger = Some logger
-                }
-        }
+              Request =
+                  { context.Request with
+                        Logger = Some logger } }
 
     /// Set the log level to use (default is LogLevel.None).
     let withLogLevel (logLevel: LogLevel) (context: Context) =
         { context with
-            Request =
-                { context.Request with
-                    LogLevel = logLevel
-                }
-        }
+              Request =
+                  { context.Request with
+                        LogLevel = logLevel } }
 
     /// Set the log format to use.
     let withLogFormat (format: string) (context: Context) =
         { context with
-            Request =
-                { context.Request with
-                    LogFormat = format
-                }
-        }
+              Request =
+                  { context.Request with
+                        LogFormat = format } }
 
     /// Set the log message to use (normally you would like to use the withLogMessage handler instead)
     let withLogMessage (msg: string) (context: Context) =
         { context with
-            Request =
-                { context.Request with
-                    Items = context.Request.Items.Add(PlaceHolder.Message, String msg)
-                }
-        }
+              Request =
+                  { context.Request with
+                        Items = context.Request.Items.Add(PlaceHolder.Message, String msg) } }
 
     /// Set the metrics (IMetrics) to use.
     let withMetrics (metrics: IMetrics) (context: Context) =
         { context with
-            Request =
-                { context.Request with
-                    Metrics = metrics
-                }
-        }
+              Request =
+                  { context.Request with
+                        Metrics = metrics } }
 
     /// Merge the list of context objects. Used by the sequential and concurrent HTTP handlers.
-    let merge (ctxs: List<Context>): Context =
+    let merge (ctxs: List<Context>) : Context =
         let ctxs =
             match ctxs with
             | [] -> [ defaultContext ]
@@ -303,16 +269,12 @@ module Context =
                 (fun state hdr -> merge state hdr (fun k (a, b) -> if a = b then a else Seq.append a b))
                 Map.empty
 
-        {
-            Request =
-                ctxs
-                |> Seq.map (fun ctx -> ctx.Request)
-                |> Seq.head
-            Response =
-                {
-                    Headers = headers
-                    StatusCode = statusCode
-                    IsSuccessStatusCode = true
-                    ReasonPhrase = reasonPhrase
-                }
-        }
+        { Request =
+              ctxs
+              |> Seq.map (fun ctx -> ctx.Request)
+              |> Seq.head
+          Response =
+              { Headers = headers
+                StatusCode = statusCode
+                IsSuccessStatusCode = true
+                ReasonPhrase = reasonPhrase } }
