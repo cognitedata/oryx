@@ -11,44 +11,42 @@ open FSharp.Control.Tasks
 [<AutoOpen>]
 module Error =
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
-    let catch (errorHandler: exn -> HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        HttpHandler
-        <| fun next ->
-            { new IHttpNext<'TSource> with
-                member _.NextAsync(ctx, ?content) = next.NextAsync(ctx, ?content = content)
+    let catch (errorHandler: exn -> IHttpHandler<'TSource>): IHttpHandler<'TSource> =
+        { new IHttpHandler<'TSource> with
+            member _.Subscribe(next) =
+                { new IHttpNext<'TSource> with
+                    member _.NextAsync(ctx, ?content) = next.NextAsync(ctx, ?content = content)
 
-                member _.ErrorAsync(ctx, err) =
-                    task {
-                        let handler = (errorHandler err).Subscribe(next)
-                        return! handler.NextAsync(ctx)
-                    } }
+                    member _.ErrorAsync(ctx, err) =
+                        task {
+                            let handler = (errorHandler err).Subscribe(next)
+                            return! handler.NextAsync(ctx)
+                        } } }
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
-    let throw<'TSource, 'TResult> (error: Exception) : HttpHandler<'TSource, 'TResult> =
-        HttpHandler
-        <| fun next ->
-            { new IHttpNext<'TSource> with
-                member _.NextAsync(ctx, _) = next.ErrorAsync(ctx, error)
-                member _.ErrorAsync(ctx, error) = next.ErrorAsync(ctx, error) }
+    let throw<'TSource, 'TResult> (error: Exception): IHttpHandler<'TSource, 'TResult> =
+        { new IHttpHandler<'TSource, 'TResult> with
+            member _.Subscribe(next) =
+                { new IHttpNext<'TSource> with
+                    member _.NextAsync(ctx, _) = next.ErrorAsync(ctx, error)
+                    member _.ErrorAsync(ctx, error) = next.ErrorAsync(ctx, error) } }
 
     /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
-    let withError
-        (errorHandler: HttpResponse -> HttpContent option -> Task<exn>)
-        : HttpHandler<HttpContent, HttpContent> =
-        HttpHandler
-        <| fun next ->
-            { new IHttpNext<HttpContent> with
-                member _.NextAsync(ctx, ?content) =
-                    task {
-                        let response = ctx.Response
+    let withError (errorHandler: HttpResponse -> HttpContent option -> Task<exn>): IHttpHandler<HttpContent> =
+        { new IHttpHandler<HttpContent> with
+            member _.Subscribe(next) =
+                { new IHttpNext<HttpContent> with
+                    member _.NextAsync(ctx, ?content) =
+                        task {
+                            let response = ctx.Response
 
-                        match response.IsSuccessStatusCode with
-                        | true -> return! next.NextAsync(ctx, ?content = content)
-                        | false ->
-                            ctx.Request.Metrics.Counter Metric.FetchErrorInc Map.empty 1L
+                            match response.IsSuccessStatusCode with
+                            | true -> return! next.NextAsync(ctx, ?content = content)
+                            | false ->
+                                ctx.Request.Metrics.Counter Metric.FetchErrorInc Map.empty 1L
 
-                            let! err = errorHandler response content
-                            return! next.ErrorAsync(ctx, err)
-                    }
+                                let! err = errorHandler response content
+                                return! next.ErrorAsync(ctx, err)
+                        }
 
-                member _.ErrorAsync(ctx, err) = next.ErrorAsync(ctx, err) }
+                    member _.ErrorAsync(ctx, err) = next.ErrorAsync(ctx, err) } }
