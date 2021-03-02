@@ -13,11 +13,11 @@ open FSharp.Control.Tasks
 open FsToolkit.ErrorHandling
 
 type IHttpNext<'TSource> =
-    abstract member NextAsync: context: Context * ?content: 'TSource -> Task<unit>
-    abstract member ErrorAsync: context: Context * error: exn -> Task<unit>
+    abstract member NextAsync : context: Context * ?content: 'TSource -> Task<unit>
+    abstract member ErrorAsync : context: Context * error: exn -> Task<unit>
 
 type IHttpHandler<'TSource, 'TResult> =
-    abstract member Subscribe: next: IHttpNext<'TResult> -> IHttpNext<'TSource>
+    abstract member Subscribe : next: IHttpNext<'TResult> -> IHttpNext<'TSource>
 
 type IHttpHandler<'TSource> = IHttpHandler<'TSource, 'TSource>
 
@@ -29,7 +29,7 @@ module Handler =
             member __.ErrorAsync(_, error) = task { tcs.SetException error } }
 
     /// Run the HTTP handler in the given context. Returns content as result type.
-    let runAsync (ctx: Context) (handler: IHttpHandler<'TSource, 'TResult>): Task<Result<'TResult, exn>> =
+    let runAsync (ctx: Context) (handler: IHttpHandler<'TSource, 'TResult>) : Task<Result<'TResult, exn>> =
         let tcs = TaskCompletionSource<'TResult option>()
 
         task {
@@ -43,7 +43,7 @@ module Handler =
         }
 
     /// Run th HTTP handler in the given context. Returns content and throws exception if any error occured.
-    let runUnsafeAsync (ctx: Context) (handler: IHttpHandler<'T, 'TResult>): Task<'TResult> =
+    let runUnsafeAsync (ctx: Context) (handler: IHttpHandler<'T, 'TResult>) : Task<'TResult> =
         task {
             let! result = runAsync ctx handler
 
@@ -53,7 +53,7 @@ module Handler =
         }
 
     /// Map the content of the HTTP handler.
-    let map<'TSource, 'TResult> (mapper: 'TSource -> 'TResult): IHttpHandler<'TSource, 'TResult> =
+    let map<'TSource, 'TResult> (mapper: 'TSource -> 'TResult) : IHttpHandler<'TSource, 'TResult> =
         { new IHttpHandler<'TSource, 'TResult> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
@@ -65,7 +65,7 @@ module Handler =
                     member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) } }
 
     /// Compose two HTTP handlers into one.
-    let inline compose (first: IHttpHandler<'T1, 'T2>) (second: IHttpHandler<'T2, 'T3>): IHttpHandler<'T1, 'T3> =
+    let inline compose (first: IHttpHandler<'T1, 'T2>) (second: IHttpHandler<'T2, 'T3>) : IHttpHandler<'T1, 'T3> =
 
         { new IHttpHandler<'T1, 'T3> with
             member _.Subscribe(next) = second.Subscribe(next) |> first.Subscribe }
@@ -79,7 +79,7 @@ module Handler =
     exception NoChoiceException of unit
 
     /// Choose from a list of handlers to use. The first handler that succeeds will be used.
-    let choose (handlers: IHttpHandler<'TSource, 'TResult> seq): IHttpHandler<'TSource, 'TResult> =
+    let choose (handlers: IHttpHandler<'TSource, 'TResult> seq) : IHttpHandler<'TSource, 'TResult> =
         { new IHttpHandler<'TSource, 'TResult> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
@@ -110,7 +110,7 @@ module Handler =
 
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
-    let withQuery (query: seq<struct (string * string)>): IHttpHandler<'TSource> =
+    let withQuery (query: seq<struct (string * string)>) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
@@ -126,7 +126,7 @@ module Handler =
     /// HTTP handler for adding content builder to context. These
     /// content will be added to the HTTP body of requests that uses
     /// this context.
-    let withContent<'TSource> (builder: unit -> HttpContent): IHttpHandler<'TSource> =
+    let withContent<'TSource> (builder: unit -> HttpContent) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
@@ -144,7 +144,7 @@ module Handler =
     /// HTTP handler for adding HTTP header to the context. The header
     /// will be added to the HTTP request when using the `fetch` HTTP
     /// handler.
-    let withHeader<'TSource> (name: string) (value: string): IHttpHandler<'TSource> =
+    let withHeader<'TSource> (name: string) (value: string) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
@@ -160,7 +160,7 @@ module Handler =
                     member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) } }
 
     /// HTTP handler for setting the expected response type.
-    let withResponseType<'TSource> (respType: ResponseType): IHttpHandler<'TSource> =
+    let withResponseType<'TSource> (respType: ResponseType) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
@@ -179,7 +179,7 @@ module Handler =
     /// using this context. You will normally want to use the `GET`,
     /// `POST`, `PUT`, `DELETE`, or `OPTIONS` HTTP handlers instead of
     /// this one.
-    let withMethod<'TSource> (method: HttpMethod): IHttpHandler<'TSource> =
+    let withMethod<'TSource> (method: HttpMethod) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
@@ -193,7 +193,7 @@ module Handler =
                     member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) } }
 
     /// HTTP handler for building the URL.
-    let withUrlBuilder<'TSource> (builder: UrlBuilder): IHttpHandler<'TSource> =
+    let withUrlBuilder<'TSource> (builder: UrlBuilder) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
@@ -246,7 +246,7 @@ module Handler =
                 { new IHttpNext<'TSource> with
                     member _.NextAsync(ctx, _) =
                         task {
-                            let res: Result<Context * 'TResult, exn> array = Array.zeroCreate (Seq.length handlers)
+                            let res : Result<Context * 'TResult, exn> array = Array.zeroCreate (Seq.length handlers)
 
                             let obv n =
                                 { new IHttpNext<'TResult> with
@@ -316,7 +316,7 @@ module Handler =
                     member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) } }
 
     /// Parse response stream to a user specified type synchronously.
-    let parse<'TResult> (parser: Stream -> 'TResult): IHttpHandler<HttpContent, 'TResult> =
+    let parse<'TResult> (parser: Stream -> 'TResult) : IHttpHandler<HttpContent, 'TResult> =
         { new IHttpHandler<HttpContent, 'TResult> with
             member _.Subscribe(next) =
                 { new IHttpNext<HttpContent> with
@@ -338,7 +338,7 @@ module Handler =
                     member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) } }
 
     /// Parse response stream to a user specified type asynchronously.
-    let parseAsync<'TResult> (parser: Stream -> Task<'TResult>): IHttpHandler<HttpContent, 'TResult> =
+    let parseAsync<'TResult> (parser: Stream -> Task<'TResult>) : IHttpHandler<HttpContent, 'TResult> =
         { new IHttpHandler<HttpContent, 'TResult> with
             member _.Subscribe(next) =
                 { new IHttpNext<HttpContent> with
@@ -393,7 +393,7 @@ module Handler =
     ///
     /// In such cases, using `HttpCompletionOption.ResponseHeadersRead` can lead to faster response times overall, while
     /// not forcing the file stream to buffer in memory.
-    let withCompletion<'TSource> (completionMode: HttpCompletionOption): IHttpHandler<'TSource> =
+    let withCompletion<'TSource> (completionMode: HttpCompletionOption) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with

@@ -11,7 +11,7 @@ open FSharp.Control.Tasks
 [<AutoOpen>]
 module Error =
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
-    let catch (errorHandler: exn -> IHttpHandler<'TSource>): IHttpHandler<'TSource> =
+    let catch (errorHandler: exn -> IHttpHandler<'TSource>) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
@@ -24,7 +24,7 @@ module Error =
                         } } }
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
-    let throw<'TSource, 'TResult> (error: Exception): IHttpHandler<'TSource, 'TResult> =
+    let throw<'TSource, 'TResult> (error: Exception) : IHttpHandler<'TSource, 'TResult> =
         { new IHttpHandler<'TSource, 'TResult> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
@@ -32,7 +32,7 @@ module Error =
                     member _.ErrorAsync(ctx, error) = next.ErrorAsync(ctx, error) } }
 
     /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
-    let withError (errorHandler: HttpResponse -> HttpContent option -> Task<exn>): IHttpHandler<HttpContent> =
+    let withError (errorHandler: HttpResponse -> HttpContent option -> Task<exn>) : IHttpHandler<HttpContent> =
         { new IHttpHandler<HttpContent> with
             member _.Subscribe(next) =
                 { new IHttpNext<HttpContent> with
