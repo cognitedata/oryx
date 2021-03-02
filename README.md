@@ -104,23 +104,24 @@ type IHttpHandler<'TSource, 'TResult> =
 ```
 
 
+The relationship can be seen as:
 ```fs
 source = handler.Subscribe(result)
 ```
 
-An `IHttpHandler` is an observable that subscribes `.Subscribe()`. the result observer `IHttpNext<'TResult>`, and also
-returns the source observer `IHttpNext<'TSource>`. The returned `IHttpNext<'TSource>` is an observer used to inject the
-`Context` and an optional content (`'TSource`) into the handler. The given result observer `IHttpNext<'Result>` is where
-the `HttpHandler` will write its output. You can think of the `IHttpNext` as the input and output observers (or
-continuations) of the `HttpHandler`.
+A handler (`IHttpHandler`) is an observable that subscribes `.Subscribe()`. the result observer (`IHttpNext<'TResult>`),
+and also returns the source observer (`IHttpNext<'TSource>`). The returned `IHttpNext<'TSource>` is an observer used to
+write the `Context` and an optional content (`'TSource`) into the handler. The given result observer
+`IHttpNext<'Result>` is where the `HttpHandler` will write its output. You can think of the `IHttpNext` as the input and
+output observers (or continuations) of the `HttpHandler`.
 
 Each `IHttpHandler` usually transforms the `HttpRequest`, `HttpResponse` or the `content` before passing it down the
 pipeline by invoking the next `IHttpNext`'s `.NextAsync()` member. It may also signal error by calling the
 `ErrorAsync` member to fail the processing of the pipeline.
 
 The easiest way to get your head around a Oryx `IHttpHandler` is to think of it as a functional web request processing
-pipeline. Each handler has the `Context` and `content` at its disposal and can decide whether it wants to fail the request or
-continue the request by passing to the "next" handler.
+pipeline. Each handler has the `Context` and `content` at its disposal and can decide whether it wants to fail the
+request or continue the request by passing to the "next" handler.
 
 ## Context Builders
 
