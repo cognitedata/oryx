@@ -116,4 +116,5 @@ module Fetch =
                             with ex -> return! next.OnErrorAsync(ctx, ex)
                         }
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } }
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                    member _.OnCompletedAsync() = next.OnCompletedAsync() } }

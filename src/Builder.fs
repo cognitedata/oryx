@@ -15,7 +15,9 @@ type RequestBuilder () =
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
                     member _.OnNextAsync(ctx, _) = next.OnNextAsync(ctx, content = content)
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } }
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                    member _.OnCompletedAsync() = next.OnCompletedAsync() } }
+
 
     member _.ReturnFrom(req: IHttpHandler<'TSource, 'TResult>) : IHttpHandler<'TSource, 'TResult> = req
 
@@ -48,7 +50,9 @@ type RequestBuilder () =
                             | None -> return! next.OnNextAsync(ctx)
                         }
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) }
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                    member _.OnCompletedAsync() = next.OnCompletedAsync() }
+
                 |> source.Subscribe }
 
 [<AutoOpen>]

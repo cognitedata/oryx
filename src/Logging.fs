@@ -26,7 +26,9 @@ module Logging =
                             ?content = content
                         )
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } }
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                    member _.OnCompletedAsync() = next.OnCompletedAsync() } }
+
 
     /// Set the log level to use (default is LogLevel.None).
     let withLogLevel (logLevel: LogLevel) : IHttpHandler<'TSource> =
@@ -40,7 +42,9 @@ module Logging =
                             ?content = content
                         )
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } }
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                    member _.OnCompletedAsync() = next.OnCompletedAsync() } }
+
 
     /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
     let withLogMessage<'TSource> (msg: string) : IHttpHandler<'TSource> =
@@ -56,7 +60,9 @@ module Logging =
                             ?content = content
                         )
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } }
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                    member _.OnCompletedAsync() = next.OnCompletedAsync() } }
+
 
     // Pre-compiled
     let private reqex =
@@ -122,4 +128,6 @@ module Logging =
                             | _ -> log LogLevel.Error ctx (Some exn)
 
                             return! next.OnErrorAsync(ctx, exn)
-                        } } }
+                        }
+
+                    member _.OnCompletedAsync() = next.OnCompletedAsync() } }

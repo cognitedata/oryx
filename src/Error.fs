@@ -21,7 +21,10 @@ module Error =
                         task {
                             let handler = (errorHandler err).Subscribe(next)
                             return! handler.OnNextAsync(ctx)
-                        } } }
+                        }
+
+                    member _.OnCompletedAsync() = next.OnCompletedAsync() } }
+
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
     let throw<'TSource, 'TResult> (error: Exception) : IHttpHandler<'TSource, 'TResult> =
@@ -29,7 +32,9 @@ module Error =
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
                     member _.OnNextAsync(ctx, _) = next.OnErrorAsync(ctx, error)
-                    member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error) } }
+                    member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
+                    member _.OnCompletedAsync() = next.OnCompletedAsync() } }
+
 
     /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
     let withError (errorHandler: HttpResponse -> HttpContent option -> Task<exn>) : IHttpHandler<HttpContent> =
@@ -49,4 +54,5 @@ module Error =
                                 return! next.OnErrorAsync(ctx, err)
                         }
 
-                    member _.OnErrorAsync(ctx, err) = next.OnErrorAsync(ctx, err) } }
+                    member _.OnErrorAsync(ctx, err) = next.OnErrorAsync(ctx, err)
+                    member _.OnCompletedAsync() = next.OnCompletedAsync() } }

@@ -64,7 +64,8 @@ let singleton<'TSource, 'TResult> (value: 'TResult) : IHttpHandler<'TSource, 'TR
         member _.Subscribe(next) =
             { new IHttpNext<'TSource> with
                 member _.OnNextAsync(ctx, _) = next.OnNextAsync(ctx, value)
-                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } }
+                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                member _.OnCompletedAsync() = next.OnCompletedAsync() } }
 
 
 let add (a: int) (b: int) = singleton (a + b)
@@ -91,7 +92,9 @@ let badRequestHandler<'TSource> (response: 'TSource) (error: exn) : IHttpHandler
                         | _ -> return! next.OnErrorAsync(ctx, error)
                     }
 
-                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } }
+                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                member _.OnCompletedAsync() = next.OnCompletedAsync() } }
+
 
 let shouldRetry (error: exn) : bool =
     match error with
