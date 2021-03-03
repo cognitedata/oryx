@@ -4,13 +4,13 @@
 namespace Oryx
 
 open System
+open System.Diagnostics
 open System.Net
 open System.Net.Http
 open System.Reflection
 open System.Threading
 
 open Microsoft.Extensions.Logging
-open System.Diagnostics
 
 type RequestMethod =
     | POST

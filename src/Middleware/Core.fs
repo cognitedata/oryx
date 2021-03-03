@@ -4,8 +4,6 @@
 namespace Oryx.Middleware
 
 open System
-open System.IO
-open System.Threading
 open System.Threading.Tasks
 
 open FSharp.Control.Tasks
@@ -22,7 +20,8 @@ type IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
 type IAsyncMiddleware<'TContext, 'TSource> = IAsyncMiddleware<'TContext, 'TSource, 'TSource>
 
 module Core =
-    let result (tcs: TaskCompletionSource<'TResult option>) =
+    /// A next continuation for observing the final result.
+    let finish (tcs: TaskCompletionSource<'TResult option>) =
         { new IAsyncNext<'TContext, 'TResult> with
             member _.OnNextAsync(_, ?response) = task { tcs.SetResult response }
             member _.OnErrorAsync(_, error) = task { tcs.SetException error }
@@ -36,7 +35,7 @@ module Core =
         let tcs = TaskCompletionSource<'TResult option>()
 
         task {
-            do! handler.Subscribe(result tcs).OnNextAsync(ctx)
+            do! handler.Subscribe(finish tcs).OnNextAsync(ctx)
 
             try
                 match! tcs.Task with
@@ -82,6 +81,7 @@ module Core =
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
+    /// Bind the content of the middleware.
     let bind<'TContext, 'TSource, 'TNext, 'TResult>
         (fn: 'TSource -> IAsyncMiddleware<'TContext, 'TNext, 'TResult>)
         : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =

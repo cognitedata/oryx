@@ -6,6 +6,7 @@ namespace Oryx
 open System
 open System.Net.Http
 open System.Text.RegularExpressions
+
 open Microsoft.Extensions.Logging
 open FSharp.Control.Tasks
 
