@@ -100,7 +100,6 @@ type HttpResponse =
       /// Reason phrase which typically is sent by servers together with the status code
       ReasonPhrase: string }
 
-[<Struct>]
 type Context =
     { Request: HttpRequest
       Response: HttpResponse }

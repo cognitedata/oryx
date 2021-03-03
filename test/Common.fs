@@ -50,7 +50,7 @@ type PushStreamContent (content: string) =
         _disposed <- true
 
 
-type HttpMessageHandlerStub (NextAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
+type HttpMessageHandlerStub (OnNextAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
     inherit HttpMessageHandler ()
 
     override self.SendAsync
@@ -58,14 +58,14 @@ type HttpMessageHandlerStub (NextAsync: Func<HttpRequestMessage, CancellationTok
             request: HttpRequestMessage,
             cancellationToken: CancellationToken
         ) : Task<HttpResponseMessage> =
-        task { return! NextAsync.Invoke(request, cancellationToken) }
+        task { return! OnNextAsync.Invoke(request, cancellationToken) }
 
 let singleton<'TSource, 'TResult> (value: 'TResult) : IHttpHandler<'TSource, 'TResult> =
     { new IHttpHandler<'TSource, 'TResult> with
         member _.Subscribe(next) =
             { new IHttpNext<'TSource> with
-                member _.NextAsync(ctx, _) = next.NextAsync(ctx, value)
-                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) } }
+                member _.OnNextAsync(ctx, _) = next.OnNextAsync(ctx, value)
+                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } }
 
 
 let add (a: int) (b: int) = singleton (a + b)
@@ -81,18 +81,18 @@ let badRequestHandler<'TSource> (response: 'TSource) (error: exn) : IHttpHandler
     { new IHttpHandler<'TSource> with
         member _.Subscribe(next) =
             { new IHttpNext<'TSource> with
-                member _.NextAsync(ctx, _) =
+                member _.OnNextAsync(ctx, _) =
                     task {
                         match error with
                         | :? TestException as ex ->
                             match enum<HttpStatusCode> (ex.code) with
-                            | HttpStatusCode.BadRequest -> return! next.NextAsync(ctx, response)
+                            | HttpStatusCode.BadRequest -> return! next.OnNextAsync(ctx, response)
 
-                            | _ -> return! next.ErrorAsync(ctx, error)
-                        | _ -> return! next.ErrorAsync(ctx, error)
+                            | _ -> return! next.OnErrorAsync(ctx, error)
+                        | _ -> return! next.OnErrorAsync(ctx, error)
                     }
 
-                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) } }
+                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } }
 
 let shouldRetry (error: exn) : bool =
     match error with

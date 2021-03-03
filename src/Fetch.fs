@@ -68,7 +68,7 @@ module Fetch =
         { new IHttpHandler<'TSource, HttpContent> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
-                    member _.NextAsync(ctx, content) =
+                    member _.OnNextAsync(ctx, content) =
                         task {
                             let timer = Stopwatch()
                             let client = ctx.Request.HttpClient()
@@ -101,7 +101,7 @@ module Fetch =
                                     ]
 
                                 let! result =
-                                    next.NextAsync(
+                                    next.OnNextAsync(
                                         { Request = { ctx.Request with Items = items }
                                           Response =
                                               { StatusCode = response.StatusCode
@@ -113,7 +113,7 @@ module Fetch =
 
                                 response.Dispose()
                                 return result
-                            with ex -> return! next.ErrorAsync(ctx, ex)
+                            with ex -> return! next.OnErrorAsync(ctx, ex)
                         }
 
-                    member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) } }
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } }

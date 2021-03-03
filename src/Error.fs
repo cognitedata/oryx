@@ -15,12 +15,12 @@ module Error =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
-                    member _.NextAsync(ctx, ?content) = next.NextAsync(ctx, ?content = content)
+                    member _.OnNextAsync(ctx, ?content) = next.OnNextAsync(ctx, ?content = content)
 
-                    member _.ErrorAsync(ctx, err) =
+                    member _.OnErrorAsync(ctx, err) =
                         task {
                             let handler = (errorHandler err).Subscribe(next)
-                            return! handler.NextAsync(ctx)
+                            return! handler.OnNextAsync(ctx)
                         } } }
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
@@ -28,25 +28,25 @@ module Error =
         { new IHttpHandler<'TSource, 'TResult> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
-                    member _.NextAsync(ctx, _) = next.ErrorAsync(ctx, error)
-                    member _.ErrorAsync(ctx, error) = next.ErrorAsync(ctx, error) } }
+                    member _.OnNextAsync(ctx, _) = next.OnErrorAsync(ctx, error)
+                    member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error) } }
 
     /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
     let withError (errorHandler: HttpResponse -> HttpContent option -> Task<exn>) : IHttpHandler<HttpContent> =
         { new IHttpHandler<HttpContent> with
             member _.Subscribe(next) =
                 { new IHttpNext<HttpContent> with
-                    member _.NextAsync(ctx, ?content) =
+                    member _.OnNextAsync(ctx, ?content) =
                         task {
                             let response = ctx.Response
 
                             match response.IsSuccessStatusCode with
-                            | true -> return! next.NextAsync(ctx, ?content = content)
+                            | true -> return! next.OnNextAsync(ctx, ?content = content)
                             | false ->
                                 ctx.Request.Metrics.Counter Metric.FetchErrorInc Map.empty 1L
 
                                 let! err = errorHandler response content
-                                return! next.ErrorAsync(ctx, err)
+                                return! next.OnErrorAsync(ctx, err)
                         }
 
-                    member _.ErrorAsync(ctx, err) = next.ErrorAsync(ctx, err) } }
+                    member _.OnErrorAsync(ctx, err) = next.OnErrorAsync(ctx, err) } }

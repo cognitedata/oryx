@@ -96,8 +96,8 @@ changes to the context is done using a series of asynchronous HTTP handlers.
 
 ```fs
 type IHttpNext<'TSource> =
-    abstract member NextAsync: context: Context * ?content: 'TSource -> Task<unit>
-    abstract member ErrorAsync: context: Context * error: exn -> Task<unit>
+    abstract member OnNextAsync: context: Context * ?content: 'TSource -> Task<unit>
+    abstract member OnErrorAsync: context: Context * error: exn -> Task<unit>
 
 type IHttpHandler<'TSource, 'TResult> =
     abstract member Subscribe: next: IHttpNext<'TResult> -> IHttpNext<'TSource>
@@ -116,8 +116,8 @@ write the `Context` and an optional content (`'TSource`) into the handler. The g
 output observers (or continuations) of the `HttpHandler`.
 
 Each `IHttpHandler` usually transforms the `HttpRequest`, `HttpResponse` or the `content` before passing it down the
-pipeline by invoking the next `IHttpNext`'s `.NextAsync()` member. It may also signal error by calling the
-`ErrorAsync` member to fail the processing of the pipeline.
+pipeline by invoking the next `IHttpNext`'s `.OnNextAsync()` member. It may also signal error by calling the
+`OnErrorAsync` member to fail the processing of the pipeline.
 
 The easiest way to get your head around a Oryx `IHttpHandler` is to think of it as a functional web request processing
 pipeline. Each handler has the `Context` and `content` at its disposal and can decide whether it wants to fail the
@@ -265,7 +265,7 @@ open a PR so we can include them in the library.
 
 ## Error handling
 
-Errors are handled by the main handler logic. Every `IHttpNext` has a member `ErrorAsync` that takes the context and
+Errors are handled by the main handler logic. Every `IHttpNext` has a member `OnErrorAsync` that takes the context and
 an exception. Thus every stage in the pipeline may be short-circuited by calling the error handler.
 
 To produce a custom error response you can use the `withError` handler _after_ e.g `fetch`. The supplied `errorHandler`
@@ -408,9 +408,7 @@ and the logging level to something higher than `LogLevel.None`.
 
 ```fs
 val withLogger : (logger: ILogger) -> (context: EmptyContext) -> (context: EmptyContext)
-
 val withLogLevel : (logLevel: LogLevel) -> (context: EmptyContext) -> (context: EmptyContext)
-
 val withLogFormat (format: string) (context: EmptyContext) -> (context: EmptyContext)
 ```
 
@@ -509,8 +507,8 @@ let withResource (resource: string): HttpHandler<'TSource> =
     { new IHttpHandler<'TSource, 'TResult> with
         member _.Subscribe(next) =
             { new IHttpNext<'TSource> with
-                member _.NextAsync(ctx, ?content) =
-                    next.NextAsync(
+                member _.OnNextAsync(ctx, ?content) =
+                    next.OnNextAsync(
                         { ctx with
                             Request =
                                 { ctx.Request with
@@ -520,7 +518,7 @@ let withResource (resource: string): HttpHandler<'TSource> =
                         ?content = content
                     )
 
-                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
+                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
             } }
 ```
 
@@ -547,8 +545,8 @@ This change effectively makes Oryx an Async Observable:
 
 ```fs
 type IHttpNext<'TSource> =
-    abstract member NextAsync: context: Context * ?content: 'TSource -> Task<unit>
-    abstract member ErrorAsync: context: Context * error: exn -> Task<unit>
+    abstract member OnNextAsync: context: Context * ?content: 'TSource -> Task<unit>
+    abstract member OnErrorAsync: context: Context * error: exn -> Task<unit>
 
 type IHttpHandler<'TSource, 'TResult> =
     abstract member Subscribe: next: IHttpNext<'TResult> -> IHttpNext<'TSource>
@@ -619,15 +617,16 @@ same. There are however some notable changes:
   in v2 / v1 where the `catch` operator had to abort processing and produce a result.
 - Http handlers take 2 generic types instead of 4. E.g `fetch<'TSource, 'TNext, 'TResult, 'TError>` now becomes
   `fetch<'TSource, 'TNext>` and the last two types can simply be removed from your code.
-- `ResponseError` is gone. You need to sub-class an exception instead. This means that the `'TError' type is also gone from the handlers.
+- `ResponseError` is gone. You need to sub-class an exception instead. This means that the `'TError' type is also gone
+  from the handlers.
 - Custom context builders do not need any changes
 - Custom HTTP handlers must be refactored. Instead of returning a result (Ok/Error) the handler needs to push down the
-  result either using the Ok path `next.NextAsync()` or fail with an error `next.ErrorAsync()`. This is very similar to
-  e.g Reactive Extensions (Rx) `OnNext` / `OnError`. E.g:
+  result either using the Ok path `next.OnNextAsync()` or fail with an error `next.OnErrorAsync()`. This is very similar
+  to e.g Reactive Extensions (Rx) `OnNext` / `OnError`. E.g:
 
 ```fs
  let withResource (resource: string) (next: NextFunc<_,_>) (context: HttpContext) =
-        next { context with Request = { context.Request with Items = context.Request.Items.Add(PlaceHolder.Resource, String resource) } }
+    next { context with Request = { context.Request with Items = context.Request.Items.Add(PlaceHolder.Resource, String resource) } }
 ```
 
 Needs to be refactored to:
@@ -637,8 +636,8 @@ let withResource (resource: string): HttpHandler<'TSource> =
     { new IHttpHandler<'TSource, 'TResult> with
         member _.Subscribe(next) =
             { new IHttpNext<'TSource> with
-                member _.NextAsync(ctx, ?content) =
-                    next.NextAsync(
+                member _.OnNextAsync(ctx, ?content) =
+                    next.OnNextAsync(
                         { ctx with
                             Request =
                                 { ctx.Request with
@@ -648,7 +647,7 @@ let withResource (resource: string): HttpHandler<'TSource> =
                         ?content = content
                     )
 
-                member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn)
+                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
             }}
 ```
 

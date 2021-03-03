@@ -14,8 +14,8 @@ type RequestBuilder () =
         { new IHttpHandler<'TSource, 'TResult> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
-                    member _.NextAsync(ctx, _) = next.NextAsync(ctx, content = content)
-                    member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) } }
+                    member _.OnNextAsync(ctx, _) = next.OnNextAsync(ctx, content = content)
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } }
 
     member _.ReturnFrom(req: IHttpHandler<'TSource, 'TResult>) : IHttpHandler<'TSource, 'TResult> = req
 
@@ -39,16 +39,16 @@ type RequestBuilder () =
         { new IHttpHandler<'TSource, 'TResult> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TValue> with
-                    member _.NextAsync(ctx, ?content) =
+                    member _.OnNextAsync(ctx, ?content) =
                         task {
                             match content with
                             | Some content ->
                                 let bound : IHttpHandler<'TSource, 'TResult> = fn content
-                                return! bound.Subscribe(next).NextAsync(ctx)
-                            | None -> return! next.NextAsync(ctx)
+                                return! bound.Subscribe(next).OnNextAsync(ctx)
+                            | None -> return! next.OnNextAsync(ctx)
                         }
 
-                    member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) }
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) }
                 |> source.Subscribe }
 
 [<AutoOpen>]
