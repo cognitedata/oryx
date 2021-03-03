@@ -98,6 +98,7 @@ changes to the context is done using a series of asynchronous HTTP handlers.
 type IHttpNext<'TSource> =
     abstract member OnNextAsync: context: Context * ?content: 'TSource -> Task<unit>
     abstract member OnErrorAsync: context: Context * error: exn -> Task<unit>
+    abstract member OnCompletedAsync : unit -> Task<unit>
 
 type IHttpHandler<'TSource, 'TResult> =
     abstract member Subscribe: next: IHttpNext<'TResult> -> IHttpNext<'TSource>
@@ -519,6 +520,7 @@ let withResource (resource: string): HttpHandler<'TSource> =
                     )
 
                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                member _.OnCompletedAsync() = next.OnCompletedAsync()
             } }
 ```
 
@@ -615,6 +617,8 @@ same. There are however some notable changes:
   Oryx v3 pushes results "down" instead of returning them "up" the chain of operators. The good thing with this change
   is that a handler can now continue processing the rest of the pipeline after catching an error. This was not possible
   in v2 / v1 where the `catch` operator had to abort processing and produce a result.
+- The log operator needs to be placed __after__ the handler you want it to log. E.g to log JSON decoded data you need to
+  place it after `json`.
 - Http handlers take 2 generic types instead of 4. E.g `fetch<'TSource, 'TNext, 'TResult, 'TError>` now becomes
   `fetch<'TSource, 'TNext>` and the last two types can simply be removed from your code.
 - `ResponseError` is gone. You need to sub-class an exception instead. This means that the `'TError' type is also gone
@@ -648,10 +652,11 @@ let withResource (resource: string): HttpHandler<'TSource> =
                     )
 
                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                member _.OnCompletedAsync() = next.OnCompletedAsync()
             }}
 ```
 
-It's a bit more verbose, but the inner part of the code is exactly the same.
+It's a bit more verbose, but the hot path of the code is exactly the same.
 
 ## Upgrade from Oryx v1 to v2
 
