@@ -32,7 +32,6 @@ type MiddlewareBuilder () =
             source: IAsyncMiddleware<'TContext, 'TSource, 'TValue>,
             fn: 'TValue -> IAsyncMiddleware<'TContext, 'TSource, 'TResult>
         ) : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
-
         source >=> bind fn
 
 [<AutoOpen>]

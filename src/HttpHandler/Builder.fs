@@ -29,7 +29,6 @@ type RequestBuilder () =
             source: IHttpHandler<'TSource, 'TValue>,
             fn: 'TValue -> IHttpHandler<'TSource, 'TResult>
         ) : IHttpHandler<'TSource, 'TResult> =
-
         source >=> Core.bind fn
 
 [<AutoOpen>]
