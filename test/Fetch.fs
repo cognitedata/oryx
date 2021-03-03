@@ -326,5 +326,5 @@ let ``Fetch with internal error will log error`` () =
 
         // Assert
         test <@ Result.isError result @>
-        test <@ logger.Output.Contains "failed" @>
+        test <@ logger.Output.Contains "Got error" @>
     }

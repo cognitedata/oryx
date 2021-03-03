@@ -49,7 +49,6 @@ type PushStreamContent (content: string) =
         base.Dispose(disposing)
         _disposed <- true
 
-
 type HttpMessageHandlerStub (OnNextAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
     inherit HttpMessageHandler ()
 
@@ -109,9 +108,9 @@ let get () =
     >=> withUrl "http://test.org"
     >=> withQuery [ struct ("debug", "true") ]
     >=> fetch
-    >=> log
     >=> withError errorHandler
     >=> json options
+    >=> log
 
 let post content =
     POST
@@ -119,9 +118,9 @@ let post content =
     >=> withContent content
     >=> withCompletion HttpCompletionOption.ResponseHeadersRead
     >=> fetch
-    >=> log
     >=> withError errorHandler
     >=> json options
+    >=> log
 
 //let retryCount = 5
 //let retry next ctx = retry shouldRetry 500<ms> retryCount next ctx

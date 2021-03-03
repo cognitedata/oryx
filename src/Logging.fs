@@ -62,57 +62,64 @@ module Logging =
     let private reqex =
         Regex(@"\{(.+?)\}", RegexOptions.Multiline ||| RegexOptions.Compiled)
 
-    /// Logger handler with message. Should be composed in pipeline after the `fetch` handler, but before `withError` in
-    /// order to log both requests, responses and errors.
-    let log : IHttpHandler<HttpContent> =
-        { new IHttpHandler<HttpContent> with
+    /// Logger handler with message. Should be composed in pipeline after both the `fetch` handler, and the `withError`
+    /// in order to log both requests, responses and errors.
+    let log : IHttpHandler<'TSource> =
+        { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
-                { new IHttpNext<HttpContent> with
+                let log logLevel ctx content =
+                    match ctx.Request.Logger with
+                    | Some logger ->
+                        let format = ctx.Request.LogFormat
+                        let request = ctx.Request
+                        let matches = reqex.Matches format
+
+                        // Create an array with values in the same order as in the format string. Important to be lazy and not
+                        // stringify any values here. Only pass references to the objects themselves so the logger can stringify
+                        // when / if the values are acutally being used / logged.
+                        let getValues response =
+                            matches
+                            |> Seq.cast
+                            |> Seq.map
+                                (fun (matche: Match) ->
+                                    match matche.Groups.[1].Value with
+                                    | PlaceHolder.HttpMethod -> box request.Method
+                                    | PlaceHolder.RequestContent ->
+                                        ctx.Request.ContentBuilder
+                                        |> Option.map (fun builder -> builder ())
+                                        |> Option.toObj
+                                        :> _
+                                    | PlaceHolder.ResponseContent ->
+                                        match response with
+                                        | Some content -> content :> _
+                                        | None -> null
+                                    | key ->
+                                        // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
+                                        // placeholders to the format string.
+                                        match ctx.Request.Items.TryFind key with
+                                        | Some value -> value :> _
+                                        | _ -> String.Empty :> _)
+                            |> Array.ofSeq
+
+                        let level, values = logLevel, getValues content
+                        logger.Log(level, format, values)
+                    | _ -> ()
+
+                { new IHttpNext<'TSource> with
                     member _.OnNextAsync(ctx, ?content) =
                         task {
-                            match ctx.Request.Logger, ctx.Request.LogLevel with
-                            | _, LogLevel.None -> ()
-                            | Some logger, _ ->
-                                let format = ctx.Request.LogFormat
-                                let request = ctx.Request
-                                let matches = reqex.Matches format
-
-                                // Create an array with values in the same order as in the format string. Important to be lazy and not
-                                // stringify any values here. Only pass references to the objects themselves so the logger can stringify
-                                // when / if the values are acutally being used / logged.
-                                let getValues response =
-                                    matches
-                                    |> Seq.cast
-                                    |> Seq.map
-                                        (fun (matche: Match) ->
-                                            match matche.Groups.[1].Value with
-                                            | PlaceHolder.HttpMethod -> box request.Method
-                                            | PlaceHolder.RequestContent ->
-                                                ctx.Request.ContentBuilder
-                                                |> Option.map (fun builder -> builder ())
-                                                |> Option.toObj
-                                                :> _
-                                            | PlaceHolder.ResponseContent ->
-                                                match response with
-                                                | Some content -> content :> _
-                                                | None -> null
-                                            | key ->
-                                                // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
-                                                // placeholders to the format string.
-                                                match ctx.Request.Items.TryFind key with
-                                                | Some value -> value :> _
-                                                | _ -> String.Empty :> _)
-                                    |> Array.ofSeq
-
-                                let level, values = request.LogLevel, getValues content
-                                logger.Log(LogLevel.Error, format, values)
-                            | _ -> ()
+                            match ctx.Request.LogLevel with
+                            | LogLevel.None -> ()
+                            | logLevel -> log logLevel ctx content
 
                             return! next.OnNextAsync(ctx, ?content = content)
                         }
 
                     member _.OnErrorAsync(ctx, exn) =
                         task {
-                            //logger.Log(LogLevel.Error, format, values)
+                            match ctx.Request.LogLevel with
+                            | LogLevel.None -> ()
+                            | _ -> log LogLevel.Error ctx (Some exn)
+
                             return! next.OnErrorAsync(ctx, exn)
                         } } }
