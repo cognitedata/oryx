@@ -25,7 +25,7 @@ module Fetch =
             content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded"
             content :> HttpContent
 
-    let buildRequest (client: HttpClient) (ctx: HttpContext): HttpRequestMessage =
+    let buildRequest (client: HttpClient) (ctx: HttpContext) : HttpRequestMessage =
         let query = ctx.Request.Query
 
         let url =

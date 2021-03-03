@@ -542,6 +542,7 @@ Oryx v3 will significantly simplify the typing of Http handlers by:
    each HTTP handler needed to care about the input (`TSource`), output (`TNext`), final result (`TResult`) and error
    (`TError`) types. By never returning anything (`Task<unit>`) we get rid of the annoying return type.
 2. Error type (`'TError`) is now simply an exception (`exn`).
+3. Core logic refactored into a generic middleware (that can be reused for other purposes).
 
 This change effectively makes Oryx an Async Observable:
 

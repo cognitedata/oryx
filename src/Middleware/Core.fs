@@ -12,12 +12,12 @@ open FSharp.Control.Tasks
 open FsToolkit.ErrorHandling
 
 type IAsyncNext<'TContext, 'TSource> =
-    abstract member OnNextAsync: ctx: 'TContext * ?content: 'TSource -> Task<unit>
-    abstract member OnErrorAsync: ctx: 'TContext * error: exn -> Task<unit>
-    abstract member OnCompletedAsync: ctx: 'TContext -> Task<unit>
+    abstract member OnNextAsync : ctx: 'TContext * ?content: 'TSource -> Task<unit>
+    abstract member OnErrorAsync : ctx: 'TContext * error: exn -> Task<unit>
+    abstract member OnCompletedAsync : ctx: 'TContext -> Task<unit>
 
 type IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
-    abstract member Subscribe: next: IAsyncNext<'TContext, 'TResult> -> IAsyncNext<'TContext, 'TSource>
+    abstract member Subscribe : next: IAsyncNext<'TContext, 'TResult> -> IAsyncNext<'TContext, 'TSource>
 
 type IAsyncMiddleware<'TContext, 'TSource> = IAsyncMiddleware<'TContext, 'TSource, 'TSource>
 
@@ -59,7 +59,7 @@ module Core =
         }
 
     /// Produce the given content.
-    let singleton<'TContext, 'TSource, 'TResult> (content: 'TResult): IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
+    let singleton<'TContext, 'TSource, 'TResult> (content: 'TResult) : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
         { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
@@ -93,7 +93,7 @@ module Core =
                         task {
                             match content with
                             | Some content ->
-                                let bound: IAsyncMiddleware<'TContext, 'TNext, 'TResult> = fn content
+                                let bound : IAsyncMiddleware<'TContext, 'TNext, 'TResult> = fn content
                                 return! bound.Subscribe(next).OnNextAsync(ctx)
                             | None -> return! next.OnNextAsync(ctx)
                         }
@@ -123,7 +123,7 @@ module Core =
                 { new IAsyncNext<'TContext, 'TSource> with
                     member _.OnNextAsync(ctx, _) =
                         task {
-                            let res: Result<'TContext * 'TResult, exn> array = Array.zeroCreate (Seq.length handlers)
+                            let res : Result<'TContext * 'TResult, exn> array = Array.zeroCreate (Seq.length handlers)
 
                             let obv n =
                                 { new IAsyncNext<'TContext, 'TResult> with

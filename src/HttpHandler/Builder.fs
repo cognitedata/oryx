@@ -6,13 +6,13 @@ namespace Oryx
 open Oryx.Middleware
 
 type RequestBuilder () =
-    member _.Zero(): IHttpHandler<'TSource> =
+    member _.Zero() : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) = next }
 
-    member _.Return(content: 'TResult): IHttpHandler<'TSource, 'TResult> = Core.singleton content
+    member _.Return(content: 'TResult) : IHttpHandler<'TSource, 'TResult> = Core.singleton content
 
-    member _.ReturnFrom(req: IHttpHandler<'TSource, 'TResult>): IHttpHandler<'TSource, 'TResult> = req
+    member _.ReturnFrom(req: IHttpHandler<'TSource, 'TResult>) : IHttpHandler<'TSource, 'TResult> = req
 
     member _.Delay(fn) = fn ()
 
@@ -20,7 +20,7 @@ type RequestBuilder () =
         (
             source: 'TSource seq,
             func: 'TSource -> IHttpHandler<'TSource, 'TResult>
-        ): IHttpHandler<'TSource, 'TResult list> =
+        ) : IHttpHandler<'TSource, 'TResult list> =
         source |> Seq.map func |> sequential
 
     /// Binds value of 'TValue for let! All handlers runs in same context within the builder.
@@ -28,7 +28,7 @@ type RequestBuilder () =
         (
             source: IHttpHandler<'TSource, 'TValue>,
             fn: 'TValue -> IHttpHandler<'TSource, 'TResult>
-        ): IHttpHandler<'TSource, 'TResult> =
+        ) : IHttpHandler<'TSource, 'TResult> =
 
         source >=> Core.bind fn
 

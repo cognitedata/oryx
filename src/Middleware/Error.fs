@@ -64,7 +64,7 @@ module Error =
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
-    let throw<'TContext, 'TSource, 'TResult> (error: Exception): IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
+    let throw<'TContext, 'TSource, 'TResult> (error: Exception) : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
         { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with

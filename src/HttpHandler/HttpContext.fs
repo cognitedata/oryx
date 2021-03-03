@@ -143,7 +143,7 @@ module Context =
           ReasonPhrase = String.Empty }
 
     /// The default context.
-    let defaultContext: HttpContext =
+    let defaultContext : HttpContext =
         { Request = defaultRequest
           Response = defaultResponse }
 
@@ -230,7 +230,7 @@ module Context =
               Request = { ctx.Request with Metrics = metrics } }
 
     /// Merge the list of context objects. Used by the sequential and concurrent HTTP handlers.
-    let merge (ctxs: List<HttpContext>): HttpContext =
+    let merge (ctxs: List<HttpContext>) : HttpContext =
         let ctxs =
             match ctxs with
             | [] -> [ defaultContext ]
