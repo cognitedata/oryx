@@ -16,10 +16,12 @@ type IHttpHandler<'TSource> = IHttpHandler<'TSource, 'TSource>
 [<AutoOpen>]
 module HttpHandler =
     /// Run the HTTP handler in the given context. Returns content as result type.
-    let runAsync<'TSource, 'TResult> = Core.runAsync<HttpContext, 'TSource, 'TResult>
+    let runAsync<'TSource, 'TResult> (ctx: HttpContext) (handler: IHttpHandler<'TSource, 'TResult>) =
+        Core.runAsync<HttpContext, 'TSource, 'TResult> ctx handler
 
     /// Run the HTTP handler in the given context. Returns content and throws exception if any error occured.
-    let runUnsafeAsync<'TSource, 'TResult> = Core.runUnsafeAsync<HttpContext, 'TSource, 'TResult>
+    let runUnsafeAsync<'TSource, 'TResult> (ctx: HttpContext) (handler: IHttpHandler<'TSource, 'TResult>) =
+        Core.runUnsafeAsync<HttpContext, 'TSource, 'TResult> ctx handler
 
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
