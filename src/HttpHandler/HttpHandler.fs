@@ -48,15 +48,15 @@ module HttpHandler =
     let map<'TContext, 'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
 
     let chunk<'TSource, 'TNext, 'TResult> =
-        Chunk.chunk<HttpContext, 'TSource, 'TNext, 'TResult> Context.merge
+        Chunk.chunk<HttpContext, 'TSource, 'TNext, 'TResult> HttpContext.merge
 
     /// Run list of HTTP handlers sequentially.
     let sequential<'TContext, 'TSource, 'TResult> =
-        Core.sequential<HttpContext, 'TSource, 'TResult> Context.merge
+        Core.sequential<HttpContext, 'TSource, 'TResult> HttpContext.merge
 
     /// Run list of HTTP handlers concurrently.
     let concurrent<'TContext, 'TSource, 'TResult> =
-        Core.concurrent<HttpContext, 'TSource, 'TResult> Context.merge
+        Core.concurrent<HttpContext, 'TSource, 'TResult> HttpContext.merge
 
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
     let catch<'TSource> = Error.catch<HttpContext, 'TSource>
@@ -233,7 +233,7 @@ module HttpHandler =
 
                             match result with
                             | Ok token ->
-                                let ctx = Context.withBearerToken token ctx
+                                let ctx = HttpContext.withBearerToken token ctx
                                 return! next.OnNextAsync ctx
                             | Error err -> return! next.OnErrorAsync(ctx, err)
                         }

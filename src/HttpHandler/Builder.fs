@@ -11,9 +11,7 @@ type RequestBuilder () =
             member _.Subscribe(next) = next }
 
     member _.Return(content: 'TResult) : IHttpHandler<'TSource, 'TResult> = Core.singleton content
-
     member _.ReturnFrom(req: IHttpHandler<'TSource, 'TResult>) : IHttpHandler<'TSource, 'TResult> = req
-
     member _.Delay(fn) = fn ()
 
     member _.For

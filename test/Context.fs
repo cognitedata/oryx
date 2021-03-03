@@ -9,8 +9,8 @@ open FsCheck.Xunit
 [<Property>]
 let ``Adding a header to a context creates a context that contains that header`` header =
     let ctx =
-        Context.defaultContext
-        |> Context.withHeader header
+        HttpContext.defaultContext
+        |> HttpContext.withHeader header
 
     ctx.Request.Headers.TryGetValue(fst header)
     |> (fun (found, value) -> found && value = snd header)
@@ -18,9 +18,9 @@ let ``Adding a header to a context creates a context that contains that header``
 [<Property>]
 let ``Adding two headers to a context creates a context that contains both headers`` h1 h2 =
     let ctx =
-        Context.defaultContext
-        |> Context.withHeader h1
-        |> Context.withHeader h2
+        HttpContext.defaultContext
+        |> HttpContext.withHeader h1
+        |> HttpContext.withHeader h2
 
     let p2 =
         ctx.Request.Headers.TryGetValue(fst h2)
@@ -38,8 +38,8 @@ let ``Adding two headers to a context creates a context that contains both heade
 [<Property>]
 let ``Adding a bearer token to a context creates a context with that token`` token =
     let ctx =
-        Context.defaultContext
-        |> Context.withBearerToken token
+        HttpContext.defaultContext
+        |> HttpContext.withBearerToken token
 
     ctx.Request.Headers.TryGetValue "Authorization"
     |> (fun (found, value) -> found && value = (sprintf "Bearer %s" token))
@@ -49,8 +49,8 @@ let ``Adding http client creates a context with that http client`` () =
     let client = new HttpClient()
 
     let ctx =
-        Context.defaultContext
-        |> Context.withHttpClient client
+        HttpContext.defaultContext
+        |> HttpContext.withHttpClient client
 
     ctx.Request.HttpClient() = client
 
@@ -59,8 +59,8 @@ let ``Adding http client factory creates a context with that http client`` () =
     let client = new HttpClient()
 
     let ctx =
-        Context.defaultContext
-        |> Context.withHttpClientFactory (fun () -> client)
+        HttpContext.defaultContext
+        |> HttpContext.withHttpClientFactory (fun () -> client)
 
     ctx.Request.HttpClient() = client
 
@@ -69,8 +69,8 @@ let ``Adding url builder creates a context with that url builder`` () =
     let urlBuilder = fun (req: HttpRequest) -> "test"
 
     let ctx =
-        Context.defaultContext
-        |> Context.withUrlBuilder urlBuilder
+        HttpContext.defaultContext
+        |> HttpContext.withUrlBuilder urlBuilder
 
     ctx.Request.UrlBuilder ctx.Request = "test"
 
@@ -79,7 +79,7 @@ let ``Adding cancellation token creates a context with that cancellation token``
     let cancellationToken = CancellationToken.None
 
     let ctx =
-        Context.defaultContext
-        |> Context.withCancellationToken cancellationToken
+        HttpContext.defaultContext
+        |> HttpContext.withCancellationToken cancellationToken
 
     ctx.Request.CancellationToken = cancellationToken

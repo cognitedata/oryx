@@ -12,7 +12,7 @@ open Tests.Common
 let ``Zero builder is Ok`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         // Act
         let! result = req { () } |> runAsync ctx
@@ -25,7 +25,7 @@ let ``Zero builder is Ok`` () =
 let ``Simple unit handler in builder is Ok`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         // Act
         let! result =
@@ -45,7 +45,7 @@ let ``Simple unit handler in builder is Ok`` () =
 let ``Simple return from unit handler in builder is Ok`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         let a = singleton 42 |> runAsync ctx
 
@@ -60,7 +60,7 @@ let ``Simple return from unit handler in builder is Ok`` () =
 let ``Multiple handlers in builder is Ok`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         // Act
         let request =

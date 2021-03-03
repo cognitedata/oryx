@@ -17,7 +17,7 @@ open Tests.Common
 let ``Simple unit handler is Ok`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         // Act
         let! content =
@@ -32,7 +32,7 @@ let ``Simple unit handler is Ok`` () =
 let ``Simple error handler is Error`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         // Act
         let! result = error "failed" |> runAsync ctx
@@ -49,7 +49,7 @@ let ``Simple error handler is Error`` () =
 let ``Simple error then ok is Error`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
         let req = error "failed" >=> singleton 42
 
         // Act
@@ -67,7 +67,7 @@ let ``Simple error then ok is Error`` () =
 let ``Simple ok then error is Error`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
         let req = singleton 42 >=> error "failed"
 
         // Act
@@ -83,7 +83,7 @@ let ``Simple ok then error is Error`` () =
 let ``Catching ok is Ok`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
         let errorHandler = badRequestHandler 420
 
         let req =
@@ -102,7 +102,7 @@ let ``Catching ok is Ok`` () =
 let ``Catching errors is Ok`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
         let errorHandler = badRequestHandler 420
 
         let req =
@@ -121,7 +121,7 @@ let ``Catching errors is Ok`` () =
 let ``Not catching errors is Error`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
         let errorHandler = badRequestHandler 420
 
         let req =
@@ -142,7 +142,7 @@ let ``Not catching errors is Error`` () =
 let ``Sequential handlers is Ok`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         let req =
             sequential [ singleton 1; singleton 2; singleton 3; singleton 4; singleton 5 ]
@@ -158,7 +158,7 @@ let ``Sequential handlers is Ok`` () =
 let ``Sequential handlers with an Error is Error`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         let req =
             sequential [ singleton 1; singleton 2; error "fail"; singleton 4; singleton 5 ]
@@ -178,7 +178,7 @@ let ``Sequential handlers with an Error is Error`` () =
 let ``Concurrent handlers is Ok`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         let req =
             concurrent [ singleton 1; singleton 2; singleton 3; singleton 4; singleton 5 ]
@@ -198,7 +198,7 @@ let ``Concurrent handlers is Ok`` () =
 let ``Concurrent handlers with an Error is Error`` () =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         let req =
             concurrent [ singleton 1; singleton 2; error "fail"; singleton 4; singleton 5 ]
@@ -218,7 +218,7 @@ let ``Concurrent handlers with an Error is Error`` () =
 let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurrency) =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         let req =
             chunk<unit, int, int> chunkSize maxConcurrency singleton [ 1; 2; 3; 4; 5 ]
@@ -232,7 +232,7 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
 let ``Choose handlers is Ok`` =
     task {
         // Arrange
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         let req = choose [ error "1"; singleton 2; error "3"; singleton 4 ]
 
@@ -246,7 +246,7 @@ let ``Choose handlers is Ok`` =
 //     task {
 //         // Arrange
 //         let renewer _ = Ok "token" |> Task.FromResult
-//         let ctx = Context.defaultContext
+//         let ctx = HttpContext.defaultContext
 
 //         let req = withTokenRenewer renewer >=> unit 42
 
@@ -270,7 +270,7 @@ let ``Request with token renewer without token gives error`` () =
         // Arrange
         let err = Exception "Unable to authenticate"
         let renewer _ = err |> Error |> Task.FromResult
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         let req = withTokenRenewer renewer >=> singleton 42
 
@@ -288,7 +288,7 @@ let ``Request with token renewer throws exception gives error`` () =
         // Arrange
         let err = Exception "Unable to authenticate"
         let renewer _ = failwith "failing" |> Task.FromResult
-        let ctx = Context.defaultContext
+        let ctx = HttpContext.defaultContext
 
         let req = withTokenRenewer renewer >=> singleton 42
 

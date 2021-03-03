@@ -614,6 +614,8 @@ type Context<'T> =
 Oryx v3 is mostly backwards compatible with v2. Your chains of operators will for most part look and work exactly the
 same. There are however some notable changes:
 
+- `Context` have been renamed to `HttpContext`.
+- `HttpHandler` have been renamed `IHttpHandler`.
 - The `retry` operator has been deprecated for now. Use [Polly](https://github.com/App-vNext/Polly) instead.
 - The `catch` operator needs to run __after__ the error producing operator e.g `fetch` (not before). This is because
   Oryx v3 pushes results "down" instead of returning them "up" the chain of operators. The good thing with this change

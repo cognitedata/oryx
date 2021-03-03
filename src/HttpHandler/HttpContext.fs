@@ -105,7 +105,7 @@ type HttpContext =
       Response: HttpResponse }
 
 [<RequireQualifiedAccess>]
-module Context =
+module HttpContext =
     let private fileVersion =
         FileVersionInfo
             .GetVersionInfo(
