@@ -11,14 +11,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Metrics.fs" />
-    <Compile Include="Context.fs" />
-    <Compile Include="Handler.fs" />
-    <Compile Include="Error.fs" />
-    <Compile Include="Logging.fs" />
-    <Compile Include="Fetch.fs" />
-    <Compile Include="Builder.fs" />
-    <Compile Include="Chunk.fs" />
+    <Compile Include="Middleware/Core.fs" />
+    <Compile Include="Middleware/Error.fs" />
+    <Compile Include="Middleware/Builder.fs" />
+    <Compile Include="Middleware/Chunk.fs" />
+
+    <Compile Include="HttpHandler/Metrics.fs" />
+    <Compile Include="HttpHandler/HttpContext.fs" />
+    <Compile Include="HttpHandler/HttpHandler.fs" />
+    <Compile Include="HttpHandler/Logging.fs" />
+    <Compile Include="HttpHandler/Fetch.fs" />
+    <Compile Include="HttpHandler/Builder.fs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\LICENSE" Pack="true" Visible="false" PackagePath=""/>

@@ -13,7 +13,7 @@ open FSharp.Control.Tasks
 module Logging =
 
     /// Set the logger (ILogger) to use. Usually you would use `Context.withLogger` instead to set the logger for all requests.
-    let withLogger (logger: ILogger) : IHttpHandler<'TSource> =
+    let withLogger (logger: ILogger): IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
@@ -27,11 +27,11 @@ module Logging =
                         )
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                    member _.OnCompletedAsync() = next.OnCompletedAsync() } }
+                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
 
     /// Set the log level to use (default is LogLevel.None).
-    let withLogLevel (logLevel: LogLevel) : IHttpHandler<'TSource> =
+    let withLogLevel (logLevel: LogLevel): IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
@@ -43,11 +43,11 @@ module Logging =
                         )
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                    member _.OnCompletedAsync() = next.OnCompletedAsync() } }
+                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
 
     /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
-    let withLogMessage<'TSource> (msg: string) : IHttpHandler<'TSource> =
+    let withLogMessage<'TSource> (msg: string): IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
@@ -61,7 +61,7 @@ module Logging =
                         )
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                    member _.OnCompletedAsync() = next.OnCompletedAsync() } }
+                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
 
     // Pre-compiled
@@ -70,7 +70,7 @@ module Logging =
 
     /// Logger handler with message. Should be composed in pipeline after both the `fetch` handler, and the `withError`
     /// in order to log both requests, responses and errors.
-    let log : IHttpHandler<'TSource> =
+    let log: IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 let log logLevel ctx content =
@@ -130,4 +130,4 @@ module Logging =
                             return! next.OnErrorAsync(ctx, exn)
                         }
 
-                    member _.OnCompletedAsync() = next.OnCompletedAsync() } }
+                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }

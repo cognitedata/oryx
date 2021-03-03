@@ -11,7 +11,6 @@ open FsCheck
 open FsCheck.Arb
 
 open Oryx
-open Oryx.Chunk
 open Tests.Common
 
 [<Fact>]
