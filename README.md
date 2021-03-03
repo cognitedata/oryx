@@ -430,9 +430,9 @@ you may use are:
 given that the message will actually end up being logged.
 
 NOTE: The logging handler (`log`) do not alter the types of the pipeline and may be composed anywhere. But to give
-meaningful output they should be composed after fetching (`fetch`) but before error handling (`withError`). This is
-because fetch related values goes down the pipeline while error values short-circuits and goes up. So you need to log in
-between to catch both.
+meaningful output they should be composed after fetching (`fetch`). To log errors the log handler should be placed after
+error handling (`withError`), and to log decoded responses the log handler should be placed after the decoder (i.e
+`json`).
 
 ```fs
 val withLogger:
