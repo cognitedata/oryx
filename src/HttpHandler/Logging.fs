@@ -4,7 +4,6 @@
 namespace Oryx
 
 open System
-open System.Net.Http
 open System.Text.RegularExpressions
 
 open Microsoft.Extensions.Logging
@@ -13,7 +12,8 @@ open FSharp.Control.Tasks
 [<AutoOpen>]
 module Logging =
 
-    /// Set the logger (ILogger) to use. Usually you would use `Context.withLogger` instead to set the logger for all requests.
+    /// Set the logger (ILogger) to use. Usually you would use `HttpContext.withLogger` instead to set the logger for
+    /// all requests.
     let withLogger (logger: ILogger) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
@@ -30,7 +30,6 @@ module Logging =
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
-
     /// Set the log level to use (default is LogLevel.None).
     let withLogLevel (logLevel: LogLevel) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
@@ -45,7 +44,6 @@ module Logging =
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
-
 
     /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
     let withLogMessage<'TSource> (msg: string) : IHttpHandler<'TSource> =
@@ -63,7 +61,6 @@ module Logging =
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
-
 
     // Pre-compiled
     let private reqex =

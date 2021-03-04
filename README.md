@@ -7,7 +7,7 @@
 Oryx is a high-performance .NET cross-platform functional HTTP request handler library for writing HTTP clients and
 orchestrating web requests in F#.
 
-> An SDK for writing HTTP web clients and orchestrating web requests.
+> A middleware SDK for writing HTTP web clients and orchestrating web requests.
 
 This library enables you to write Web and REST clients and SDKs for various APIs and is currently used by the [.NET SDK
 for Cognite Data Fusion (CDF)](https://github.com/cognitedata/cognite-sdk-dotnet).
