@@ -38,10 +38,10 @@ let ``Get with return expression is Ok`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
         let ctx =
-            Context.defaultContext
-            |> Context.withHttpClient client
-            |> Context.withUrlBuilder (fun _ -> "http://test.org/")
-            |> Context.withHeader ("api-key", "test-key")
+            HttpContext.defaultContext
+            |> HttpContext.withHttpClient client
+            |> HttpContext.withUrlBuilder (fun _ -> "http://test.org/")
+            |> HttpContext.withHeader ("api-key", "test-key")
 
         // Act
         let request =
@@ -83,10 +83,10 @@ let ``Post url encoded with return expression is Ok`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
         let ctx =
-            Context.defaultContext
-            |> Context.withHttpClient client
-            |> Context.withUrlBuilder (fun _ -> "http://test.org/")
-            |> Context.withHeader ("api-key", "test-key")
+            HttpContext.defaultContext
+            |> HttpContext.withHttpClient client
+            |> HttpContext.withUrlBuilder (fun _ -> "http://test.org/")
+            |> HttpContext.withHeader ("api-key", "test-key")
 
         let query = Seq.singleton ("foo", "bar")
         let content = FormUrlEncodedContent.FromTuples query
@@ -125,13 +125,13 @@ let ``Get with logging is OK`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
         let ctx =
-            Context.defaultContext
-            |> Context.withHttpClient client
-            |> Context.withUrlBuilder (fun _ -> "http://test.org/")
-            |> Context.withHeader ("api-key", "test-key")
-            |> Context.withMetrics metrics
-            |> Context.withLogger logger
-            |> Context.withLogLevel LogLevel.Debug
+            HttpContext.defaultContext
+            |> HttpContext.withHttpClient client
+            |> HttpContext.withUrlBuilder (fun _ -> "http://test.org/")
+            |> HttpContext.withHeader ("api-key", "test-key")
+            |> HttpContext.withMetrics metrics
+            |> HttpContext.withLogger logger
+            |> HttpContext.withLogLevel LogLevel.Debug
 
         // Act
         let request =
@@ -174,12 +174,12 @@ let ``Post with logging is OK`` () =
         let content () = new StringableContent(json) :> HttpContent
 
         let ctx =
-            Context.defaultContext
-            |> Context.withHttpClientFactory (fun () -> client)
-            |> Context.withUrlBuilder (fun _ -> "http://testing.org/")
-            |> Context.withHeader ("api-key", "test-key")
-            |> Context.withLogger (logger)
-            |> Context.withLogLevel LogLevel.Debug
+            HttpContext.defaultContext
+            |> HttpContext.withHttpClientFactory (fun () -> client)
+            |> HttpContext.withUrlBuilder (fun _ -> "http://testing.org/")
+            |> HttpContext.withHeader ("api-key", "test-key")
+            |> HttpContext.withLogger (logger)
+            |> HttpContext.withLogLevel LogLevel.Debug
 
         // Act
         let! result =
@@ -217,12 +217,12 @@ let ``Multiple post with logging is OK`` () =
 
 
         let ctx =
-            Context.defaultContext
-            |> Context.withHttpClientFactory (fun () -> client)
-            |> Context.withUrlBuilder (fun _ -> "http://testing.org/")
-            |> Context.withHeader ("api-key", "test-key")
-            |> Context.withLogger (logger)
-            |> Context.withLogLevel LogLevel.Debug
+            HttpContext.defaultContext
+            |> HttpContext.withHttpClientFactory (fun () -> client)
+            |> HttpContext.withUrlBuilder (fun _ -> "http://testing.org/")
+            |> HttpContext.withHeader ("api-key", "test-key")
+            |> HttpContext.withLogger (logger)
+            |> HttpContext.withLogLevel LogLevel.Debug
 
         // Act
         let! result =
@@ -263,12 +263,12 @@ let ``Post with disabled logging does not log`` () =
         let content () = new StringableContent(json) :> HttpContent
 
         let ctx =
-            Context.defaultContext
-            |> Context.withHttpClient client
-            |> Context.withUrlBuilder (fun _ -> "http://test.org/")
-            |> Context.withHeader ("api-key", "test-key")
-            |> Context.withLogger logger
-            |> Context.withLogLevel LogLevel.None
+            HttpContext.defaultContext
+            |> HttpContext.withHttpClient client
+            |> HttpContext.withUrlBuilder (fun _ -> "http://test.org/")
+            |> HttpContext.withHeader ("api-key", "test-key")
+            |> HttpContext.withLogger logger
+            |> HttpContext.withLogLevel LogLevel.None
 
         // Act
         let request =
@@ -306,12 +306,12 @@ let ``Fetch with internal error will log error`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
         let ctx =
-            Context.defaultContext
-            |> Context.withHttpClient client
-            |> Context.withUrlBuilder (fun _ -> "http://test.org/")
-            |> Context.withHeader ("api-key", "test-key")
-            |> Context.withLogger logger
-            |> Context.withLogLevel LogLevel.Debug
+            HttpContext.defaultContext
+            |> HttpContext.withHttpClient client
+            |> HttpContext.withUrlBuilder (fun _ -> "http://test.org/")
+            |> HttpContext.withHeader ("api-key", "test-key")
+            |> HttpContext.withLogger logger
+            |> HttpContext.withLogLevel LogLevel.Debug
 
         // Act
         let request =
@@ -326,5 +326,5 @@ let ``Fetch with internal error will log error`` () =
 
         // Assert
         test <@ Result.isError result @>
-        test <@ logger.Output.Contains "failed" @>
+        test <@ logger.Output.Contains "Got error" @>
     }

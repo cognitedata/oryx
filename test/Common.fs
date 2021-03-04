@@ -49,8 +49,7 @@ type PushStreamContent (content: string) =
         base.Dispose(disposing)
         _disposed <- true
 
-
-type HttpMessageHandlerStub (NextAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
+type HttpMessageHandlerStub (OnNextAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
     inherit HttpMessageHandler ()
 
     override self.SendAsync
@@ -58,41 +57,34 @@ type HttpMessageHandlerStub (NextAsync: Func<HttpRequestMessage, CancellationTok
             request: HttpRequestMessage,
             cancellationToken: CancellationToken
         ) : Task<HttpResponseMessage> =
-        task { return! NextAsync.Invoke(request, cancellationToken) }
-
-let singleton<'TSource, 'TResult> (value: 'TResult) : HttpHandler<'TSource, 'TResult> =
-    HttpHandler
-    <| fun next ->
-        { new IHttpNext<'TSource> with
-            member _.NextAsync(ctx, _) = next.NextAsync(ctx, value)
-            member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) }
-
+        task { return! OnNextAsync.Invoke(request, cancellationToken) }
 
 let add (a: int) (b: int) = singleton (a + b)
-
 
 exception TestException of code: int * message: string with
     override this.ToString() = this.message
 
-let error msg : HttpHandler<'TSource, 'TResult> = throw <| TestException(code = 400, message = msg)
+let error msg : IHttpHandler<'TSource, 'TResult> = throw <| TestException(code = 400, message = msg)
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
-let badRequestHandler<'TSource> (response: 'TSource) (error: exn) : HttpHandler<'TSource> =
-    HttpHandler
-    <| fun next ->
-        { new IHttpNext<'TSource> with
-            member _.NextAsync(ctx, _) =
-                task {
-                    match error with
-                    | :? TestException as ex ->
-                        match enum<HttpStatusCode> (ex.code) with
-                        | HttpStatusCode.BadRequest -> return! next.NextAsync(ctx, response)
+let badRequestHandler<'TSource> (response: 'TSource) (error: exn) : IHttpHandler<'TSource> =
+    { new IHttpHandler<'TSource> with
+        member _.Subscribe(next) =
+            { new IHttpNext<'TSource> with
+                member _.OnNextAsync(ctx, _) =
+                    task {
+                        match error with
+                        | :? TestException as ex ->
+                            match enum<HttpStatusCode> (ex.code) with
+                            | HttpStatusCode.BadRequest -> return! next.OnNextAsync(ctx, response)
 
-                        | _ -> return! next.ErrorAsync(ctx, error)
-                    | _ -> return! next.ErrorAsync(ctx, error)
-                }
+                            | _ -> return! next.OnErrorAsync(ctx, error)
+                        | _ -> return! next.OnErrorAsync(ctx, error)
+                    }
 
-            member _.ErrorAsync(ctx, exn) = next.ErrorAsync(ctx, exn) }
+                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+
 
 let shouldRetry (error: exn) : bool =
     match error with
@@ -109,9 +101,9 @@ let get () =
     >=> withUrl "http://test.org"
     >=> withQuery [ struct ("debug", "true") ]
     >=> fetch
-    >=> log
     >=> withError errorHandler
     >=> json options
+    >=> log
 
 let post content =
     POST
@@ -119,9 +111,9 @@ let post content =
     >=> withContent content
     >=> withCompletion HttpCompletionOption.ResponseHeadersRead
     >=> fetch
-    >=> log
     >=> withError errorHandler
     >=> json options
+    >=> log
 
 //let retryCount = 5
 //let retry next ctx = retry shouldRetry 500<ms> retryCount next ctx

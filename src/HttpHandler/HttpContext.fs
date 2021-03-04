@@ -4,13 +4,13 @@
 namespace Oryx
 
 open System
+open System.Diagnostics
 open System.Net
 open System.Net.Http
 open System.Reflection
 open System.Threading
 
 open Microsoft.Extensions.Logging
-open System.Diagnostics
 
 type RequestMethod =
     | POST
@@ -100,13 +100,12 @@ type HttpResponse =
       /// Reason phrase which typically is sent by servers together with the status code
       ReasonPhrase: string }
 
-[<Struct>]
-type Context =
+type HttpContext =
     { Request: HttpRequest
       Response: HttpResponse }
 
 [<RequireQualifiedAccess>]
-module Context =
+module HttpContext =
     let private fileVersion =
         FileVersionInfo
             .GetVersionInfo(
@@ -144,98 +143,94 @@ module Context =
           ReasonPhrase = String.Empty }
 
     /// The default context.
-    let defaultContext : Context =
+    let defaultContext : HttpContext =
         { Request = defaultRequest
           Response = defaultResponse }
 
     /// Add HTTP header to context.
-    let withHeader (header: string * string) (context: Context) =
-        { context with
+    let withHeader (header: string * string) (ctx: HttpContext) =
+        { ctx with
               Request =
-                  { context.Request with
-                        Headers = context.Request.Headers.Add header } }
+                  { ctx.Request with
+                        Headers = ctx.Request.Headers.Add header } }
 
     /// Replace all headers in the context.
-    let withHeaders (headers: Map<string, string>) (context: Context) =
+    let withHeaders (headers: Map<string, string>) (context: HttpContext) =
         { context with
               Request =
                   { context.Request with
                         Headers = headers } }
 
     /// Helper for setting Bearer token as Authorization header.
-    let withBearerToken (token: string) (context: Context) =
+    let withBearerToken (token: string) (ctx: HttpContext) =
         let header = ("Authorization", sprintf "Bearer %s" token)
 
-        { context with
+        { ctx with
               Request =
-                  { context.Request with
-                        Headers = context.Request.Headers.Add header } }
+                  { ctx.Request with
+                        Headers = ctx.Request.Headers.Add header } }
 
     /// Set the HTTP client to use for the requests.
-    let withHttpClient (client: HttpClient) (context: Context) =
-        { context with
+    let withHttpClient (client: HttpClient) (ctx: HttpContext) =
+        { ctx with
               Request =
-                  { context.Request with
+                  { ctx.Request with
                         HttpClient = (fun () -> client) } }
 
     /// Set the HTTP client factory to use for the requests.
-    let withHttpClientFactory (factory: unit -> HttpClient) (context: Context) =
-        { context with
+    let withHttpClientFactory (factory: unit -> HttpClient) (ctx: HttpContext) =
+        { ctx with
               Request =
-                  { context.Request with
+                  { ctx.Request with
                         HttpClient = factory } }
 
     /// Set the URL builder to use.
-    let withUrlBuilder (builder: HttpRequest -> string) (context: Context) =
-        { context with
+    let withUrlBuilder (builder: HttpRequest -> string) (ctx: HttpContext) =
+        { ctx with
               Request =
-                  { context.Request with
+                  { ctx.Request with
                         UrlBuilder = builder } }
 
     /// Set a cancellation token to use for the requests.
-    let withCancellationToken (token: CancellationToken) (context: Context) =
-        { context with
+    let withCancellationToken (token: CancellationToken) (ctx: HttpContext) =
+        { ctx with
               Request =
-                  { context.Request with
+                  { ctx.Request with
                         CancellationToken = token } }
 
     /// Set the logger (ILogger) to use.
-    let withLogger (logger: ILogger) (context: Context) =
-        { context with
+    let withLogger (logger: ILogger) (ctx: HttpContext) =
+        { ctx with
               Request =
-                  { context.Request with
+                  { ctx.Request with
                         Logger = Some logger } }
 
     /// Set the log level to use (default is LogLevel.None).
-    let withLogLevel (logLevel: LogLevel) (context: Context) =
+    let withLogLevel (logLevel: LogLevel) (context: HttpContext) =
         { context with
               Request =
                   { context.Request with
                         LogLevel = logLevel } }
 
     /// Set the log format to use.
-    let withLogFormat (format: string) (context: Context) =
-        { context with
-              Request =
-                  { context.Request with
-                        LogFormat = format } }
+    let withLogFormat (format: string) (ctx: HttpContext) =
+        { ctx with
+              Request = { ctx.Request with LogFormat = format } }
 
     /// Set the log message to use (normally you would like to use the withLogMessage handler instead)
-    let withLogMessage (msg: string) (context: Context) =
-        { context with
+    let withLogMessage (msg: string) (ctx: HttpContext) =
+        { ctx with
               Request =
-                  { context.Request with
-                        Items = context.Request.Items.Add(PlaceHolder.Message, String msg) } }
+                  { ctx.Request with
+                        Items = ctx.Request.Items.Add(PlaceHolder.Message, String msg) } }
 
     /// Set the metrics (IMetrics) to use.
-    let withMetrics (metrics: IMetrics) (context: Context) =
-        { context with
-              Request =
-                  { context.Request with
-                        Metrics = metrics } }
+    let withMetrics (metrics: IMetrics) (ctx: HttpContext) =
+        { ctx with
+              Request = { ctx.Request with Metrics = metrics } }
 
     /// Merge the list of context objects. Used by the sequential and concurrent HTTP handlers.
-    let merge (ctxs: List<Context>) : Context =
+    let merge (ctxs: List<HttpContext>) : HttpContext =
         let ctxs =
             match ctxs with
             | [] -> [ defaultContext ]

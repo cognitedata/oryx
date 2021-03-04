@@ -39,8 +39,8 @@ let asyncMain argv =
         use client = new HttpClient()
 
         let ctx =
-            Context.defaultContext
-            |> Context.withHttpClient client
+            HttpContext.defaultContext
+            |> HttpContext.withHttpClient client
 
         let! result = request "F#" |> runAsync ctx
         printfn "Result: %A" result
