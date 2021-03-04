@@ -152,10 +152,8 @@ module HttpHandler =
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
-    /// HTTP handler for setting the method to be used for requests
-    /// using this context. You will normally want to use the `GET`,
-    /// `POST`, `PUT`, `DELETE`, or `OPTIONS` HTTP handlers instead of
-    /// this one.
+    /// HTTP handler for setting the method to be used for requests using this context. You will normally want to use
+    /// the `GET`, `POST`, `PUT`, `DELETE`, or `OPTIONS` HTTP handlers instead of this one.
     let withMethod<'TSource> (method: HttpMethod) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
@@ -268,7 +266,6 @@ module HttpHandler =
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
-
 
     /// HTTP handler for adding content builder to context. These
     /// content will be added to the HTTP body of requests that uses

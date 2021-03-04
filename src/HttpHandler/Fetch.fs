@@ -68,7 +68,7 @@ module Fetch =
         { new IHttpHandler<'TSource, HttpContent> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, content) =
+                    member _.OnNextAsync(ctx, _) =
                         task {
                             let timer = Stopwatch()
                             let client = ctx.Request.HttpClient()
@@ -95,10 +95,9 @@ module Fetch =
                                         .Add(PlaceHolder.Elapsed, Number timer.ElapsedMilliseconds)
 
                                 let headers =
-                                    Map [
-                                        for KeyValue (k, v) in response.Headers do
-                                            k, v
-                                    ]
+                                    response.Headers
+                                    |> Seq.map (|KeyValue|)
+                                    |> Map.ofSeq
 
                                 let! result =
                                     next.OnNextAsync(
