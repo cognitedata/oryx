@@ -2,7 +2,7 @@ open Oryx
 open System.Net.Http
 open Oryx.ThothJsonNet.ResponseReader
 open Thoth.Json.Net
-open FSharp.Control.Tasks.ContextInsensitive
+open FSharp.Control.Tasks
 
 [<EntryPoint>]
 let main argv =

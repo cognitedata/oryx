@@ -69,3 +69,6 @@ group Examples
 
     nuget Ply
     nuget Thoth.Json.Net
+    nuget Oryx prerelease
+    nuget Oryx.ThothJsonNet prerelease
+    nuget Newtonsoft.Json

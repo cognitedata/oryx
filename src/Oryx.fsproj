@@ -14,7 +14,6 @@
     <Compile Include="Middleware/Core.fs" />
     <Compile Include="Middleware/Error.fs" />
     <Compile Include="Middleware/Builder.fs" />
-    <Compile Include="Middleware/Chunk.fs" />
 
     <Compile Include="HttpHandler/Metrics.fs" />
     <Compile Include="HttpHandler/HttpContext.fs" />

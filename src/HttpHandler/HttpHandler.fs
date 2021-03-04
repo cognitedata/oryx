@@ -49,8 +49,9 @@ module HttpHandler =
     /// Map the content of the HTTP handler.
     let map<'TContext, 'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
 
+    /// Chunks a sequence of HTTP handlers into sequential and concurrent batches.
     let chunk<'TSource, 'TNext, 'TResult> =
-        Chunk.chunk<HttpContext, 'TSource, 'TNext, 'TResult> HttpContext.merge
+        Core.chunk<HttpContext, 'TSource, 'TNext, 'TResult> HttpContext.merge
 
     /// Run list of HTTP handlers sequentially.
     let sequential<'TContext, 'TSource, 'TResult> =

@@ -196,3 +196,19 @@ module Core =
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+
+    /// Chunks a sequence of Middlewares into a combination of sequential and concurrent batches.
+    let chunk<'TContext, 'TSource, 'TNext, 'TResult>
+        (merge: 'TContext list -> 'TContext)
+        (chunkSize: int)
+        (maxConcurrency: int)
+        (handler: seq<'TNext> -> IAsyncMiddleware<'TContext, 'TSource, seq<'TResult>>)
+        (items: seq<'TNext>)
+        : IAsyncMiddleware<'TContext, 'TSource, seq<'TResult>> =
+        items
+        |> Seq.chunkBySize chunkSize
+        |> Seq.chunkBySize maxConcurrency
+        |> Seq.map (Seq.map handler >> concurrent merge)
+        |> sequential merge
+        // Collect results
+        >=> map (Seq.ofList >> Seq.collect (Seq.collect id))
