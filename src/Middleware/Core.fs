@@ -85,7 +85,6 @@ module Core =
     let bind<'TContext, 'TSource, 'TNext, 'TResult>
         (fn: 'TSource -> IAsyncMiddleware<'TContext, 'TNext, 'TResult>)
         : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
-
         { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
@@ -111,7 +110,6 @@ module Core =
 
     /// Composes two middleware into one.
     let (>=>) = compose
-
 
     /// Run list of middlewares concurrently.
     let concurrent<'TContext, 'TSource, 'TResult>

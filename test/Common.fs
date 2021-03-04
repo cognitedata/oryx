@@ -59,17 +59,7 @@ type HttpMessageHandlerStub (OnNextAsync: Func<HttpRequestMessage, CancellationT
         ) : Task<HttpResponseMessage> =
         task { return! OnNextAsync.Invoke(request, cancellationToken) }
 
-let singleton<'TSource, 'TResult> (value: 'TResult) : IHttpHandler<'TSource, 'TResult> =
-    { new IHttpHandler<'TSource, 'TResult> with
-        member _.Subscribe(next) =
-            { new IHttpNext<'TSource> with
-                member _.OnNextAsync(ctx, _) = next.OnNextAsync(ctx, value)
-                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
-
-
 let add (a: int) (b: int) = singleton (a + b)
-
 
 exception TestException of code: int * message: string with
     override this.ToString() = this.message

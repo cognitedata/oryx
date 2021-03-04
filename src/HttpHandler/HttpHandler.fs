@@ -23,6 +23,22 @@ module HttpHandler =
     let runUnsafeAsync<'TSource, 'TResult> (ctx: HttpContext) (handler: IHttpHandler<'TSource, 'TResult>) =
         Core.runUnsafeAsync<HttpContext, 'TSource, 'TResult> ctx handler
 
+    /// Compose two HTTP handlers into one.
+    let inline compose (first: IHttpHandler<'T1, 'T2>) (second: IHttpHandler<'T2, 'T3>) : IHttpHandler<'T1, 'T3> =
+        Core.compose first second
+
+    /// Composes two HTTP handlers.
+    let (>=>) = compose
+
+    /// Return the given content.
+    let singleton<'TSource, 'TResult> = Core.singleton<HttpContext, 'TSource, 'TResult>
+
+    /// Map the content of the HTTP handler.
+    let map<'TContext, 'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
+
+    /// Bind the content of the middleware.
+    let bind<'TContext, 'TSource, 'TNext, 'TResult> = Core.bind<HttpContext, 'TSource, 'TNext, 'TResult>
+
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
     let withQuery (query: seq<struct (string * string)>) : IHttpHandler<'TSource> =
@@ -38,16 +54,6 @@ module HttpHandler =
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
-
-    /// Compose two HTTP handlers into one.
-    let inline compose (first: IHttpHandler<'T1, 'T2>) (second: IHttpHandler<'T2, 'T3>) : IHttpHandler<'T1, 'T3> =
-        Core.compose first second
-
-    /// Composes two HTTP handlers.
-    let (>=>) = compose
-
-    /// Map the content of the HTTP handler.
-    let map<'TContext, 'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
 
     /// Chunks a sequence of HTTP handlers into sequential and concurrent batches.
     let chunk<'TSource, 'TNext, 'TResult> =
