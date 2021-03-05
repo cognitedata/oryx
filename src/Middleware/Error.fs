@@ -26,15 +26,14 @@ module Error =
 
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
-    /// Thrown if no choice found.
-    exception NoChoiceException of unit
-
     /// Choose from a list of middlewares to use. The first middleware that succeeds will be used.
     let choose<'TContext, 'TSource, 'TResult>
         (handlers: IAsyncMiddleware<'TContext, 'TSource, 'TResult> seq)
         : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
         { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
             member _.Subscribe(next) =
+                let exns : ResizeArray<exn> = ResizeArray()
+
                 { new IAsyncNext<'TContext, 'TSource> with
                     member _.OnNextAsync(ctx, ?content) =
                         let mutable found = false
@@ -44,9 +43,13 @@ module Error =
                                 { new IAsyncNext<'TContext, 'TResult> with
                                     member _.OnNextAsync(ctx, ?content) =
                                         found <- true
+                                        exns.Clear()
                                         next.OnNextAsync(ctx, ?content = content)
 
-                                    member _.OnErrorAsync(ctx, exn) = Task.FromResult()
+                                    member _.OnErrorAsync(ctx, error) =
+                                        exns.Add error
+                                        Task.FromResult()
+
                                     member _.OnCompletedAsync _ = Task.FromResult() }
 
                             for handler in handlers do
@@ -56,12 +59,17 @@ module Error =
                                             .Subscribe(obv)
                                             .OnNextAsync(ctx, ?content = content)
 
-                            if not found then
-                                return! next.OnErrorAsync(ctx, NoChoiceException())
+                            match found, exns with
+                            | false, exns when exns.Count = 1 -> return! next.OnErrorAsync(ctx, exns.[0])
+                            | false, _ -> return! next.OnErrorAsync(ctx, AggregateException(exns))
+                            | true, _ -> ()
                         }
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+
+                    member _.OnCompletedAsync(ctx) =
+                        exns.Clear()
+                        next.OnCompletedAsync(ctx) } }
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
     let throw<'TContext, 'TSource, 'TResult> (error: Exception) : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
