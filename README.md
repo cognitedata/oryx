@@ -544,13 +544,13 @@ Oryx v3 will significantly simplify the typing of HTTP handlers by:
 2. Error type (`'TError`) is now simply an exception (`exn`).
 3. Core logic refactored into a generic middleware (that can be reused for other purposes).
 
-This change effectively makes Oryx an Async Observable:
+This change effectively makes Oryx an Async Observable (with context):
 
 ```fs
 type IHttpNext<'TSource> =
-    abstract member OnNextAsync: context: HttpContext * ?content: 'TSource -> Task<unit>
-    abstract member OnErrorAsync: context: HttpContext * error: exn -> Task<unit>
-    abstract member OnCompletedAsync: context: HttpContext -> Task<unit>
+    abstract member OnNextAsync: ctx: HttpContext * ?content: 'TSource -> Task<unit>
+    abstract member OnErrorAsync: ctx: HttpContext * error: exn -> Task<unit>
+    abstract member OnCompletedAsync: ctx: HttpContext -> Task<unit>
 
 type IHttpHandler<'TSource, 'TResult> =
     abstract member Subscribe: next: IHttpNext<'TResult> -> IHttpNext<'TSource>
@@ -615,7 +615,7 @@ Oryx v3 is mostly backwards compatible with v2. Your chains of operators will fo
 same. There are however some notable changes:
 
 - `Context` have been renamed to `HttpContext`.
-- `HttpHandler` have been renamed `IHttpHandler`.
+- `HttpHandler` have been renamed `IHttpHandler`. This is because `IHttpHandler` is now an interface.
 - The `retry` operator has been deprecated for now. Use [Polly](https://github.com/App-vNext/Polly) instead.
 - The `catch` operator needs to run __after__ the error producing operator e.g `fetch` (not before). This is because
   Oryx v3 pushes results "down" instead of returning them "up" the chain of operators. The good thing with this change
@@ -627,7 +627,7 @@ same. There are however some notable changes:
   `fetch<'TSource, 'TNext>` and the last two types can simply be removed from your code.
 - `ResponseError` is gone. You need to sub-class an exception instead. This means that the `'TError' type is also gone
   from the handlers.
-- Custom context builders do not need any changes
+- Custom context builders do not need any changes except renaming `Context` to `HttpContext`.
 - Custom HTTP handlers must be refactored. Instead of returning a result (Ok/Error) the handler needs to push down the
   result either using the Ok path `next.OnNextAsync()` or fail with an error `next.OnErrorAsync()`. This is very similar
   to e.g Reactive Extensions (Rx) `OnNext` / `OnError`. E.g:
@@ -660,7 +660,7 @@ let withResource (resource: string): HttpHandler<'TSource> =
             }}
 ```
 
-It's a bit more verbose, but the hot path of the code is mostly the same.
+It's a bit more verbose, but the hot path of the code is mostly the same as before.
 
 ## Upgrade from Oryx v1 to v2
 
