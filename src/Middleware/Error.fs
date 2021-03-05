@@ -43,7 +43,7 @@ module Error =
                                 { new IAsyncNext<'TContext, 'TResult> with
                                     member _.OnNextAsync(ctx, ?content) =
                                         found <- true
-                                        exns.Clear()
+                                        exns.Clear() // Clear to avoid buildup of exceptions in streaming scenarios.
                                         next.OnNextAsync(ctx, ?content = content)
 
                                     member _.OnErrorAsync(ctx, error) =
@@ -65,7 +65,9 @@ module Error =
                             | true, _ -> ()
                         }
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                    member _.OnErrorAsync(ctx, exn) =
+                        exns.Clear()
+                        next.OnErrorAsync(ctx, exn)
 
                     member _.OnCompletedAsync(ctx) =
                         exns.Clear()
