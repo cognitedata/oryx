@@ -74,25 +74,8 @@ module Core =
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
                     member _.OnNextAsync(ctx, content) = next.OnNextAsync(ctx, mapper content)
-
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
-
-    /// Bind the content of the middleware.
-    // let bind<'TContext, 'TSource, 'TResult>
-    //     (fn: 'TSource -> IAsyncMiddleware<'TContext, 'TSource, 'TResult>)
-    //     : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
-    //     { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
-    //         member _.Subscribe(next) =
-    //             { new IAsyncNext<'TContext, 'TSource> with
-    //                 member _.OnNextAsync(ctx, content) =
-    //                     task {
-    //                         let bound : IAsyncMiddleware<'TContext, 'TSource, 'TResult> = fn content
-    //                         return! bound.Subscribe(next).OnNextAsync(ctx, content)
-    //                     }
-
-    //                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-    //                 member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
     /// Compose two middlewares into one.
     let inline compose
@@ -120,7 +103,6 @@ module Core =
                             let obv n =
                                 { new IAsyncNext<'TContext, 'TResult> with
                                     member _.OnNextAsync(ctx, content) = task { res.[n] <- Ok(ctx, content) }
-
                                     member _.OnErrorAsync(_, err) = task { res.[n] <- Error err }
                                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) }
 
@@ -157,7 +139,6 @@ module Core =
                             let obv =
                                 { new IAsyncNext<'TContext, 'TResult> with
                                     member _.OnNextAsync(ctx, content) = task { Ok(ctx, content) |> res.Add }
-
                                     member _.OnErrorAsync(_, err) = task { Error err |> res.Add }
                                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) }
 

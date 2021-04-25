@@ -36,9 +36,6 @@ module HttpHandler =
     /// Map the content of the HTTP handler.
     let map<'TContext, 'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
 
-    /// Bind the content of the middleware.
-    //let bind<'TContext, 'TSource, 'TResult> = Core.bind<HttpContext, 'TSource, 'TResult>
-
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
     let withQuery (query: seq<struct (string * string)>) : IHttpHandler<'TSource> =
