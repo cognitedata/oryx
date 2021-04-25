@@ -18,13 +18,13 @@ module Logging =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, ?content) =
+                    member _.OnNextAsync(ctx, content) =
                         next.OnNextAsync(
                             { ctx with
                                   Request =
                                       { ctx.Request with
                                             Logger = Some logger } },
-                            ?content = content
+                            content = content
                         )
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
@@ -35,11 +35,11 @@ module Logging =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, ?content) =
+                    member _.OnNextAsync(ctx, content) =
                         next.OnNextAsync(
                             { ctx with
                                   Request = { ctx.Request with LogLevel = logLevel } },
-                            ?content = content
+                            content = content
                         )
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
@@ -50,13 +50,13 @@ module Logging =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) =
                 { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, ?content) =
+                    member _.OnNextAsync(ctx, content) =
                         next.OnNextAsync(
                             { ctx with
                                   Request =
                                       { ctx.Request with
                                             Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } },
-                            ?content = content
+                            content = content
                         )
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
@@ -93,10 +93,7 @@ module Logging =
                                         |> Option.map (fun builder -> builder ())
                                         |> Option.toObj
                                         :> _
-                                    | PlaceHolder.ResponseContent ->
-                                        match response with
-                                        | Some content -> content :> _
-                                        | None -> null
+                                    | PlaceHolder.ResponseContent -> content :> _
                                     | key ->
                                         // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
                                         // placeholders to the format string.
@@ -110,13 +107,13 @@ module Logging =
                     | _ -> ()
 
                 { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, ?content) =
+                    member _.OnNextAsync(ctx, content) =
                         task {
                             match ctx.Request.LogLevel with
                             | LogLevel.None -> ()
                             | logLevel -> log logLevel ctx content
 
-                            return! next.OnNextAsync(ctx, ?content = content)
+                            return! next.OnNextAsync(ctx, content = content)
                         }
 
                     member _.OnErrorAsync(ctx, exn) =

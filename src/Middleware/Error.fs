@@ -11,17 +11,17 @@ open FSharp.Control.Tasks
 module Error =
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
     let catch<'TContext, 'TSource>
-        (errorHandler: exn -> IAsyncMiddleware<'TContext, 'TSource>)
+        (errorHandler: exn -> IAsyncMiddleware<'TContext, unit, 'TSource>)
         : IAsyncMiddleware<'TContext, 'TSource> =
         { new IAsyncMiddleware<'TContext, 'TSource> with
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, ?content) = next.OnNextAsync(ctx, ?content = content)
+                    member _.OnNextAsync(ctx, content) = next.OnNextAsync(ctx, content)
 
                     member _.OnErrorAsync(ctx, err) =
                         task {
                             let obv = (errorHandler err).Subscribe(next)
-                            return! obv.OnNextAsync(ctx)
+                            return! obv.OnNextAsync(ctx, ())
                         }
 
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
@@ -35,34 +35,32 @@ module Error =
                 let exns : ResizeArray<exn> = ResizeArray()
 
                 { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, ?content) =
-                        let mutable found = false
+                    member _.OnNextAsync(ctx, content) =
+                        let mutable errored = true
 
                         task {
                             let obv =
                                 { new IAsyncNext<'TContext, 'TResult> with
-                                    member _.OnNextAsync(ctx, ?content) =
-                                        found <- true
+                                    member _.OnNextAsync(ctx, content) =
                                         exns.Clear() // Clear to avoid buildup of exceptions in streaming scenarios.
-                                        next.OnNextAsync(ctx, ?content = content)
+                                        next.OnNextAsync(ctx, content)
 
                                     member _.OnErrorAsync(ctx, error) =
                                         exns.Add error
+                                        errored <- true
                                         Task.FromResult()
 
                                     member _.OnCompletedAsync _ = Task.FromResult() }
 
                             for handler in handlers do
-                                if not found then
-                                    do!
-                                        handler
-                                            .Subscribe(obv)
-                                            .OnNextAsync(ctx, ?content = content)
+                                if errored then
+                                    errored <- false
+                                    do! handler.Subscribe(obv).OnNextAsync(ctx, content)
 
-                            match found, exns with
-                            | false, exns when exns.Count = 1 -> return! next.OnErrorAsync(ctx, exns.[0])
-                            | false, _ -> return! next.OnErrorAsync(ctx, AggregateException(exns))
-                            | true, _ -> ()
+                            match errored, exns with
+                            | true, exns when exns.Count = 1 -> return! next.OnErrorAsync(ctx, exns.[0])
+                            | true, _ -> return! next.OnErrorAsync(ctx, AggregateException(exns))
+                            | false, _ -> ()
                         }
 
                     member _.OnErrorAsync(ctx, exn) =

@@ -10,7 +10,7 @@ open FSharp.Control.Tasks
 open FsToolkit.ErrorHandling
 
 type IAsyncNext<'TContext, 'TSource> =
-    abstract member OnNextAsync : ctx: 'TContext * ?content: 'TSource -> Task<unit>
+    abstract member OnNextAsync : ctx: 'TContext * content: 'TSource -> Task<unit>
     abstract member OnErrorAsync : ctx: 'TContext * error: exn -> Task<unit>
     abstract member OnCompletedAsync : ctx: 'TContext -> Task<unit>
 
@@ -21,33 +21,32 @@ type IAsyncMiddleware<'TContext, 'TSource> = IAsyncMiddleware<'TContext, 'TSourc
 
 module Core =
     /// A next continuation for observing the final result.
-    let finish (tcs: TaskCompletionSource<'TResult option>) =
+    let finish (tcs: TaskCompletionSource<'TResult>) =
         { new IAsyncNext<'TContext, 'TResult> with
-            member _.OnNextAsync(_, ?response) = task { tcs.SetResult response }
+            member _.OnNextAsync(_, response) = task { tcs.SetResult response }
             member _.OnErrorAsync(_, error) = task { tcs.SetException error }
             member _.OnCompletedAsync _ = task { tcs.SetCanceled() } }
 
     /// Run the HTTP handler in the given context. Returns content as result type.
     let runAsync<'TContext, 'TSource, 'TResult>
         (ctx: 'TContext)
-        (handler: IAsyncMiddleware<'TContext, 'TSource, 'TResult>)
+        (handler: IAsyncMiddleware<'TContext, unit, 'TResult>)
         : Task<Result<'TResult, exn>> =
-        let tcs = TaskCompletionSource<'TResult option>()
+        let tcs = TaskCompletionSource<'TResult>()
 
         task {
-            do! handler.Subscribe(finish tcs).OnNextAsync(ctx)
+            do! handler.Subscribe(finish tcs).OnNextAsync(ctx, ())
 
             try
-                match! tcs.Task with
-                | Some value -> return Ok value
-                | _ -> return OperationCanceledException() :> Exception |> Error
+                let! value = tcs.Task
+                return Ok value
             with err -> return Error err
         }
 
     /// Run the HTTP handler in the given context. Returns content and throws exception if any error occured.
     let runUnsafeAsync<'TContext, 'TSource, 'TResult>
         (ctx: 'TContext)
-        (handler: IAsyncMiddleware<'TContext, 'TSource, 'TResult>)
+        (handler: IAsyncMiddleware<'TContext, unit, 'TResult>)
         : Task<'TResult> =
         task {
             let! result = runAsync ctx handler
@@ -66,6 +65,7 @@ module Core =
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
+
     /// Map the content of the middleware.
     let map<'TContext, 'TSource, 'TResult>
         (mapper: 'TSource -> 'TResult)
@@ -73,32 +73,26 @@ module Core =
         { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, ?content) =
-                        match content with
-                        | Some content -> next.OnNextAsync(ctx, mapper content)
-                        | None -> next.OnNextAsync(ctx)
+                    member _.OnNextAsync(ctx, content) = next.OnNextAsync(ctx, mapper content)
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
     /// Bind the content of the middleware.
-    let bind<'TContext, 'TSource, 'TNext, 'TResult>
-        (fn: 'TSource -> IAsyncMiddleware<'TContext, 'TNext, 'TResult>)
-        : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
-        { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
-            member _.Subscribe(next) =
-                { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, ?content) =
-                        task {
-                            match content with
-                            | Some content ->
-                                let bound : IAsyncMiddleware<'TContext, 'TNext, 'TResult> = fn content
-                                return! bound.Subscribe(next).OnNextAsync(ctx)
-                            | None -> return! next.OnNextAsync(ctx)
-                        }
+    // let bind<'TContext, 'TSource, 'TResult>
+    //     (fn: 'TSource -> IAsyncMiddleware<'TContext, 'TSource, 'TResult>)
+    //     : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
+    //     { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
+    //         member _.Subscribe(next) =
+    //             { new IAsyncNext<'TContext, 'TSource> with
+    //                 member _.OnNextAsync(ctx, content) =
+    //                     task {
+    //                         let bound : IAsyncMiddleware<'TContext, 'TSource, 'TResult> = fn content
+    //                         return! bound.Subscribe(next).OnNextAsync(ctx, content)
+    //                     }
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+    //                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+    //                 member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
     /// Compose two middlewares into one.
     let inline compose
@@ -119,25 +113,20 @@ module Core =
         { new IAsyncMiddleware<'TContext, 'TSource, 'TResult list> with
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, _) =
+                    member _.OnNextAsync(ctx, content) =
                         task {
                             let res : Result<'TContext * 'TResult, exn> array = Array.zeroCreate (Seq.length handlers)
 
                             let obv n =
                                 { new IAsyncNext<'TContext, 'TResult> with
-                                    member _.OnNextAsync(ctx, content) =
-                                        task {
-                                            match content with
-                                            | Some content -> res.[n] <- Ok(ctx, content)
-                                            | None -> res.[n] <- Error(ArgumentNullException() :> _)
-                                        }
+                                    member _.OnNextAsync(ctx, content) = task { res.[n] <- Ok(ctx, content) }
 
                                     member _.OnErrorAsync(_, err) = task { res.[n] <- Error err }
                                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) }
 
                             let! _ =
                                 handlers
-                                |> Seq.mapi (fun n handler -> handler.Subscribe(obv n).OnNextAsync ctx)
+                                |> Seq.mapi (fun n handler -> handler.Subscribe(obv n).OnNextAsync(ctx, content))
                                 |> Task.WhenAll
 
                             let result = res |> List.ofSeq |> List.sequenceResultM
@@ -161,18 +150,13 @@ module Core =
         { new IAsyncMiddleware<'TContext, 'TSource, 'TResult list> with
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, _) =
+                    member _.OnNextAsync(ctx, content) =
                         task {
                             let res = ResizeArray<Result<'TContext * 'TResult, exn>>()
 
                             let obv =
                                 { new IAsyncNext<'TContext, 'TResult> with
-                                    member _.OnNextAsync(ctx, content) =
-                                        task {
-                                            match content with
-                                            | Some content -> Ok(ctx, content) |> res.Add
-                                            | None -> Error(ArgumentNullException() :> exn) |> res.Add
-                                        }
+                                    member _.OnNextAsync(ctx, content) = task { Ok(ctx, content) |> res.Add }
 
                                     member _.OnErrorAsync(_, err) = task { Error err |> res.Add }
                                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) }
@@ -180,7 +164,7 @@ module Core =
                             for handler in handlers do
                                 do!
                                     handler.Subscribe(obv)
-                                    |> (fun obv -> obv.OnNextAsync ctx)
+                                    |> (fun obv -> obv.OnNextAsync(ctx, content))
 
                             let result = res |> List.ofSeq |> List.sequenceResultM
 
@@ -210,3 +194,38 @@ module Core =
         |> sequential merge
         // Collect results
         >=> map (Seq.ofList >> Seq.collect (Seq.collect id))
+
+[<AutoOpen>]
+module Extensions =
+    type IAsyncMiddleware<'TResource, 'TSource, 'TResult> with
+        /// Subscribe using plain task returning functions.
+        member _.Subscribe
+            (
+                ?onNextAsync: 'TSource -> Task<unit>,
+                ?onErrorAsync: exn -> Task<unit>,
+                ?onCompletedAsync: unit -> Task<unit>
+            ) =
+            { new IAsyncNext<'TContext, 'TSource> with
+                member _.OnNextAsync(ctx, content) =
+                    match onNextAsync with
+                    | Some fn -> fn (content)
+                    | None -> Task.FromResult()
+
+                member _.OnErrorAsync(ctx, exn) =
+                    match onErrorAsync with
+                    | Some fn -> fn exn
+                    | None -> Task.FromResult()
+
+                member _.OnCompletedAsync(ctx) =
+                    match onCompletedAsync with
+                    | Some fn -> fn ()
+                    | None -> Task.FromResult() }
+
+        /// Subscribe using a task returning function taking a result. Invokations of `OnNextAsync` will result in `Ok`
+        /// while `OnErrorAsync` and `OnCompletedAsync` will produce `Error`. `OnCompletedAsync` will produce
+        /// `OperationCanceledException`.
+        member _.Subscribe(next: Result<'TSource, exn> -> Task<unit>) =
+            { new IAsyncNext<'TContext, 'TSource> with
+                member _.OnNextAsync(ctx, content) = next (Ok content)
+                member _.OnErrorAsync(ctx, exn) = next (Error exn)
+                member _.OnCompletedAsync(ctx) = next (OperationCanceledException() :> exn |> Error) }
