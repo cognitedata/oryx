@@ -111,7 +111,7 @@ source = handler.Subscribe(result)
 
 An HTTP handler (`IHttpHandler`) is a middleware that subscribes `.Subscribe()` the given HTTP next handler
 (`IHttpNext<'TResult>`), and also returns the source HTTP next (`IHttpNext<'TSource>`). The returned
-`IHttpNext<'TSource>` is used to write the `Context` and thel content (`'TSource`) into the handler.
+`IHttpNext<'TSource>` is used to write the `Context` and content (`'TSource`) into the handler.
 The given result (`IHttpNext<'Result>`) is where the `HttpHandler` will write its output. You can think of the
 `IHttpNext` as the input and output next functions (or observers / continuations) of the `HttpHandler`.
 
