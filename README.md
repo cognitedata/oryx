@@ -330,8 +330,8 @@ Content can be handled using `type JsonPushStreamContent (content : JToken)`.
 
 ### Thoth.Json.Net
 
-Support for `Thoth.Net.Json` is made available using the
-[`Oryx.ThothNetJson`](https://www.nuget.org/packages/Oryx.Protobuf/) extension.
+Support for `Thoth.Json.Net` is made available using the
+[`Oryx.ThothJsonNet`](https://www.nuget.org/packages/Oryx.ThothJsonNet/) extension.
 
 The `json` decoder takes a `Decoder` from `Thoth.Json.Net` to decode the response into a user-defined type of `'T`.
 
