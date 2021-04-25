@@ -16,12 +16,12 @@ type IHttpHandler<'TSource> = IHttpHandler<'TSource, 'TSource>
 [<AutoOpen>]
 module HttpHandler =
     /// Run the HTTP handler in the given context. Returns content as result type.
-    let runAsync<'TSource, 'TResult> (ctx: HttpContext) (handler: IHttpHandler<unit, 'TResult>) =
-        Core.runAsync<HttpContext, unit, 'TResult> ctx handler
+    let runAsync<'TResult> (ctx: HttpContext) (handler: IHttpHandler<unit, 'TResult>) =
+        Core.runAsync<HttpContext, 'TResult> ctx handler
 
     /// Run the HTTP handler in the given context. Returns content and throws exception if any error occured.
-    let runUnsafeAsync<'TSource, 'TResult> (ctx: HttpContext) (handler: IHttpHandler<unit, 'TResult>) =
-        Core.runUnsafeAsync<HttpContext, 'TSource, 'TResult> ctx handler
+    let runUnsafeAsync<'TResult> (ctx: HttpContext) (handler: IHttpHandler<unit, 'TResult>) =
+        Core.runUnsafeAsync<HttpContext, 'TResult> ctx handler
 
     /// Compose two HTTP handlers into one.
     let inline compose (first: IHttpHandler<'T1, 'T2>) (second: IHttpHandler<'T2, 'T3>) : IHttpHandler<'T1, 'T3> =

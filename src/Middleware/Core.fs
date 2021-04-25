@@ -28,7 +28,7 @@ module Core =
             member _.OnCompletedAsync _ = task { tcs.SetCanceled() } }
 
     /// Run the HTTP handler in the given context. Returns content as result type.
-    let runAsync<'TContext, 'TSource, 'TResult>
+    let runAsync<'TContext, 'TResult>
         (ctx: 'TContext)
         (handler: IAsyncMiddleware<'TContext, unit, 'TResult>)
         : Task<Result<'TResult, exn>> =
@@ -44,7 +44,7 @@ module Core =
         }
 
     /// Run the HTTP handler in the given context. Returns content and throws exception if any error occured.
-    let runUnsafeAsync<'TContext, 'TSource, 'TResult>
+    let runUnsafeAsync<'TContext, 'TResult>
         (ctx: 'TContext)
         (handler: IAsyncMiddleware<'TContext, unit, 'TResult>)
         : Task<'TResult> =
