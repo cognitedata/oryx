@@ -96,7 +96,7 @@ changes to the context are done using a series of asynchronous HTTP handlers.
 
 ```fs
 type IHttpNext<'TSource> =
-    abstract member OnNextAsync: ctx: HttpContext * ?content: 'TSource -> Task<unit>
+    abstract member OnNextAsync: ctx: HttpContext * content: 'TSource -> Task<unit>
     abstract member OnErrorAsync: ctx: HttpContext * error: exn -> Task<unit>
     abstract member OnCompletedAsync : ctx: HttpContext -> Task<unit>
 
@@ -111,7 +111,7 @@ source = handler.Subscribe(result)
 
 An HTTP handler (`IHttpHandler`) is a middleware that subscribes `.Subscribe()` the given HTTP next handler
 (`IHttpNext<'TResult>`), and also returns the source HTTP next (`IHttpNext<'TSource>`). The returned
-`IHttpNext<'TSource>` is used to write the `Context` and an optional content (`'TSource`) into the handler.
+`IHttpNext<'TSource>` is used to write the `Context` and thel content (`'TSource`) into the handler.
 The given result (`IHttpNext<'Result>`) is where the `HttpHandler` will write its output. You can think of the
 `IHttpNext` as the input and output next functions (or observers / continuations) of the `HttpHandler`.
 
@@ -274,7 +274,7 @@ is given full access the the `HttpResponse` and the `HttpContent` and may produc
 
 ```fs
 val withError:
-   errorHandler: HttpResponse -> HttpContent option -> Task<exn> ->
+   errorHandler: HttpResponse -> HttpContent -> Task<exn> ->
    next        : IHttpNext<HttpContent>
               -> IHttpNext<HttpContent>
 ```
@@ -387,7 +387,7 @@ To run a handler you can use the `runAsync` function.
 ```fs
 val runAsync:
    ctx    : HttpContext ->
-   handler: IHttpHandler<'T,'TResult>
+   handler: IHttpHandler<unit,'TResult>
          -> Task<Result<'TResult,exn>>
 ```
 
@@ -396,7 +396,7 @@ or the unsafe version that may throw exceptions:
 ```fs
 val runUnsafeAsync:
    ctx    : HttpContext ->
-   handler: IHttpHandler<'T,'TResult>
+   handler: IHttpHandler<unit,'TResult>
          -> Task<'TResult>
 ```
 
@@ -508,7 +508,7 @@ let withResource (resource: string): HttpHandler<'TSource> =
     { new IHttpHandler<'TSource, 'TResult> with
         member _.Subscribe(next) =
             { new IHttpNext<'TSource> with
-                member _.OnNextAsync(ctx, ?content) =
+                member _.OnNextAsync(ctx, content) =
                     next.OnNextAsync(
                         { ctx with
                             Request =
@@ -516,7 +516,7 @@ let withResource (resource: string): HttpHandler<'TSource> =
                                     Items = ctx.Request.Items.Add("resource", String resource)
                                 }
                         },
-                        ?content = content
+                        content = content
                     )
 
                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
@@ -531,6 +531,22 @@ anything added to the `Items` map is also available as place-holders in the logg
 let urlBuilder (request: HttpRequest) : string =
     let items = request.Items
     ...
+```
+
+## What is new in Oryx v4
+
+Oryx v4 makes the content non-optional to simplify the HTTP handlers.
+
+```fs
+type IHttpNext<'TSource> =
+    abstract member OnNextAsync: ctx: HttpContext * content: 'TSource -> Task<unit>
+    abstract member OnErrorAsync: ctx: HttpContext * error: exn -> Task<unit>
+    abstract member OnCompletedAsync: ctx: HttpContext -> Task<unit>
+
+type IHttpHandler<'TSource, 'TResult> =
+    abstract member Subscribe: next: IHttpNext<'TResult> -> IHttpNext<'TSource>
+
+type IHttpHandler<'TSource> = IHttpHandler<'TSource, 'TSource>
 ```
 
 ## What is new in Oryx v3
@@ -607,6 +623,53 @@ type Context<'T> =
         Request: HttpRequest
         Response: HttpResponse<'T>
     }
+```
+## Upgrade from Oryx v3 to v4
+
+The content is now non-optional. Thus code such as:
+
+```fs
+let withResource (resource: string): HttpHandler<'TSource> =
+    { new IHttpHandler<'TSource, 'TResult> with
+        member _.Subscribe(next) =
+            { new IHttpNext<'TSource> with
+                member _.OnNextAsync(ctx, ?content) =
+                    next.OnNextAsync(
+                        { ctx with
+                            Request =
+                                { ctx.Request with
+                                    Items = ctx.Request.Items.Add(PlaceHolder.Resource, String resource)
+                                }
+                        },
+                        ?content = content
+                    )
+
+                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                member _.OnCompletedAsync() = next.OnCompletedAsync()
+            }}
+```
+
+Needs to be refactored to:
+
+```fs
+let withResource (resource: string): HttpHandler<'TSource> =
+    { new IHttpHandler<'TSource, 'TResult> with
+        member _.Subscribe(next) =
+            { new IHttpNext<'TSource> with
+                member _.OnNextAsync(ctx, content) =
+                    next.OnNextAsync(
+                        { ctx with
+                            Request =
+                                { ctx.Request with
+                                    Items = ctx.Request.Items.Add(PlaceHolder.Resource, String resource)
+                                }
+                        },
+                        content = content
+                    )
+
+                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                member _.OnCompletedAsync() = next.OnCompletedAsync()
+            }}
 ```
 
 ## Upgrade from Oryx v2 to v3
