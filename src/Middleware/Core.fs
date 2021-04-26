@@ -176,6 +176,29 @@ module Core =
         // Collect results
         >=> map (Seq.ofList >> Seq.collect (Seq.collect id))
 
+    /// Handler that ignores the content and outputs unit.
+    let ignore<'TContext, 'TSource> =
+        { new IAsyncMiddleware<'TContext, 'TSource, unit> with
+            member _.Subscribe(next) =
+                { new IAsyncNext<'TContext, 'TSource> with
+                    member _.OnNextAsync(ctx, _) = next.OnNextAsync(ctx, content = ())
+                    member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
+                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+
+    /// Validate content using a predicate function.
+    let validate<'TContext, 'TSource> (predicate: 'TSource -> bool) : IAsyncMiddleware<'TContext, 'TSource, 'TSource> =
+        { new IAsyncMiddleware<'TContext, 'TSource, 'TSource> with
+            member _.Subscribe(next) =
+                { new IAsyncNext<'TContext, 'TSource> with
+                    member _.OnNextAsync(ctx, value) =
+                        if predicate (value) then
+                            next.OnNextAsync(ctx, content = value)
+                        else
+                            next.OnErrorAsync(ctx, Exception("Validation failed"))
+
+                    member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
+                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+
 [<AutoOpen>]
 module Extensions =
     type IAsyncMiddleware<'TResource, 'TSource, 'TResult> with
