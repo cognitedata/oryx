@@ -4,6 +4,7 @@
 namespace Oryx.Middleware
 
 open Oryx.Middleware.Core
+open FSharp.Control.Tasks
 
 type MiddlewareBuilder () =
     member _.Zero() : IAsyncMiddleware<'TContext, 'TSource> =
@@ -32,7 +33,7 @@ type MiddlewareBuilder () =
             source: IAsyncMiddleware<'TContext, 'TSource, 'TValue>,
             fn: 'TValue -> IAsyncMiddleware<'TContext, 'TSource, 'TResult>
         ) : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
-        source >=> bind fn
+        source |> Core.bind fn
 
 [<AutoOpen>]
 module Builder =

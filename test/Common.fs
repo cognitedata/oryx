@@ -67,10 +67,10 @@ exception TestException of code: int * message: string with
 let error msg : IHttpHandler<'TSource, 'TResult> = throw <| TestException(code = 400, message = msg)
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
-let badRequestHandler<'TSource> (response: 'TSource) (error: exn) : IHttpHandler<'TSource> =
-    { new IHttpHandler<'TSource> with
+let badRequestHandler<'TSource> (response: 'TSource) (error: exn) : IHttpHandler<unit, 'TSource> =
+    { new IHttpHandler<unit, 'TSource> with
         member _.Subscribe(next) =
-            { new IHttpNext<'TSource> with
+            { new IHttpNext<unit> with
                 member _.OnNextAsync(ctx, _) =
                     task {
                         match error with
@@ -85,13 +85,12 @@ let badRequestHandler<'TSource> (response: 'TSource) (error: exn) : IHttpHandler
                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                 member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
-
 let shouldRetry (error: exn) : bool =
     match error with
     | :? TestException -> true
     | _ -> false
 
-let errorHandler (response: HttpResponse) (content: HttpContent option) =
+let errorHandler (response: HttpResponse) (content: HttpContent) =
     task { return TestException(code = int response.StatusCode, message = "Got error") }
 
 let options = JsonSerializerOptions()

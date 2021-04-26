@@ -4,6 +4,7 @@
 namespace Oryx
 
 open Oryx.Middleware
+open FSharp.Control.Tasks
 
 type RequestBuilder () =
     member _.Zero() : IHttpHandler<'TSource> =
@@ -27,7 +28,7 @@ type RequestBuilder () =
             source: IHttpHandler<'TSource, 'TValue>,
             fn: 'TValue -> IHttpHandler<'TSource, 'TResult>
         ) : IHttpHandler<'TSource, 'TResult> =
-        source >=> Core.bind fn
+        source |> Core.bind fn
 
 [<AutoOpen>]
 module Builder =
