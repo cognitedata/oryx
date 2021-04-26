@@ -57,11 +57,11 @@ module HttpHandler =
         Core.chunk<HttpContext, 'TSource, 'TNext, 'TResult> HttpContext.merge
 
     /// Run list of HTTP handlers sequentially.
-    let sequential<'TContext, 'TSource, 'TResult> =
+    let sequential<'TSource, 'TResult> =
         Core.sequential<HttpContext, 'TSource, 'TResult> HttpContext.merge
 
     /// Run list of HTTP handlers concurrently.
-    let concurrent<'TContext, 'TSource, 'TResult> =
+    let concurrent<'TSource, 'TResult> =
         Core.concurrent<HttpContext, 'TSource, 'TResult> HttpContext.merge
 
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
@@ -71,7 +71,13 @@ module HttpHandler =
     let choose<'TSource, 'TResult> = Error.choose<HttpContext, 'TSource, 'TResult>
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
-    let throw<'TContext, 'TSource, 'TResult> = throw<HttpContext, 'TSource, 'TResult>
+    let throw<'TSource, 'TResult> = throw<HttpContext, 'TSource, 'TResult>
+
+    /// Validate content using a predicate function.
+    let validate<'TSource> = Core.validate<HttpContext, 'TSource>
+
+    /// Handler that ignores the content and outputs unit.
+    let ignore<'TSource> = Core.ignore<HttpContext, 'TSource>
 
     /// Parse response stream to a user specified type synchronously.
     let parse<'TResult> (parser: Stream -> 'TResult) : IHttpHandler<HttpContent, 'TResult> =

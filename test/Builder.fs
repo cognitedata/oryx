@@ -47,7 +47,7 @@ let ``Simple return from unit handler in builder is Ok`` () =
         // Arrange
         let ctx = HttpContext.defaultContext
 
-        let a = singleton 42 |> runAsync ctx
+        let a = singleton 42 >=> ignore |> runAsync ctx
 
         // Act
         let! result = req { return! singleton 42 } |> runUnsafeAsync ctx
@@ -67,7 +67,10 @@ let ``Multiple handlers in builder is Ok`` () =
             req {
                 let! a = singleton 10
                 let! b = singleton 20
-                return! add a b
+
+                return!
+                    add a b
+                    >=> validate (fun value -> value = 10 + 20)
             }
 
         let! result = request |> runUnsafeAsync ctx
