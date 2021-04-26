@@ -28,28 +28,7 @@ type RequestBuilder () =
             source: IHttpHandler<'TSource, 'TValue>,
             fn: 'TValue -> IHttpHandler<'TSource, 'TResult>
         ) : IHttpHandler<'TSource, 'TResult> =
-        { new IHttpHandler<'TSource, 'TResult> with
-            member _.Subscribe(next) =
-                { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, content) =
-                        let valueObs =
-                            { new IHttpNext<'TValue> with
-                                member _.OnNextAsync(ctx, value) =
-                                    task {
-                                        let bound : IHttpHandler<'TSource, 'TResult> = fn value
-                                        return! bound.Subscribe(next).OnNextAsync(ctx, content)
-                                    }
-
-                                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                                member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) }
-
-                        task {
-                            let sourceObv = source.Subscribe(valueObs)
-                            return! sourceObv.OnNextAsync(ctx, content)
-                        }
-
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+        source |> Core.bind fn
 
 [<AutoOpen>]
 module Builder =

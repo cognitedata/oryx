@@ -77,6 +77,34 @@ module Core =
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
+    /// Bind the content of the middleware.
+    let bind<'TContext, 'TSource, 'TValue, 'TResult>
+        (fn: 'TValue -> IAsyncMiddleware<'TContext, 'TSource, 'TResult>)
+        (source: IAsyncMiddleware<'TContext, 'TSource, 'TValue>)
+        : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
+        { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
+            member _.Subscribe(next) =
+                { new IAsyncNext<'TContext, 'TSource> with
+                    member _.OnNextAsync(ctx, content) =
+                        let valueObs =
+                            { new IAsyncNext<'TContext, 'TValue> with
+                                member _.OnNextAsync(ctx, value) =
+                                    task {
+                                        let bound : IAsyncMiddleware<'TContext, 'TSource, 'TResult> = fn value
+                                        return! bound.Subscribe(next).OnNextAsync(ctx, content)
+                                    }
+
+                                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                                member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) }
+
+                        task {
+                            let sourceObv = source.Subscribe(valueObs)
+                            return! sourceObv.OnNextAsync(ctx, content)
+                        }
+
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+
     /// Compose two middlewares into one.
     let inline compose
         (first: IAsyncMiddleware<'TContext, 'T1, 'T2>)
