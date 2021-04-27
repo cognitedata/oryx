@@ -9,7 +9,7 @@ open FSharp.Control.Tasks
 
 [<AutoOpen>]
 module Error =
-    /// Handler for proteting the pipeline from exceptions and protocol violations.
+    /// Handler for protecting the pipeline from exceptions and protocol violations.
     let protect<'TContext, 'TSource> =
         { new IAsyncMiddleware<'TContext, 'TSource> with
             member _.Subscribe(next) =
