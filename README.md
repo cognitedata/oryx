@@ -541,7 +541,21 @@ let urlBuilder (request: HttpRequest) : string =
 
 ## What is new in Oryx v4
 
-Oryx v4 makes the content non-optional to simplify the HTTP handlers.
+- A `validate` handler has been added that can validate the passing
+  content using a predicate function. If the predicate fails then the
+  error path will be taken.
+
+- A `protect` handler has been added that protects the pipeline from
+  exceptions (thrown upwards) and protocol error with regards to error /
+  complete handling. E.g not allowed to call `OnNextAsync()` after
+  `OnErrorAsync()`.
+
+- The sematics of the `choose` operator have been modified so it
+  continues processing the next handler if the current handler produces
+  error i.e `OnErrorAsync`. Previously it was triggered by not calling
+  `.OnNextAsync()`
+
+- Oryx v4 makes the content non-optional to simplify the HTTP handlers.
 
 ```fs
 type IHttpNext<'TSource> =
@@ -632,7 +646,11 @@ type Context<'T> =
 ```
 ## Upgrade from Oryx v3 to v4
 
-The content is now non-optional. Thus code such as:
+The `throw` operator have been renamed to `fail`. The `throw` operator
+is still available but will give an obsoleted warning.
+
+The content used through the handler pipeline is now non-optional. Thus
+custom code such as:
 
 ```fs
 let withResource (resource: string): HttpHandler<'TSource> =
