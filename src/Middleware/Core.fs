@@ -73,7 +73,11 @@ module Core =
         { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, content) = next.OnNextAsync(ctx, mapper content)
+                    member _.OnNextAsync(ctx, content) =
+                        try
+                            next.OnNextAsync(ctx, mapper content)
+                        with error -> next.OnErrorAsync(ctx, error)
+
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
@@ -90,8 +94,14 @@ module Core =
                             { new IAsyncNext<'TContext, 'TValue> with
                                 member _.OnNextAsync(ctx, value) =
                                     task {
-                                        let bound : IAsyncMiddleware<'TContext, 'TSource, 'TResult> = fn value
-                                        return! bound.Subscribe(next).OnNextAsync(ctx, content)
+                                        let result =
+                                            try
+                                                fn value |> Ok
+                                            with error -> Error error
+
+                                        match result with
+                                        | Ok handler -> return! handler.Subscribe(next).OnNextAsync(ctx, content)
+                                        | Error error -> return! next.OnErrorAsync(ctx, error)
                                     }
 
                                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
@@ -204,8 +214,8 @@ module Core =
         // Collect results
         >=> map (Seq.ofList >> Seq.collect (Seq.collect id))
 
-    /// Handler that ignores the content and outputs unit.
-    let ignore<'TContext, 'TSource> =
+    /// Handler that forgets (ignores) the content and outputs unit.
+    let forget<'TContext, 'TSource> =
         { new IAsyncMiddleware<'TContext, 'TSource, unit> with
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
@@ -219,13 +229,16 @@ module Core =
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
                     member _.OnNextAsync(ctx, value) =
-                        if predicate (value) then
+                        if predicate value then
                             next.OnNextAsync(ctx, content = value)
                         else
                             next.OnErrorAsync(ctx, Exception("Validation failed"))
 
                     member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+
+    /// Retrieves the content.
+    let get<'TContext, 'TSource> () = map<'TContext, 'TSource, 'TSource> id
 
 [<AutoOpen>]
 module Extensions =

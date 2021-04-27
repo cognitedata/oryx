@@ -9,14 +9,56 @@ open FSharp.Control.Tasks
 
 [<AutoOpen>]
 module Error =
-    /// Catch handler for catching errors and then delegating to the error handler on what to do.
+    /// Handler for protecting the pipeline from exceptions and protocol violations.
+    let protect<'TContext, 'TSource> =
+        { new IAsyncMiddleware<'TContext, 'TSource> with
+            member _.Subscribe(next) =
+                let mutable stopped = false
+
+                { new IAsyncNext<'TContext, 'TSource> with
+                    member _.OnNextAsync(ctx, content) =
+                        task {
+                            match stopped with
+                            | false ->
+                                try
+                                    return! next.OnNextAsync(ctx, content)
+                                with err ->
+                                    stopped <- true
+                                    return! next.OnErrorAsync(ctx, err)
+                            | _ -> ()
+                        }
+
+                    member _.OnErrorAsync(ctx, err) =
+                        task {
+                            match stopped with
+                            | false ->
+                                stopped <- true
+                                return! next.OnErrorAsync(ctx, err)
+                            | _ -> ()
+                        }
+
+                    member _.OnCompletedAsync(ctx) =
+                        task {
+                            match stopped with
+                            | false ->
+                                stopped <- true
+                                return! next.OnCompletedAsync(ctx)
+                            | _ -> ()
+                        } } }
+
+    /// Handler for catching errors and then delegating to the error handler on what to do.
     let catch<'TContext, 'TSource>
         (errorHandler: exn -> IAsyncMiddleware<'TContext, unit, 'TSource>)
         : IAsyncMiddleware<'TContext, 'TSource> =
         { new IAsyncMiddleware<'TContext, 'TSource> with
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, content) = next.OnNextAsync(ctx, content)
+                    member _.OnNextAsync(ctx, content) =
+                        task {
+                            try
+                                return! next.OnNextAsync(ctx, content)
+                            with err -> return! next.OnErrorAsync(ctx, err)
+                        }
 
                     member _.OnErrorAsync(ctx, err) =
                         task {
@@ -72,7 +114,7 @@ module Error =
                         next.OnCompletedAsync(ctx) } }
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
-    let throw<'TContext, 'TSource, 'TResult> (error: Exception) : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
+    let fail<'TContext, 'TSource, 'TResult> (error: Exception) : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
         { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with

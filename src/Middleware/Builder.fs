@@ -4,13 +4,13 @@
 namespace Oryx.Middleware
 
 open Oryx.Middleware.Core
-open FSharp.Control.Tasks
 
 type MiddlewareBuilder () =
     member _.Zero() : IAsyncMiddleware<'TContext, 'TSource> =
         { new IAsyncMiddleware<'TContext, 'TSource> with
             member _.Subscribe(next) = next }
 
+    member _.Yield(content: 'TResult) : IAsyncMiddleware<'TContext, 'TSource, 'TResult> = Core.singleton content
     member _.Return(content: 'TResult) : IAsyncMiddleware<'TContext, 'TSource, 'TResult> = Core.singleton content
 
     member _.ReturnFrom
@@ -20,10 +20,13 @@ type MiddlewareBuilder () =
 
     member _.Delay(fn) = fn ()
 
+    member _.Combine(source: IAsyncMiddleware<'TContext, 'T1, 'T2>, other: IAsyncMiddleware<'TContext, 'T2, 'T3>) =
+        source >=> other
+
     member _.For
         (
-            source: 'TSource seq,
-            func: 'TSource -> IAsyncMiddleware<'TContext, 'TSource, 'TResult>
+            source: 'TValue seq,
+            func: 'TValue -> IAsyncMiddleware<'TContext, 'TSource, 'TResult>
         ) : IAsyncMiddleware<'TContext, 'TSource, 'TResult list> =
         source |> Seq.map func |> sequential List.head
 

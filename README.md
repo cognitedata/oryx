@@ -162,12 +162,18 @@ are like lego bricks and may be composed into more complex HTTP handlers. The HT
 - `choose` - Choose the first handler that succeeds in a list of handlers.
 - `chunk` - Chunks a sequence of HTTP handlers into sequential and concurrent batches.
 - `concurrent` - Runs a sequence of HTTP handlers concurrently.
+- `fail`- Fails the pipeline and pushes an exception downstream.
 - `fetch` - Fetches from remote using the current context
+- `forget` - Handler that forgets (ignores) the content and outputs unit.
+- `get` - Retrieves the content (for use in `req` builder)
 - `log` - Log information about the given request.
+- `map` - Map the content of the HTTP handler.
 - `parse` - Parse response stream to a user-specified type synchronously.
 - `parseAsync` - Parse response stream to a user-specified type asynchronously.
+- `protect` - Handler for protecting the pipeline from exceptions and protocol violations.
 - `sequential` - Runs a sequence of HTTP handlers sequentially.
-- `throw`- Fails the pipeline and pushes an exception downstream.
+- `singleton` - Handler that produces a single content value.
+- `validate` - Validate content using a predicate function.
 - `withContent` - Add HTTP content to the fetch request
 - `withLogMessage` - Log information about the given request supplying a user-specified message.
 - `withMethod` - with HTTP method. You can use GET, PUT, POST instead.
@@ -535,7 +541,21 @@ let urlBuilder (request: HttpRequest) : string =
 
 ## What is new in Oryx v4
 
-Oryx v4 makes the content non-optional to simplify the HTTP handlers.
+- A `validate` handler has been added that can validate the passing
+  content using a predicate function. If the predicate fails then the
+  error path will be taken.
+
+- A `protect` handler has been added that protects the pipeline from
+  exceptions (thrown upwards) and protocol error with regards to error /
+  complete handling. E.g not allowed to call `OnNextAsync()` after
+  `OnErrorAsync()`.
+
+- The sematics of the `choose` operator have been modified so it
+  continues processing the next handler if the current handler produces
+  error i.e `OnErrorAsync`. Previously it was triggered by not calling
+  `.OnNextAsync()`
+
+- Oryx v4 makes the content non-optional to simplify the HTTP handlers.
 
 ```fs
 type IHttpNext<'TSource> =
@@ -626,7 +646,11 @@ type Context<'T> =
 ```
 ## Upgrade from Oryx v3 to v4
 
-The content is now non-optional. Thus code such as:
+The `throw` operator have been renamed to `fail`. The `throw` operator
+is still available but will give an obsoleted warning.
+
+The content used through the handler pipeline is now non-optional. Thus
+custom code such as:
 
 ```fs
 let withResource (resource: string): HttpHandler<'TSource> =
