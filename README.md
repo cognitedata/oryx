@@ -162,12 +162,18 @@ are like lego bricks and may be composed into more complex HTTP handlers. The HT
 - `choose` - Choose the first handler that succeeds in a list of handlers.
 - `chunk` - Chunks a sequence of HTTP handlers into sequential and concurrent batches.
 - `concurrent` - Runs a sequence of HTTP handlers concurrently.
+- `fail`- Fails the pipeline and pushes an exception downstream.
 - `fetch` - Fetches from remote using the current context
+- `forget` - Handler that forgets (ignores) the content and outputs unit.
+- `get` - Retrieves the content (for use in `req` builder)
 - `log` - Log information about the given request.
+- `map` - Map the content of the HTTP handler.
 - `parse` - Parse response stream to a user-specified type synchronously.
 - `parseAsync` - Parse response stream to a user-specified type asynchronously.
+- `protect` - Handler for proteting the pipeline from exceptions and protocol violations.
 - `sequential` - Runs a sequence of HTTP handlers sequentially.
-- `throw`- Fails the pipeline and pushes an exception downstream.
+- `singleton` - Handler that produces a single content value.
+- `validate` - Validate content using a predicate function.
 - `withContent` - Add HTTP content to the fetch request
 - `withLogMessage` - Log information about the given request supplying a user-specified message.
 - `withMethod` - with HTTP method. You can use GET, PUT, POST instead.
