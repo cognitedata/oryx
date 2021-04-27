@@ -64,7 +64,7 @@ let add (a: int) (b: int) = singleton (a + b)
 exception TestException of code: int * message: string with
     override this.ToString() = this.message
 
-let error msg : IHttpHandler<'TSource, 'TResult> = throw <| TestException(code = 400, message = msg)
+let error msg : IHttpHandler<'TSource, 'TResult> = fail <| TestException(code = 400, message = msg)
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
 let badRequestHandler<'TSource> (response: 'TSource) (error: exn) : IHttpHandler<unit, 'TSource> =
@@ -97,6 +97,7 @@ let options = JsonSerializerOptions()
 
 let get () =
     GET
+    >=> protect
     >=> withUrl "http://test.org"
     >=> withQuery [ struct ("debug", "true") ]
     >=> fetch
@@ -106,6 +107,7 @@ let get () =
 
 let post content =
     POST
+    >=> protect
     >=> withResponseType JsonValue
     >=> withContent content
     >=> withCompletion HttpCompletionOption.ResponseHeadersRead

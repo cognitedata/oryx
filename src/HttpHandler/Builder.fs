@@ -4,21 +4,22 @@
 namespace Oryx
 
 open Oryx.Middleware
-open FSharp.Control.Tasks
 
 type RequestBuilder () =
     member _.Zero() : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
             member _.Subscribe(next) = next }
 
+    member _.Yield(content: 'TResult) : IHttpHandler<'TSource, 'TResult> = Core.singleton content
     member _.Return(content: 'TResult) : IHttpHandler<'TSource, 'TResult> = Core.singleton content
     member _.ReturnFrom(req: IHttpHandler<'TSource, 'TResult>) : IHttpHandler<'TSource, 'TResult> = req
     member _.Delay(fn) = fn ()
+    member _.Combine(source, other) = source >=> other
 
     member _.For
         (
-            source: 'TSource seq,
-            func: 'TSource -> IHttpHandler<'TSource, 'TResult>
+            source: 'TValue seq,
+            func: 'TValue -> IHttpHandler<'TSource, 'TResult>
         ) : IHttpHandler<'TSource, 'TResult list> =
         source |> Seq.map func |> sequential
 

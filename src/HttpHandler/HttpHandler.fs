@@ -34,7 +34,7 @@ module HttpHandler =
     let singleton<'TSource, 'TResult> = Core.singleton<HttpContext, 'TSource, 'TResult>
 
     /// Map the content of the HTTP handler.
-    let map<'TContext, 'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
+    let map<'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
 
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
@@ -67,17 +67,26 @@ module HttpHandler =
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
     let catch<'TSource> = Error.catch<HttpContext, 'TSource>
 
+    /// Handler for proteting the pipeline from exceptions and protocol violations.
+    let protect<'TSource> = Error.protect<HttpContext, 'TSource>
+
     /// Choose from a list of handlers to use. The first handler that succeeds will be used.
     let choose<'TSource, 'TResult> = Error.choose<HttpContext, 'TSource, 'TResult>
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
-    let throw<'TSource, 'TResult> = throw<HttpContext, 'TSource, 'TResult>
+    let fail<'TSource, 'TResult> = Error.fail<HttpContext, 'TSource, 'TResult>
+
+    [<Obsolete("Use fail instead")>]
+    let throw<'TSource, 'TResult> = fail<'TSource, 'TResult>
 
     /// Validate content using a predicate function.
     let validate<'TSource> = Core.validate<HttpContext, 'TSource>
 
-    /// Handler that ignores the content and outputs unit.
-    let ignore<'TSource> = Core.ignore<HttpContext, 'TSource>
+    /// Handler that forgets (ignores) the content and outputs unit.
+    let forget<'TSource> = Core.forget<HttpContext, 'TSource>
+
+    /// Retrieves the content.
+    let get<'TSource> () = map<'TSource, 'TSource> id
 
     /// Parse response stream to a user specified type synchronously.
     let parse<'TResult> (parser: Stream -> 'TResult) : IHttpHandler<HttpContent, 'TResult> =
