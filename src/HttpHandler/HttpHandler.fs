@@ -67,7 +67,7 @@ module HttpHandler =
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
     let catch<'TSource> = Error.catch<HttpContext, 'TSource>
 
-    /// Handler for proteting the pipeline from exceptions and protocol violations.
+    /// Handler for protecting the pipeline from exceptions and protocol violations.
     let protect<'TSource> = Error.protect<HttpContext, 'TSource>
 
     /// Choose from a list of handlers to use. The first handler that succeeds will be used.

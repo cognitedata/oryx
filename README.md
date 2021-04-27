@@ -170,7 +170,7 @@ are like lego bricks and may be composed into more complex HTTP handlers. The HT
 - `map` - Map the content of the HTTP handler.
 - `parse` - Parse response stream to a user-specified type synchronously.
 - `parseAsync` - Parse response stream to a user-specified type asynchronously.
-- `protect` - Handler for protecting the pipeline from exceptions and protocol violations.
+- `protect` - Handler for proteting the pipeline from exceptions and protocol violations.
 - `sequential` - Runs a sequence of HTTP handlers sequentially.
 - `singleton` - Handler that produces a single content value.
 - `validate` - Validate content using a predicate function.
