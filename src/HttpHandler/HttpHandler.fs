@@ -76,6 +76,10 @@ module HttpHandler =
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
     let fail<'TSource, 'TResult> = Error.fail<HttpContext, 'TSource, 'TResult>
 
+    /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
+    /// the any error handling e.g `choose` or `catch`•.
+    let panic<'TSource, 'TResult> = Error.panic<HttpContext, 'TSource, 'TResult>
+
     [<Obsolete("Use fail instead")>]
     let throw<'TSource, 'TResult> = fail<'TSource, 'TResult>
 

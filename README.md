@@ -168,6 +168,7 @@ are like lego bricks and may be composed into more complex HTTP handlers. The HT
 - `get` - Retrieves the content (for use in `req` builder)
 - `log` - Log information about the given request.
 - `map` - Map the content of the HTTP handler.
+- `panic` - Fails the pipeline and pushes an exception downstream. This error cannot be catched or skipped.
 - `parse` - Parse response stream to a user-specified type synchronously.
 - `parseAsync` - Parse response stream to a user-specified type asynchronously.
 - `protect` - Handler for protecting the pipeline from exceptions and protocol violations.
@@ -288,13 +289,28 @@ val withError:
 It's also possible to catch errors using the `catch` handler _after_ e.g `fetch`. The function takes an `errorHandler`
 that is given the returned error and produces a new `HttpHandler` that may then decide to transform the error and
 continue processing or fail with an error. This is very helpful when a failed request not necessarily means an error,
-e.g if you need to check if an object with a given id exists at the server.
+e.g if you need to check if an object with a given id exists at the server. It's not possible to catch a
+`PanicException`, so wrapping an excption in a `PanicException` can be used if you need to signal a fatal error and
+bypass a `catch` operator.
 
 ```fs
 val catch:
    errorHandler: exn -> IHttpHandler<'TSource> ->
    next        : IHttpNext<'TSource>
               -> IHttpNext<'TSource>
+```
+
+A `choose` operator takes a list of HTTP handlers and tries each of them until one of them succeeds. The `choose`
+operator will record every error that happes except for `SkipException` that can be used for skipping to the next
+handler. Other errors will be recorded. If multiple error happens they will be provided as an `AggregateException`. If
+you need break out of `choose` and force an exception without skipping to the next handler you can use the
+`PanicException`.
+
+```fs
+val choose:
+    handlers: seq<IAsyncMiddleware<HttpContext,'TSource,'TResult>>
+           -> IAsyncMiddleware<HttpContext,'TSource,'TResult>
+
 ```
 
 ## JSON and Protobuf Content Handling

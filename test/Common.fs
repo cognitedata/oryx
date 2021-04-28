@@ -65,6 +65,7 @@ exception TestException of code: int * message: string with
     override this.ToString() = this.message
 
 let error msg : IHttpHandler<'TSource, 'TResult> = fail <| TestException(code = 400, message = msg)
+let panic msg : IHttpHandler<'TSource, 'TResult> = panic <| TestException(code = 400, message = msg)
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
 let badRequestHandler<'TSource> (response: 'TSource) (error: exn) : IHttpHandler<unit, 'TSource> =
