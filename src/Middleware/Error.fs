@@ -112,7 +112,7 @@ module Error =
                                                 state <- ChooseState.Error
                                         }
 
-                                    member _.OnCompletedAsync _ = Task.FromResult() }
+                                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) }
 
                             /// Proces handlers until `NoError` or `Panic`.
                             for handler in handlers do
