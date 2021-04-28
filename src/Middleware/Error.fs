@@ -102,11 +102,11 @@ module Error =
                                     member _.OnErrorAsync(ctx, error) =
                                         task {
                                             match error with
-                                            | :? SkipException -> state <- ChooseState.Error
-                                            | :? PanicException ->
+                                            | PanicException (_) ->
                                                 exns.Clear()
                                                 exns.Add(error)
                                                 state <- ChooseState.Panic
+                                            | SkipException (_) -> state <- ChooseState.Error
                                             | _ ->
                                                 exns.Add(error)
                                                 state <- ChooseState.Error

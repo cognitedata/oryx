@@ -274,7 +274,27 @@ let ``Choose panic is Error`` () =
         try
             let! result = req |> runUnsafeAsync ctx
             assert false
-        with :? PanicException -> ()
+        with
+        | PanicException (_) -> ()
+        | _ -> failwith "Should be panic"
+    }
+
+[<Fact>]
+let ``Choose panic is not skipped`` () =
+    task {
+        // Arrange
+        let ctx = HttpContext.defaultContext
+
+        let req =
+            choose [ error "1"; choose [ panic "2"; singleton 42; error "3" ]; singleton 4 ]
+
+        // Act
+        try
+            let! result = req |> runUnsafeAsync ctx
+            assert false
+        with
+        | PanicException (_) -> ()
+        | _ -> failwith "Should be panic"
     }
 
 [<Fact>]
@@ -289,7 +309,10 @@ let ``Choose empty is SkipException`` () =
         try
             let! result = req |> runUnsafeAsync ctx
             assert false
-        with :? SkipException -> ()
+        with
+        | SkipException (_) -> ()
+        | _ -> failwith "Should be skip"
+
     }
 
 // [<Fact>]
