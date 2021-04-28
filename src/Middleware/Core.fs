@@ -1,6 +1,19 @@
 // Copyright 2020 Cognite AS
 // SPDX-License-Identifier: Apache-2.0
 
+namespace Oryx
+
+open System
+
+/// Skip exception will not be recorded and forwarded by `choose`.
+exception SkipException of string with
+    static member Create() = SkipException String.Empty
+
+/// Wrapping an exception as a PanicException will short-circuit the
+/// handlers. A PanicException cannot be catched by `catch` and will
+/// not be skipped by `choose`
+exception PanicException of exn
+
 namespace Oryx.Middleware
 
 open System
@@ -8,6 +21,7 @@ open System.Threading.Tasks
 
 open FSharp.Control.Tasks
 open FsToolkit.ErrorHandling
+open Oryx
 
 type IAsyncNext<'TContext, 'TSource> =
     abstract member OnNextAsync : ctx: 'TContext * content: 'TSource -> Task<unit>
@@ -232,7 +246,7 @@ module Core =
                         if predicate value then
                             next.OnNextAsync(ctx, content = value)
                         else
-                            next.OnErrorAsync(ctx, Exception("Validation failed"))
+                            next.OnErrorAsync(ctx, SkipException("Validation failed"))
 
                     member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }

@@ -8,7 +8,6 @@ open Swensen.Unquote
 open Xunit
 open FsCheck.Xunit
 open FsCheck
-open FsCheck.Arb
 
 open Oryx
 open Tests.Common
@@ -115,6 +114,27 @@ let ``Catching errors is Ok`` () =
 
         // Assert
         test <@ content = 420 @>
+    }
+
+[<Fact>]
+let ``Catching panic is not possible`` () =
+    task {
+        // Arrange
+        let ctx = HttpContext.defaultContext
+        let errorHandler = badRequestHandler 420
+
+        let req =
+            singleton 42
+            >=> panic "panic!"
+            >=> catch errorHandler
+
+        // Act
+        let! result = req |> runAsync ctx
+
+        // Assert
+        match result with
+        | Ok _ -> failwith "should panic!"
+        | Error err -> test <@ err.ToString() = "panic!" @>
     }
 
 [<Fact>]
@@ -229,7 +249,8 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
     }
     |> fun x -> x.Result
 
-let ``Choose handlers is Ok`` =
+[<Fact>]
+let ``Choose handlers is Ok`` () =
     task {
         // Arrange
         let ctx = HttpContext.defaultContext
@@ -239,6 +260,36 @@ let ``Choose handlers is Ok`` =
         // Act
         let! result = req |> runUnsafeAsync ctx
         test <@ result = 2 @>
+    }
+
+[<Fact>]
+let ``Choose panic is Error`` () =
+    task {
+        // Arrange
+        let ctx = HttpContext.defaultContext
+
+        let req = choose [ error "1"; panic "2"; error "3"; singleton 4 ]
+
+        // Act
+        try
+            let! result = req |> runUnsafeAsync ctx
+            assert false
+        with :? PanicException -> ()
+    }
+
+[<Fact>]
+let ``Choose empty is SkipException`` () =
+    task {
+        // Arrange
+        let ctx = HttpContext.defaultContext
+
+        let req = choose []
+
+        // Act
+        try
+            let! result = req |> runUnsafeAsync ctx
+            assert false
+        with :? SkipException -> ()
     }
 
 // [<Fact>]
