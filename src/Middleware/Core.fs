@@ -1,19 +1,6 @@
 // Copyright 2020 Cognite AS
 // SPDX-License-Identifier: Apache-2.0
 
-namespace Oryx
-
-open System
-
-/// Skip exception will not be recorded and forwarded by `choose`.
-exception SkipException of string with
-    static member Create() = SkipException String.Empty
-
-/// Wrapping an exception as a PanicException will short-circuit the
-/// handlers. A PanicException cannot be catched by `catch` and will
-/// not be skipped by `choose`
-exception PanicException of exn
-
 namespace Oryx.Middleware
 
 open System

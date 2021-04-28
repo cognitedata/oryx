@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Middleware/Exception.fs" />
     <Compile Include="Middleware/Core.fs" />
     <Compile Include="Middleware/Error.fs" />
     <Compile Include="Middleware/Builder.fs" />
