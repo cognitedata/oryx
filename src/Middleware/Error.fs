@@ -4,7 +4,6 @@
 namespace Oryx.Middleware
 
 open System
-open System.Threading.Tasks
 
 open FSharp.Control.Tasks
 open Oryx
@@ -96,20 +95,28 @@ module Error =
                             let obv =
                                 { new IAsyncNext<'TContext, 'TResult> with
                                     member _.OnNextAsync(ctx, content) =
-                                        exns.Clear() // Clear to avoid buildup of exceptions in streaming scenarios.
-                                        next.OnNextAsync(ctx, content)
-
-                                    member _.OnErrorAsync(ctx, error) =
                                         task {
-                                            match error with
-                                            | PanicException (_) ->
-                                                exns.Clear()
-                                                exns.Add(error)
+                                            exns.Clear() // Clear to avoid buildup of exceptions in streaming scenarios.
+
+                                            if state = ChooseState.NoError then
+                                                return! next.OnNextAsync(ctx, content)
+                                        }
+
+                                    member _.OnErrorAsync(_, error) =
+                                        task {
+                                            match error, state with
+                                            | PanicException (_), st when st <> ChooseState.Panic ->
                                                 state <- ChooseState.Panic
-                                            | SkipException (_) -> state <- ChooseState.Error
-                                            | _ ->
-                                                exns.Add(error)
+                                                return! next.OnErrorAsync(ctx, error)
+                                            | SkipException (_), st when st = ChooseState.NoError ->
+                                                // Flag error, but do not record skips.
                                                 state <- ChooseState.Error
+                                            | _, ChooseState.Panic ->
+                                                // Already panic. Ignoring additional error.
+                                                ()
+                                            | _, _ ->
+                                                state <- ChooseState.Error
+                                                exns.Add(error)
                                         }
 
                                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) }
@@ -121,7 +128,9 @@ module Error =
                                     do! handler.Subscribe(obv).OnNextAsync(ctx, content)
 
                             match state, exns with
-                            | ChooseState.Panic, exns -> return! next.OnErrorAsync(ctx, exns.[0])
+                            | ChooseState.Panic, _ ->
+                                // Panic is sent immediately above
+                                ()
                             | ChooseState.Error, exns when exns.Count > 1 ->
                                 return! next.OnErrorAsync(ctx, AggregateException(exns))
                             | ChooseState.Error, exns when exns.Count = 1 -> return! next.OnErrorAsync(ctx, exns.[0])
@@ -130,13 +139,14 @@ module Error =
                             | ChooseState.NoError, _ -> ()
                         }
 
-                    member _.OnErrorAsync(ctx, exn) =
+                    member _.OnErrorAsync(ctx, error) =
                         exns.Clear()
-                        next.OnErrorAsync(ctx, exn)
+                        next.OnErrorAsync(ctx, error)
 
                     member _.OnCompletedAsync(ctx) =
                         exns.Clear()
                         next.OnCompletedAsync(ctx) } }
+
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
     let fail<'TContext, 'TSource, 'TResult> (error: Exception) : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
