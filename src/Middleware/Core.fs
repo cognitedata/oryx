@@ -82,6 +82,7 @@ module Core =
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
+
     /// Bind the content of the middleware.
     let bind<'TContext, 'TSource, 'TValue, 'TResult>
         (fn: 'TValue -> IAsyncMiddleware<'TContext, 'TSource, 'TResult>)
@@ -224,8 +225,22 @@ module Core =
                     member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
-    /// Validate content using a predicate function.
-    let validate<'TContext, 'TSource> (predicate: 'TSource -> bool) : IAsyncMiddleware<'TContext, 'TSource, 'TSource> =
+    /// Filter content using a predicate function.
+    let filter<'TContext, 'TSource> (predicate: 'TSource -> bool) : IAsyncMiddleware<'TContext, 'TSource> =
+        { new IAsyncMiddleware<'TContext, 'TSource, 'TSource> with
+            member _.Subscribe(next) =
+                { new IAsyncNext<'TContext, 'TSource> with
+                    member _.OnNextAsync(ctx, value) =
+                        task {
+                            if predicate value then
+                                return! next.OnNextAsync(ctx, content = value)
+                        }
+
+                    member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
+                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+
+    /// Validate content using a predicate function. Same as filter ut produces an error if validation fails.
+    let validate<'TContext, 'TSource> (predicate: 'TSource -> bool) : IAsyncMiddleware<'TContext, 'TSource> =
         { new IAsyncMiddleware<'TContext, 'TSource, 'TSource> with
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
