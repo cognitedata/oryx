@@ -141,7 +141,6 @@ module Error =
 
                     member _.OnErrorAsync(ctx, error) =
                         exns.Clear()
-                        printfn "Choose.OnErrorAsync(), %A" error
                         next.OnErrorAsync(ctx, error)
 
                     member _.OnCompletedAsync(ctx) =
