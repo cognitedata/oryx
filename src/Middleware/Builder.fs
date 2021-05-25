@@ -18,7 +18,7 @@ type MiddlewareBuilder () =
         : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
         req
 
-    member _.Delay(fn) = fn ()
+    member _.Delay(fn) : IAsyncMiddleware<'TContext, 'TSource, 'TResult> = fn ()
 
     member _.Combine(source: IAsyncMiddleware<'TContext, 'T1, 'T2>, other: IAsyncMiddleware<'TContext, 'T2, 'T3>) =
         source >=> other
