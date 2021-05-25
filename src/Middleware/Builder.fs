@@ -28,9 +28,7 @@ type MiddlewareBuilder () =
             source: 'TValue seq,
             func: 'TValue -> IAsyncMiddleware<'TContext, 'TSource, 'TResult>
         ) : IAsyncMiddleware<'TContext, 'TSource, 'TResult list> =
-        source
-        |> Seq.map func
-        |> sequential List.head
+        source |> Seq.map func |> sequential List.head
 
     /// Binds value of 'TValue for let! All handlers runs in same context within the builder.
     member _.Bind
