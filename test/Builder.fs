@@ -47,7 +47,7 @@ let ``Simple return from unit handler in builder is Ok`` () =
         // Arrange
         let ctx = HttpContext.defaultContext
 
-        let a = singleton 42 >=> forget |> runAsync ctx
+        let a = singleton 42 >=> skip |> runAsync ctx
 
         // Act
         let! result = req { return! singleton 42 } |> runUnsafeAsync ctx
