@@ -86,8 +86,8 @@ module HttpHandler =
     /// Validate content using a predicate function.
     let validate<'TSource> = Core.validate<HttpContext, 'TSource>
 
-    /// Handler that forgets (ignores) the content and outputs unit.
-    let forget<'TSource> = Core.forget<HttpContext, 'TSource>
+    /// Handler that skips (ignores) the content and outputs unit.
+    let skip<'TSource> = Core.skip<HttpContext, 'TSource>
 
     /// Retrieves the content.
     let get<'TSource> () = map<'TSource, 'TSource> id

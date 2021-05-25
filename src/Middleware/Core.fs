@@ -21,6 +21,20 @@ type IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
 type IAsyncMiddleware<'TContext, 'TSource> = IAsyncMiddleware<'TContext, 'TSource, 'TSource>
 
 module Core =
+    /// Returns a middleware whose elements are the result of invoking the async transform function on each
+    /// element of the source.
+    let transform<'TContext, 'TSource, 'TResult>
+        (transform: ('TContext * 'TResult -> Task<unit>) -> 'TContext -> 'TSource -> Task<unit>)
+        : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
+        let subscribeAsync (next: IAsyncNext<'TContext, 'TResult>) =
+            { new IAsyncNext<'TContext, 'TSource> with
+                member __.OnNextAsync(ctx, x) = transform next.OnNextAsync ctx x
+                member __.OnErrorAsync(ctx, err) = next.OnErrorAsync(ctx, err)
+                member __.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) }
+
+        { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
+            member __.Subscribe o = subscribeAsync o }
+
     /// A next continuation for observing the final result.
     let finish (tcs: TaskCompletionSource<'TResult>) =
         { new IAsyncNext<'TContext, 'TResult> with
@@ -216,14 +230,32 @@ module Core =
         // Collect results
         >=> map (Seq.ofList >> Seq.collect (Seq.collect id))
 
-    /// Handler that forgets (ignores) the content and outputs unit.
-    let forget<'TContext, 'TSource> =
+    /// Handler that skips (ignores) the content and outputs unit.
+    let skip<'TContext, 'TSource> =
         { new IAsyncMiddleware<'TContext, 'TSource, unit> with
             member _.Subscribe(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
                     member _.OnNextAsync(ctx, _) = next.OnNextAsync(ctx, content = ())
                     member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+
+    /// Never produces a result.
+    let never =
+        { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
+            member _.Subscribe(next) =
+                { new IAsyncNext<'TContext, 'TSource> with
+                    member _.OnNextAsync(ctx, _) = Task.FromResult()
+                    member __.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
+                    member __.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+
+    /// Completes the current request.
+    let complete =
+        { new IAsyncMiddleware<'TContext, 'TSource, 'TResult> with
+            member _.Subscribe(next) =
+                { new IAsyncNext<'TContext, 'TSource> with
+                    member _.OnNextAsync(ctx, _) = next.OnCompletedAsync(ctx)
+                    member __.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
+                    member __.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
     /// Filter content using a predicate function.
     let filter<'TContext, 'TSource> (predicate: 'TSource -> bool) : IAsyncMiddleware<'TContext, 'TSource> =
@@ -254,7 +286,25 @@ module Core =
                     member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
     /// Retrieves the content.
-    let get<'TContext, 'TSource> () = map<'TContext, 'TSource, 'TSource> id
+    let await<'TContext, 'TSource> () = map<'TContext, 'TSource, 'TSource> id
+
+    /// Returns the current environment.
+    let ask =
+        { new IAsyncMiddleware<'TContext, 'TSource, 'TContext> with
+            member _.Subscribe(next) =
+                { new IAsyncNext<'TContext, 'TSource> with
+                    member _.OnNextAsync(ctx, _) = next.OnNextAsync(ctx, ctx)
+                    member __.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
+                    member __.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+
+    /// Update (asks) the context.
+    let update (update: 'TContext -> 'TContext) =
+        { new IAsyncMiddleware<'TContext, 'TSource, 'TSource> with
+            override _.Subscribe(next) =
+                { new IAsyncNext<'TContext, 'TSource> with
+                    member _.OnNextAsync(ctx, content) = next.OnNextAsync(update ctx, content)
+                    member __.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
+                    member __.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
 
 [<AutoOpen>]
 module Extensions =

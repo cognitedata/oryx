@@ -18,7 +18,7 @@ type MiddlewareBuilder () =
         : IAsyncMiddleware<'TContext, 'TSource, 'TResult> =
         req
 
-    member _.Delay(fn) = fn ()
+    member _.Delay(fn) : IAsyncMiddleware<'TContext, 'TSource, 'TResult> = fn ()
 
     member _.Combine(source: IAsyncMiddleware<'TContext, 'T1, 'T2>, other: IAsyncMiddleware<'TContext, 'T2, 'T3>) =
         source >=> other
@@ -28,7 +28,9 @@ type MiddlewareBuilder () =
             source: 'TValue seq,
             func: 'TValue -> IAsyncMiddleware<'TContext, 'TSource, 'TResult>
         ) : IAsyncMiddleware<'TContext, 'TSource, 'TResult list> =
-        source |> Seq.map func |> sequential List.head
+        source
+        |> Seq.map func
+        |> sequential List.head
 
     /// Binds value of 'TValue for let! All handlers runs in same context within the builder.
     member _.Bind

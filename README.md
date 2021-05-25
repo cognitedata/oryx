@@ -164,7 +164,7 @@ are like lego bricks and may be composed into more complex HTTP handlers. The HT
 - `concurrent` - Runs a sequence of HTTP handlers concurrently.
 - `fail`- Fails the pipeline and pushes an exception downstream.
 - `fetch` - Fetches from remote using the current context
-- `forget` - Handler that forgets (ignores) the content and outputs unit.
+- `skip` - Handler that skips (ignores) the content and outputs unit.
 - `get` - Retrieves the content (for use in `req` builder)
 - `log` - Log information about the given request.
 - `map` - Map the content of the HTTP handler.
