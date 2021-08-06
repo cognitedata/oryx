@@ -107,11 +107,8 @@ type HttpContext =
 [<RequireQualifiedAccess>]
 module HttpContext =
     let private fileVersion =
-        FileVersionInfo
-            .GetVersionInfo(
-                Assembly.GetExecutingAssembly().Location
-            )
-            .FileVersion
+        Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            .InformationalVersion
 
     let defaultLogFormat =
         "Oryx: {Message} {HttpMethod} {Url}\n→ {RequestContent}\n← {ResponseContent}"
