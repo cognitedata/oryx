@@ -10,7 +10,8 @@ open FsToolkit.ErrorHandling
 open Oryx
 
 /// Represents the next delegate. Note that errors are also pushed down so that error-handling and logging middleware
-/// handlers can be placed down-stream.
+/// handlers can be placed down-stream. You may also think of it as an observer where the handler may invoke the
+/// observer using the OnNextAsync or OnErrorAsync methods.
 type IAsyncNext<'TContext, 'TSource> =
     abstract member OnNextAsync : ctx: 'TContext * content: 'TSource -> ValueTask
     abstract member OnErrorAsync : ctx: 'TContext * error: exn -> ValueTask
@@ -291,54 +292,44 @@ module Core =
     let await<'TContext, 'TSource> () = map<'TContext, 'TSource, 'TSource> id
 
 /// Returns the current environment.
-//    let ask =
-//        { new IAsyncHandler<'TContext, 'TSource, 'TContext> with
-//            member _.Subscribe(next) =
-//                { new IAsyncNext<'TContext, 'TSource> with
-//                    member _.OnNextAsync(ctx, _) = next.OnNextAsync(ctx, ctx)
-//                    member __.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
-//                    member __.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
-//
+    let ask (source: IAsyncHandler<'TContext, 'TSource>) =
+        { new IAsyncHandler<'TContext, 'TContext> with
+            member _.Use(next) =
+                { new IAsyncNext<'TContext, 'TSource> with
+                    member _.OnNextAsync(ctx, _) = next.OnNextAsync(ctx, ctx)
+                    member __.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error) } |> source.Use }
+
 //    /// Update (asks) the context.
-//    let update (update: 'TContext -> 'TContext) =
-//        { new IAsyncHandler<'TContext, 'TSource, 'TSource> with
-//            override _.Subscribe(next) =
-//                { new IAsyncNext<'TContext, 'TSource> with
-//                    member _.OnNextAsync(ctx, content) = next.OnNextAsync(update ctx, content)
-//                    member __.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)
-//                    member __.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
-//
+    let update (update: 'TContext -> 'TContext) (source: IAsyncHandler<'TContext, 'TSource>) =
+        { new IAsyncHandler<'TContext, 'TSource> with
+            override _.Use(next) =
+                { new IAsyncNext<'TContext, 'TSource> with
+                    member _.OnNextAsync(ctx, content) = next.OnNextAsync(update ctx, content)
+                    member __.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error) } |> source.Use}
 //[<AutoOpen>]
-//module Extensions =
-//    type IAsyncHandler<'TResource, 'TSource, 'TResult> with
-//        /// Subscribe using plain task returning functions.
-//        member _.Subscribe
-//            (
-//                ?onNextAsync: 'TSource -> Task<unit>,
-//                ?onErrorAsync: exn -> Task<unit>,
-//                ?onCompletedAsync: unit -> Task<unit>
-//            ) =
-//            { new IAsyncNext<'TContext, 'TSource> with
-//                member _.OnNextAsync(ctx, content) =
-//                    match onNextAsync with
-//                    | Some fn -> fn content
-//                    | None -> Task.FromResult()
-//
-//                member _.OnErrorAsync(ctx, exn) =
-//                    match onErrorAsync with
-//                    | Some fn -> fn exn
-//                    | None -> Task.FromResult()
-//
-//                member _.OnCompletedAsync(ctx) =
-//                    match onCompletedAsync with
-//                    | Some fn -> fn ()
-//                    | None -> Task.FromResult() }
-//
-//        /// Subscribe using a task returning function taking a result. Invokations of `OnNextAsync` will result in `Ok`
-//        /// while `OnErrorAsync` and `OnCompletedAsync` will produce `Error`. `OnCompletedAsync` will produce
-//        /// `OperationCanceledException`.
-//        member _.Subscribe(next: Result<'TSource, exn> -> Task<unit>) =
-//            { new IAsyncNext<'TContext, 'TSource> with
-//                member _.OnNextAsync(ctx, content) = next (Ok content)
-//                member _.OnErrorAsync(ctx, exn) = next (Error exn)
-//                member _.OnCompletedAsync(ctx) = next (OperationCanceledException() :> exn |> Error) }
+module Extensions =
+    type IAsyncHandler<'TResource, 'TSource> with
+        /// Subscribe using plain task returning functions.
+        member _.Use
+            (
+                ?onNextAsync: 'TSource -> ValueTask,
+                ?onErrorAsync: exn -> ValueTask
+            ) =
+            { new IAsyncNext<'TContext, 'TSource> with
+                member _.OnNextAsync(ctx, content) = unitVtask {
+                    match onNextAsync with
+                    | Some fn -> return! fn content
+                    | None -> return ()
+                }
+                member _.OnErrorAsync(ctx, exn) = unitVtask {
+                    match onErrorAsync with
+                    | Some fn -> return! fn exn
+                    | None -> return ()  }}
+
+        /// Subscribe using a task returning function taking a result. Invokations of `OnNextAsync` will result in `Ok`
+        /// while `OnErrorAsync` and `OnCompletedAsync` will produce `Error`. `OnCompletedAsync` will produce
+        /// `OperationCanceledException`.
+        member _.Use(next: Result<'TSource, exn> -> ValueTask) =
+            { new IAsyncNext<'TContext, 'TSource> with
+                member _.OnNextAsync(ctx, content) = next (Ok content)
+                member _.OnErrorAsync(ctx, exn) = next (Error exn)  }

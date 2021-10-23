@@ -57,18 +57,18 @@ let query term = [
 
 let request term =
     GET
-    >=> withUrl Url
-    >=> withQuery (query term)
-    >=> fetch
-    >=> json options
+    >> withUrl Url
+    >> withQuery (query term)
+    >> fetch
+    >> json options
 
 let asyncMain argv = task {
     use client = new HttpClient ()
     let ctx =
-        HttpContext.defaultContext
-        |> HttpContext.withHttpClient client
+        empty
+        |> withHttpClient client
 
-    let! result = request "F#" |> runAsync ctx
+    let! result = ctx |> request "F#" |> runAsync
     printfn "Result: %A" result
 }
 
@@ -91,76 +91,44 @@ type Context = {
 }
 ```
 
-The `HttpContext` is constructed using a series of context builder functions (`HttpContext -> HttpContext`). Request specific
-changes to the context are done using a series of asynchronous HTTP handlers.
+The `HttpContext` is constructed using a series of asynchronous HTTP handlers.
 
 ```fs
 type IHttpNext<'TSource> =
-    abstract member OnNextAsync: ctx: HttpContext * content: 'TSource -> Task<unit>
-    abstract member OnErrorAsync: ctx: HttpContext * error: exn -> Task<unit>
+    abstract member OnNextAsync: ctx: HttpContext * content: 'TSource -> ValueTask
+    abstract member OnErrorAsync: ctx: HttpContext * error: exn -> ValueTask
 
 type IHttpHandler<'TSource, 'TResult> =
-    abstract member Use: next: IHttpNext<'TResult> -> IHttpNext<'TSource>
+    abstract member Use : next: IAsyncNext<'TSource> -> ValueTask
 ```
 
 The relationship can be seen as:
 ```fs
-source = handler.Subscribe(result)
+do! handler1.Use(handler2)
 ```
 
-An HTTP handler (`IHttpHandler`) is a middleware that subscribes `.Use()` the given HTTP next handler
-(`IHttpNext<'TResult>`), and also returns the source HTTP next (`IHttpNext<'TSource>`). The returned
-`IHttpNext<'TSource>` is used to write the `Context` and content (`'TSource`) into the handler.
-The given result (`IHttpNext<'Result>`) is where the `HttpHandler` will write its output. You can think of the
-`IHttpNext` as the input and output next functions (or observers / continuations) of the `HttpHandler`.
+An HTTP handler (`IHttpHandler`) is a middleware that uses or subscribes `.Use()` the given HTTP next handler
+(`IHttpNext<'TResult>`), and return a `ValueTask` of nothing.
 
 Each `IHttpHandler` usually transforms the `HttpRequest`, `HttpResponse` or the `content` before passing it down the
 pipeline by invoking the next `IHttpNext`'s `.OnNextAsync()` member. It may also signal an error by calling the
-`.OnErrorAsync()` member to fail the processing of the pipeline, or cancel the request by calling `.OnCompletedAsync()`.
+`.OnErrorAsync()` member to fail the processing of the pipeline.
 
 The easiest way to get your head around the Oryx `IHttpHandler` is to think of it as a functional web request processing
 pipeline. Each handler has the `HttpContext` and `content` at its disposal and can decide whether it wants to fail the
-request or continue the request by calling the "next" handler.
-
-## Context Builders
-
-The context you want to use for your requests may be constructed using a builder-like pattern (`HttpContext ->
-HttpContext`) where you set the common things you need for all of your requests. You create the context using
-synchronous functions where you can set e.g. the headers you want to use, the HTTP client, URL builder, logging, and
-metrics.
-
-- `defaultContext` - A default empty context.
-
-The following builder functions may be used:
-
-- `withHeader` - Adds a header to the context.
-- `withHeaders` - Adds headers to the context.
-- `withBearerToken` - Adds an `Authorization` header with `Bearer` token.
-- `withHttpClient` - Adds the `HttpClient` to use for making requests using the `fetch` handler.
-- `withHttpClientFactory` - Adds an `HttpClient` factory function to use for producing the `HttpClient`.
-- `withUrlBuilder` - Adds the URL builder to use. An URL builder constructs the URL for the `Request` part of the
-  context.
-- `withCancellationToken` - Adds a cancellation token to use for the context. This is particularly useful when using
-  Oryx together with C# client code that supplies a cancellation token.
-- `withLogger` - Adds an
-  [`ILogger`](https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.ilogger?view=dotnet-plat-ext-3.1)
-  for logging requests and responses.
-- `withLogLevel` - The log level
-  ([`LogLevel`](https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-3.1))
-  that the logging should be performed at. Oryx will disable logging for `LogLevel.None` and this is also the default
-  log level.
-- `withLogFormat` - Specify the log format of the log messages written.
-- `withMetrics` - Add and `IMetrics` interface to produce metrics info.
+request by calling "error", or continue the request by calling the "next" handler.
 
 ## HTTP Handlers
 
 The context and content may then be transformed for individual requests using a series of HTTP handlers. HTTP handlers
 are like lego bricks and may be composed into more complex HTTP handlers. The HTTP handlers included with Oryx are:
 
+- `cache` - Caches the result of a given handler, both the context and the content.
 - `catch` - Catches errors and continues using another handler.
 - `choose` - Choose the first handler that succeeds in a list of handlers.
 - `chunk` - Chunks a sequence of HTTP handlers into sequential and concurrent batches.
 - `concurrent` - Runs a sequence of HTTP handlers concurrently.
+- `empty` - Creates a default empty request. You would usually start the chain with this handler.
 - `fail`- Fails the pipeline and pushes an exception downstream.
 - `fetch` - Fetches from remote using the current context
 - `skip` - Handler that skips (ignores) the content and outputs unit.
@@ -174,15 +142,34 @@ are like lego bricks and may be composed into more complex HTTP handlers. The HT
 - `sequential` - Runs a sequence of HTTP handlers sequentially.
 - `singleton` - Handler that produces a single content value.
 - `validate` - Validate content using a predicate function.
+- `withBearerToken` - Adds an `Authorization` header with `Bearer` token.
+- `withCancellationToken` - Adds a cancellation token to use for the context. This is particularly useful when using
+  Oryx together with C# client code that supplies a cancellation token.
 - `withContent` - Add HTTP content to the fetch request
+- `withMetrics` - Add and `IMetrics` interface to produce metrics info.
+- `withError` - Detect if the HTTP request failed, and then fail processing.
+- `withHeader` - Adds a header to the context.
+- `withHeaders` - Adds headers to the context.
+- `withHttpClient` - Adds the `HttpClient` to use for making requests using the `fetch` handler.
+- `withHttpClientFactory` - Adds an `HttpClient` factory function to use for producing the `HttpClient`.
+- `withLogger` - Adds an
+  [`ILogger`](https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.ilogger?view=dotnet-plat-ext-3.1)
+  for logging requests and responses.
+- `withLogLevel` - The log level
+  ([`LogLevel`](https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-3.1))
+  that the logging should be performed at. Oryx will disable logging for `LogLevel.None` and this is also the default
+  log level.
+- `withLogFormat` - Specify the log format of the log messages written.
 - `withLogMessage` - Log information about the given request supplying a user-specified message.
 - `withMethod` - with HTTP method. You can use GET, PUT, POST instead.
 - `withQuery` - Add URL query parameters
 - `withResponseType` - Sets the Accept header of the request.
+- `withTokenRenewer` - Enables refresh of bearer tokens without building a new context.
 - `withUrl` - Use the given URL for the request.
 - `withUrlBuilder` - Use the given URL builder for the request.
-- `withError` - Detect if the HTTP request failed, and then fail processing.
-- `withTokenRenewer` - Enables refresh of bearer tokens without building a new context.
+- `withUrlBuilder` - Adds the URL builder to use. An URL builder constructs the URL for the `Request` part of the
+  context.
+
 
 In addition there are several extension for decoding JSON and Protobuf responses:
 
@@ -205,7 +192,7 @@ The HTTP verbs are convenience functions using the `withMethod` under the hood:
 
 The real magic of Oryx is composition. The fact that everything is an `IHttpHandler` makes it easy to compose HTTP
 handlers together. You can think of them as Lego bricks that you can fit together. Two or more `IHttpHandler` functions
-may be composed together using Kleisli composition, i.e using the fish operator `>=>`. This enables you to compose your
+may be composed together using functional composition, i.e using the `>>` operator. This enables you to compose your
 web requests and decode the response, e.g as we do when listing Assets in the [Cognite Data Fusion
 SDK](https://github.com/cognitedata/cognite-sdk-dotnet/blob/master/Oryx.Cognite/src/Handler.fs):
 
@@ -214,12 +201,12 @@ SDK](https://github.com/cognitedata/cognite-sdk-dotnet/blob/master/Oryx.Cognite/
         let url = Url +/ "list"
 
         POST
-        >=> withVersion V10
-        >=> withResource url
-        >=> withContent (() -> new JsonPushStreamContent<AssetQuery>(query, jsonOptions))
-        >=> fetch
-        >=> withError decodeError
-        >=> json jsonOptions
+        >> withVersion V10
+        >> withResource url
+        >> withContent (() -> new JsonPushStreamContent<AssetQuery>(query, jsonOptions))
+        >> fetch
+        >> withError decodeError
+        >> json jsonOptions
 ```
 
 The function `listAssets` is now also an `IHttpHandler` and may be composed with other handlers to create complex chains
