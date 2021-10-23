@@ -6,29 +6,29 @@ namespace Oryx
 open Oryx.Middleware
 
 type RequestBuilder () =
-    member _.Zero() : IHttpHandler<'TSource> =
-        { new IHttpHandler<'TSource> with
-            member _.Subscribe(next) = next }
+    member _.Zero() : IHttpHandler<unit> = empty
 
-    member _.Yield(content: 'TResult) : IHttpHandler<'TSource, 'TResult> = Core.singleton content
-    member _.Return(content: 'TResult) : IHttpHandler<'TSource, 'TResult> = Core.singleton content
-    member _.ReturnFrom(req: IHttpHandler<'TSource, 'TResult>) : IHttpHandler<'TSource, 'TResult> = req
+    member _.Yield(content: 'TResult) : IHttpHandler<'TResult> = singleton HttpContext.defaultContext content
+    member _.Return(content: 'TResult) : IHttpHandler<'TResult> = singleton HttpContext.defaultContext content
+    member _.ReturnFrom(req: IHttpHandler<'TResult>) : IHttpHandler<'TResult> = req
     member _.Delay(fn) = fn ()
-    member _.Combine(source, other) = source >=> other
+    member _.Combine(source, other) = [ source; other ] |> sequential
 
     member _.For
         (
-            source: 'TValue seq,
-            func: 'TValue -> IHttpHandler<'TSource, 'TResult>
-        ) : IHttpHandler<'TSource, 'TResult list> =
-        source |> Seq.map func |> sequential
+            source: 'TSource seq,
+            func: 'TSource -> IHttpHandler<'TResult>
+        ) : IHttpHandler<'TResult list> =
+        source
+        |> Seq.map func
+        |> sequential
 
     /// Binds value of 'TValue for let! All handlers runs in same context within the builder.
     member _.Bind
         (
-            source: IHttpHandler<'TSource, 'TValue>,
-            fn: 'TValue -> IHttpHandler<'TSource, 'TResult>
-        ) : IHttpHandler<'TSource, 'TResult> =
+            source: IHttpHandler<'TSource>,
+            fn: 'TSource -> IHttpHandler<'TResult>
+        ) : IHttpHandler<'TResult> =
         source |> Core.bind fn
 
 [<AutoOpen>]

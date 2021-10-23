@@ -19,7 +19,7 @@ module Fetch =
         static member FromTuples values =
             let pairs =
                 values
-                |> Seq.map (fun (k, v) -> new KeyValuePair<string, string>(k, v))
+                |> Seq.map (fun (k, v) -> KeyValuePair<string, string>(k, v))
 
             let content = new FormUrlEncodedContent(pairs)
             content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded"
@@ -36,7 +36,7 @@ module Fetch =
             else
                 let queryString = HttpUtility.ParseQueryString(String.Empty)
 
-                for (key, value) in query do
+                for key, value in query do
                     queryString.Add(key, value)
 
                 sprintf "%s?%s" result (queryString.ToString())
@@ -45,8 +45,8 @@ module Fetch =
 
         let acceptHeader =
             match ctx.Request.ResponseType with
-            | JsonValue -> "Accept", "application/json"
-            | Protobuf -> "Accept", "application/protobuf"
+            | ResponseType.JsonValue -> "Accept", "application/json"
+            | ResponseType.Protobuf -> "Accept", "application/protobuf"
 
         for KeyValue (header, value) in ctx.Request.Headers.Add(acceptHeader) do
             if not (client.DefaultRequestHeaders.Contains header) then
@@ -64,12 +64,12 @@ module Fetch =
 
     /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{RequestContent}` and `{Elapsed}`
     /// to the log format.
-    let fetch<'TSource> : IHttpHandler<'TSource, HttpContent> =
-        { new IHttpHandler<'TSource, HttpContent> with
-            member _.Subscribe(next) =
+    let fetch<'TSource> (source: IHttpHandler<'TSource>) : IHttpHandler<HttpContent> =
+        { new IHttpHandler<HttpContent> with
+            member _.Use(next) =
                 { new IHttpNext<'TSource> with
                     member _.OnNextAsync(ctx, _) =
-                        task {
+                        unitVtask {
                             let timer = Stopwatch()
                             let client = ctx.Request.HttpClient()
                             let cancellationToken = ctx.Request.CancellationToken
@@ -91,8 +91,8 @@ module Fetch =
                                     ctx
                                         .Request
                                         .Items
-                                        .Add(PlaceHolder.Url, Url request.RequestUri)
-                                        .Add(PlaceHolder.Elapsed, Number timer.ElapsedMilliseconds)
+                                        .Add(PlaceHolder.Url, Value.Url request.RequestUri)
+                                        .Add(PlaceHolder.Elapsed, Value.Number timer.ElapsedMilliseconds)
 
                                 let headers =
                                     response.Headers
@@ -115,5 +115,4 @@ module Fetch =
                             with ex -> return! next.OnErrorAsync(ctx, ex)
                         }
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)  }|> source.Use }

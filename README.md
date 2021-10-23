@@ -98,10 +98,9 @@ changes to the context are done using a series of asynchronous HTTP handlers.
 type IHttpNext<'TSource> =
     abstract member OnNextAsync: ctx: HttpContext * content: 'TSource -> Task<unit>
     abstract member OnErrorAsync: ctx: HttpContext * error: exn -> Task<unit>
-    abstract member OnCompletedAsync : ctx: HttpContext -> Task<unit>
 
 type IHttpHandler<'TSource, 'TResult> =
-    abstract member Subscribe: next: IHttpNext<'TResult> -> IHttpNext<'TSource>
+    abstract member Use: next: IHttpNext<'TResult> -> IHttpNext<'TSource>
 ```
 
 The relationship can be seen as:
@@ -109,7 +108,7 @@ The relationship can be seen as:
 source = handler.Subscribe(result)
 ```
 
-An HTTP handler (`IHttpHandler`) is a middleware that subscribes `.Subscribe()` the given HTTP next handler
+An HTTP handler (`IHttpHandler`) is a middleware that subscribes `.Use()` the given HTTP next handler
 (`IHttpNext<'TResult>`), and also returns the source HTTP next (`IHttpNext<'TSource>`). The returned
 `IHttpNext<'TSource>` is used to write the `Context` and content (`'TSource`) into the handler.
 The given result (`IHttpNext<'Result>`) is where the `HttpHandler` will write its output. You can think of the

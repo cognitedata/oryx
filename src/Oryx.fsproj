@@ -14,7 +14,6 @@
     <Compile Include="Middleware/Exception.fs" />
     <Compile Include="Middleware/Core.fs" />
     <Compile Include="Middleware/Error.fs" />
-    <Compile Include="Middleware/Builder.fs" />
 
     <Compile Include="HttpHandler/Metrics.fs" />
     <Compile Include="HttpHandler/HttpContext.fs" />
@@ -24,7 +23,8 @@
     <Compile Include="HttpHandler/Builder.fs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\LICENSE" Pack="true" Visible="false" PackagePath=""/>
+    <None Include="..\LICENSE" Pack="true" Visible="false" PackagePath="\" />
+    <None Include="..\README.md" Pack="true" PackagePath="\"/>
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>

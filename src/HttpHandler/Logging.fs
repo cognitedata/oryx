@@ -14,9 +14,9 @@ module Logging =
 
     /// Set the logger (ILogger) to use. Usually you would use `HttpContext.withLogger` instead to set the logger for
     /// all requests.
-    let withLogger (logger: ILogger) : IHttpHandler<'TSource> =
+    let withLogger (logger: ILogger) (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
-            member _.Subscribe(next) =
+            member _.Use(next) =
                 { new IHttpNext<'TSource> with
                     member _.OnNextAsync(ctx, content) =
                         next.OnNextAsync(
@@ -27,13 +27,12 @@ module Logging =
                             content = content
                         )
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } |> source.Use }
 
     /// Set the log level to use (default is LogLevel.None).
-    let withLogLevel (logLevel: LogLevel) : IHttpHandler<'TSource> =
+    let withLogLevel (logLevel: LogLevel) (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
-            member _.Subscribe(next) =
+            member _.Use(next) =
                 { new IHttpNext<'TSource> with
                     member _.OnNextAsync(ctx, content) =
                         next.OnNextAsync(
@@ -42,13 +41,12 @@ module Logging =
                             content = content
                         )
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } |> source.Use }
 
     /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
-    let withLogMessage<'TSource> (msg: string) : IHttpHandler<'TSource> =
+    let withLogMessage<'TSource> (msg: string) (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
-            member _.Subscribe(next) =
+            member _.Use(next) =
                 { new IHttpNext<'TSource> with
                     member _.OnNextAsync(ctx, content) =
                         next.OnNextAsync(
@@ -59,8 +57,7 @@ module Logging =
                             content = content
                         )
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } |> source.Use }
 
     // Pre-compiled
     let private reqex =
@@ -68,9 +65,9 @@ module Logging =
 
     /// Logger handler with message. Should be composed in pipeline after both the `fetch` handler, and the `withError`
     /// in order to log both requests, responses and errors.
-    let log : IHttpHandler<'TSource> =
+    let log (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> =
         { new IHttpHandler<'TSource> with
-            member _.Subscribe(next) =
+            member _.Use(next) =
                 let log logLevel ctx content =
                     match ctx.Request.Logger with
                     | Some logger ->
@@ -81,7 +78,7 @@ module Logging =
                         // Create an array with values in the same order as in the format string. Important to be lazy and not
                         // stringify any values here. Only pass references to the objects themselves so the logger can stringify
                         // when / if the values are acutally being used / logged.
-                        let getValues response =
+                        let getValues _ =
                             matches
                             |> Seq.cast
                             |> Seq.map
@@ -108,7 +105,7 @@ module Logging =
 
                 { new IHttpNext<'TSource> with
                     member _.OnNextAsync(ctx, content) =
-                        task {
+                        unitVtask {
                             match ctx.Request.LogLevel with
                             | LogLevel.None -> ()
                             | logLevel -> log logLevel ctx content
@@ -117,7 +114,7 @@ module Logging =
                         }
 
                     member _.OnErrorAsync(ctx, exn) =
-                        task {
+                        unitVtask {
                             match ctx.Request.LogLevel with
                             | LogLevel.None -> ()
                             | _ -> log LogLevel.Error ctx (Some exn)
@@ -125,4 +122,4 @@ module Logging =
                             return! next.OnErrorAsync(ctx, exn)
                         }
 
-                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+                    } |> source.Use }
