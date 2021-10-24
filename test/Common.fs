@@ -29,7 +29,7 @@ type PushStreamContent (content: string) =
 
     override this.ToString() = content
 
-    override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
+    override this.SerializeToStreamAsync(stream: Stream, _: TransportContext) : Task =
         task {
             let bytes = Encoding.ASCII.GetBytes(_content)
             do! stream.AsyncWrite(bytes)
@@ -64,58 +64,59 @@ let add (a: int) (b: int) = singleton (a + b)
 exception TestException of code: int * message: string with
     override this.ToString() = this.message
 
-let error msg : IHttpHandler<'TSource, 'TResult> = fail <| TestException(code = 400, message = msg)
-let panic msg : IHttpHandler<'TSource, 'TResult> = panic <| TestException(code = 400, message = msg)
+let error msg (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> = fail (TestException(code = 400, message = msg)) source
+let panic msg (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> = panic (TestException(code = 400, message = msg)) source
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
-let badRequestHandler<'TSource> (response: 'TSource) (error: exn) : IHttpHandler<unit, 'TSource> =
-    { new IHttpHandler<unit, 'TSource> with
-        member _.Subscribe(next) =
+let badRequestHandler<'TSource> (response: 'TSource) (error: exn) (source: IHttpHandler<unit>) : IHttpHandler<'TSource> =
+    { new IHttpHandler<'TSource> with
+        member _.Use(next) =
             { new IHttpNext<unit> with
                 member _.OnNextAsync(ctx, _) =
-                    task {
+                    unitVtask {
                         match error with
                         | :? TestException as ex ->
-                            match enum<HttpStatusCode> (ex.code) with
+                            match enum<HttpStatusCode> ex.code with
                             | HttpStatusCode.BadRequest -> return! next.OnNextAsync(ctx, response)
 
                             | _ -> return! next.OnErrorAsync(ctx, error)
                         | _ -> return! next.OnErrorAsync(ctx, error)
                     }
 
-                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } |> source.Use }
 
 let shouldRetry (error: exn) : bool =
     match error with
     | :? TestException -> true
     | _ -> false
 
-let errorHandler (response: HttpResponse) (content: HttpContent) =
+let errorHandler (response: HttpResponse) (_: HttpContent) =
     task { return TestException(code = int response.StatusCode, message = "Got error") }
 
 let options = JsonSerializerOptions()
 
 let get () =
-    GET
-    >=> protect
-    >=> withUrl "http://test.org"
-    >=> withQuery [ struct ("debug", "true") ]
-    >=> fetch
-    >=> withError errorHandler
-    >=> json options
-    >=> log
+    empty
+    |> GET
+    |> protect
+    |> withUrl "http://test.org"
+    |> withQuery [ struct ("debug", "true") ]
+    |> fetch
+    |> withError errorHandler
+    |> json options
+    |> log
 
 let post content =
-    POST
-    >=> protect
-    >=> withResponseType JsonValue
-    >=> withContent content
-    >=> withCompletion HttpCompletionOption.ResponseHeadersRead
-    >=> fetch
-    >=> withError errorHandler
-    >=> json options
-    >=> log
+    empty
+    |> POST
+    |> protect
+    |> withResponseType ResponseType.JsonValue
+    |> withContent content
+    |> withCompletion HttpCompletionOption.ResponseHeadersRead
+    |> fetch
+    |> withError errorHandler
+    |> json options
+    |> log
 
 //let retryCount = 5
 //let retry next ctx = retry shouldRetry 500<ms> retryCount next ctx
@@ -154,7 +155,7 @@ type TestMetrics () =
     member val DecodeErrors = 0L with get, set
 
     interface IMetrics with
-        member this.Counter (metric: string) (labels: IDictionary<string, string>) (increase: int64) =
+        member this.Counter (metric: string) (_: IDictionary<string, string>) (increase: int64) =
             match metric with
             | Metric.FetchInc -> this.Fetches <- this.Fetches + increase
             | Metric.FetchErrorInc -> this.Errors <- this.Errors + increase
@@ -162,7 +163,7 @@ type TestMetrics () =
             | Metric.DecodeErrorInc -> this.DecodeErrors <- this.DecodeErrors + increase
             | _ -> ()
 
-        member this.Gauge (metric: string) (labels: IDictionary<string, string>) (update: float) =
+        member this.Gauge (metric: string) (_: IDictionary<string, string>) (update: float) =
             match metric with
             | Metric.FetchLatencyUpdate -> this.Latency <- int64 update
             | _ -> ()

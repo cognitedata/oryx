@@ -20,8 +20,8 @@ let ``Simple unit handler is Ok`` () =
 
         // Act
         let! content =
-            singleton 42 >=> singleton 43
-            |> runUnsafeAsync ctx
+            singleton 43
+            |> runUnsafeAsync
 
         // Assert
         test <@ content = 43 @>
@@ -31,10 +31,10 @@ let ``Simple unit handler is Ok`` () =
 let ``Simple error handler is Error`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
+        let ctx = empty
 
         // Act
-        let! result = error "failed" |> runAsync ctx
+        let! result = empty |> error "failed" |> runAsync
 
         // Assert
         test <@ Result.isError result @>
@@ -48,11 +48,11 @@ let ``Simple error handler is Error`` () =
 let ``Simple error then ok is Error`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-        let req = error "failed" >=> singleton 42
+        let ctx = empty
+        let req = error "failed" >> singleton 42
 
         // Act
-        let! result = req |> runAsync ctx
+        let! result = req |> runAsync
 
         // Assert
         test <@ Result.isError result @>
@@ -66,11 +66,10 @@ let ``Simple error then ok is Error`` () =
 let ``Simple ok then error is Error`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-        let req = singleton 42 >=> error "failed"
+        let req = singleton 42 |> error "failed"
 
         // Act
-        let! result = req |> runAsync ctx
+        let! result = req |> runAsync
 
         // Assert
         match result with
@@ -87,8 +86,8 @@ let ``Catching ok is Ok`` () =
 
         let req =
             singleton 42
-            >=> map (fun a -> a * 10)
-            >=> catch errorHandler
+            |> map (fun a -> a * 10)
+            |> catch errorHandler
 
         // Act
         let! content = req |> runUnsafeAsync ctx

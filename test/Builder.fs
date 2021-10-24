@@ -15,7 +15,7 @@ let ``Zero builder is Ok`` () =
         let ctx = HttpContext.defaultContext
 
         // Act
-        let! result = req { () } |> runAsync ctx
+        let! result = req { () } |> runAsync
 
         // Assert
         test <@ Result.isOk result @>
@@ -35,7 +35,7 @@ let ``Simple unit handler in builder is Ok`` () =
                     return value
                 }
 
-            a |> runUnsafeAsync ctx
+            a |> runUnsafeAsync
 
         // Assert
         test <@ result = 42 @>
@@ -47,10 +47,10 @@ let ``Simple return from unit handler in builder is Ok`` () =
         // Arrange
         let ctx = HttpContext.defaultContext
 
-        let a = singleton 42 >=> skip |> runAsync ctx
+        let a = singleton 42 |> skip |> runAsync
 
         // Act
-        let! result = req { return! singleton 42 } |> runUnsafeAsync ctx
+        let! result = req { return! singleton 42 } |> runUnsafeAsync
 
         // Assert
         test <@ result = 42 @>
@@ -70,10 +70,10 @@ let ``Multiple handlers in builder is Ok`` () =
 
                 return!
                     add a b
-                    >=> validate (fun value -> value = 10 + 20)
+                    |> validate (fun value -> value = 10 + 20)
             }
 
-        let! result = request |> runUnsafeAsync ctx
+        let! result = request |> runUnsafeAsync
 
         // Assert
         test <@ result = 30 @>
@@ -90,12 +90,12 @@ let ``Get value is Ok`` () =
             req {
                 let! a =
                     HttpHandler.get ()
-                    >=> validate (fun value -> value = 42)
+                    >> (validate (fun value -> value = 42))
 
                 return a
             }
 
-        let! result = singleton 42 >=> request |> runUnsafeAsync ctx
+        let! result = singleton 42 |> request |> runUnsafeAsync
 
         // Assert
         test <@ result = 42 @>
@@ -141,7 +141,7 @@ let ``Iterate handlers is Ok`` () =
                 return List.sum h
             }
 
-        let! result = request |> runUnsafeAsync ctx
+        let! result = request |> runUnsafeAsync
 
         // Assert
         test <@ result = 420 @>

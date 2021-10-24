@@ -23,7 +23,7 @@ module HttpHandler =
     let runUnsafeAsync<'TResult> (handler: IHttpHandler<'TResult>) =
         Core.runUnsafeAsync<HttpContext, 'TResult> handler
 
-    let singleton<'TSource> = Core.singleton<HttpContext, 'TSource>
+    let singleton<'TSource> = Core.singleton<HttpContext, 'TSource> HttpContext.defaultContext
 
     /// Map the content of the HTTP handler.
     let map<'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>

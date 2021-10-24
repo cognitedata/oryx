@@ -38,10 +38,10 @@ let ``Get with return expression is Ok`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
         let ctx =
-            HttpContext.defaultContext
-            |> HttpContext.withHttpClient client
-            |> HttpContext.withUrlBuilder (fun _ -> "http://test.org/")
-            |> HttpContext.withHeader ("api-key", "test-key")
+            empty
+            |> withHttpClient client
+            |> withUrlBuilder (fun _ -> "http://test.org/")
+            |> withHeader ("api-key", "test-key")
 
         // Act
         let request =
@@ -50,7 +50,7 @@ let ``Get with return expression is Ok`` () =
                 return result + 1
             }
 
-        let! result = request |> runAsync ctx
+        let! result = request |> runAsync
         let retries' = retries
 
         match result with
@@ -83,10 +83,10 @@ let ``Post url encoded with return expression is Ok`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
         let ctx =
-            HttpContext.defaultContext
-            |> HttpContext.withHttpClient client
-            |> HttpContext.withUrlBuilder (fun _ -> "http://test.org/")
-            |> HttpContext.withHeader ("api-key", "test-key")
+            empty
+            |> withHttpClient client
+            |> withUrlBuilder (fun _ -> "http://test.org/")
+            |> withHeader ("api-key", "test-key")
 
         let query = Seq.singleton ("foo", "bar")
         let content = FormUrlEncodedContent.FromTuples query
@@ -98,7 +98,7 @@ let ``Post url encoded with return expression is Ok`` () =
                 return result
             }
 
-        let! result = request |> runAsync ctx
+        let! result = request |> runAsync
         let urldecoded' = urlencoded
 
         // Assert
@@ -125,13 +125,14 @@ let ``Get with logging is OK`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
         let ctx =
-            HttpContext.defaultContext
-            |> HttpContext.withHttpClient client
-            |> HttpContext.withUrlBuilder (fun _ -> "http://test.org/")
-            |> HttpContext.withHeader ("api-key", "test-key")
-            |> HttpContext.withMetrics metrics
-            |> HttpContext.withLogger logger
-            |> HttpContext.withLogLevel LogLevel.Debug
+            empty
+            |> withHttpClient client
+            |> withUrlBuilder (fun _ -> "http://test.org/")
+            |> withHeader ("api-key", "test-key")
+            |> withMetrics metrics
+            |> withLogger logger
+            |> withLogLevel LogLevel.Debug
+            |> cache
 
         // Act
         let request =
@@ -140,7 +141,7 @@ let ``Get with logging is OK`` () =
                 return result + 2
             }
 
-        let! result = request |> runAsync ctx
+        let! result = request |> runAsync
 
         // Assert
         test <@ logger.Output.Contains "42" @>
@@ -174,17 +175,18 @@ let ``Post with logging is OK`` () =
         let content () = new StringableContent(json) :> HttpContent
 
         let ctx =
-            HttpContext.defaultContext
-            |> HttpContext.withHttpClientFactory (fun () -> client)
-            |> HttpContext.withUrlBuilder (fun _ -> "http://testing.org/")
-            |> HttpContext.withHeader ("api-key", "test-key")
-            |> HttpContext.withLogger (logger)
-            |> HttpContext.withLogLevel LogLevel.Debug
+            empty
+            |> withHttpClientFactory (fun () -> client)
+            |> withUrlBuilder (fun _ -> "http://testing.org/")
+            |> withHeader ("api-key", "test-key")
+            |> withLogger (logger)
+            |> withLogLevel LogLevel.Debug
+            |> cache
 
         // Act
         let! result =
             withLogMessage msg >=> post content
-            |> runAsync ctx
+            |> runAsync
 
         let retries' = retries
 
@@ -217,12 +219,12 @@ let ``Multiple post with logging is OK`` () =
 
 
         let ctx =
-            HttpContext.defaultContext
-            |> HttpContext.withHttpClientFactory (fun () -> client)
-            |> HttpContext.withUrlBuilder (fun _ -> "http://testing.org/")
-            |> HttpContext.withHeader ("api-key", "test-key")
-            |> HttpContext.withLogger (logger)
-            |> HttpContext.withLogLevel LogLevel.Debug
+            empty
+            |> withHttpClientFactory (fun () -> client)
+            |> withUrlBuilder (fun _ -> "http://testing.org/")
+            |> withHeader ("api-key", "test-key")
+            |> withLogger (logger)
+            |> withLogLevel LogLevel.Debug
 
         // Act
         let! result =
@@ -231,7 +233,7 @@ let ``Multiple post with logging is OK`` () =
                 let! b = withLogMessage "second" >=> post (content 42)
                 return a + b
             }
-            |> runAsync ctx
+            |> runAsync
 
         // Assert
         test <@ Result.isOk result @>
@@ -263,21 +265,22 @@ let ``Post with disabled logging does not log`` () =
         let content () = new StringableContent(json) :> HttpContent
 
         let ctx =
-            HttpContext.defaultContext
-            |> HttpContext.withHttpClient client
-            |> HttpContext.withUrlBuilder (fun _ -> "http://test.org/")
-            |> HttpContext.withHeader ("api-key", "test-key")
-            |> HttpContext.withLogger logger
-            |> HttpContext.withLogLevel LogLevel.None
+            empty
+            |> withHttpClient client
+            |> withUrlBuilder (fun _ -> "http://test.org/")
+            |> withHeader ("api-key", "test-key")
+            |> withLogger logger
+            |> withLogLevel LogLevel.None
+            |> cache
 
         // Act
         let request =
             req {
-                let! result = withLogMessage msg >=> post content
+                let! result = withLogMessage msg >> post content
                 return result
             }
 
-        let! result = request |> runAsync ctx
+        let! result = request |> runAsync
         let retries' = retries
 
         // Assert
@@ -306,12 +309,13 @@ let ``Fetch with internal error will log error`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
         let ctx =
-            HttpContext.defaultContext
-            |> HttpContext.withHttpClient client
-            |> HttpContext.withUrlBuilder (fun _ -> "http://test.org/")
-            |> HttpContext.withHeader ("api-key", "test-key")
-            |> HttpContext.withLogger logger
-            |> HttpContext.withLogLevel LogLevel.Debug
+            empty
+            |> withHttpClient client
+            |> withUrlBuilder (fun _ -> "http://test.org/")
+            |> withHeader ("api-key", "test-key")
+            |> withLogger logger
+            |> withLogLevel LogLevel.Debug
+            |> cache
 
         // Act
         let request =
@@ -322,7 +326,7 @@ let ``Fetch with internal error will log error`` () =
                 return result
             }
 
-        let! result = request |> runAsync ctx
+        let! result = request |> runAsync
 
         // Assert
         test <@ Result.isError result @>
