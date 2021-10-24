@@ -7,5 +7,9 @@
   <ItemGroup>
     <Compile Include="Program.fs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Oryx.fsproj" />
+    <ProjectReference Include="..\..\extensions\Oryx.ThothJsonNet\Oryx.ThothJsonNet.fsproj" />
+  </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

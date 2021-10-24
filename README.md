@@ -123,7 +123,7 @@ request by calling "error", or continue the request by calling the "next" handle
 The context and content may then be transformed for individual requests using a series of HTTP handlers. HTTP handlers
 are like lego bricks and may be composed into more complex HTTP handlers. The HTTP handlers included with Oryx are:
 
-- `cache` - Caches the result of a given handler, both the context and the content.
+- `cache` - Caches the last result of a given handler, both the context and the content.
 - `catch` - Catches errors and continues using another handler.
 - `choose` - Choose the first handler that succeeds in a list of handlers.
 - `chunk` - Chunks a sequence of HTTP handlers into sequential and concurrent batches.
@@ -267,9 +267,9 @@ is given full access the the `HttpResponse` and the `HttpContent` and may produc
 
 ```fs
 val withError:
-   errorHandler: HttpResponse -> HttpContent -> Task<exn> ->
-   next        : IHttpNext<HttpContent>
-              -> IHttpNext<HttpContent>
+   errorHandler: (HttpResponse -> HttpContent -> Task<exn>) ->
+   source      : IHttpHandler<HttpContent>
+              -> IHttpHandler<HttpContent>
 ```
 
 It's also possible to catch errors using the `catch` handler _after_ e.g `fetch`. The function takes an `errorHandler`
@@ -281,9 +281,9 @@ bypass a `catch` operator.
 
 ```fs
 val catch:
-   errorHandler: exn -> IHttpHandler<'TSource> ->
-   next        : IHttpNext<'TSource>
-              -> IHttpNext<'TSource>
+  errorhandler: (exn -> IHttpHandler<'TSource>  -> 
+  source: IHttpHandler<'TSource> 
+              -> IHttpHandler<HttpContent>
 ```
 
 A `choose` operator takes a list of HTTP handlers and tries each of them until one of them succeeds. The `choose`
@@ -294,7 +294,8 @@ you need break out of `choose` and force an exception without skipping to the ne
 
 ```fs
 val choose:
-    handlers: seq<IAsyncMiddleware<HttpContext,'TSource,'TResult>>
+    handlers: seq<IHttpHandler<'TResult>> ->
+    source: IHttpHandler<'TSource>
            -> IAsyncMiddleware<HttpContext,'TSource,'TResult>
 
 ```
@@ -445,24 +446,24 @@ after error handling (`withError`), and to log decoded responses the log handler
 
 ```fs
 val withLogger:
-   logger: ILogger             ->
-   next  : IHttpNext<'TSource>
-        -> IHttpNext<'TSource>
-
+   logger: ILogger ->
+   source: IHttpHandler<'TSource>
+        -> IHttpHandler<'TSource>
+        
 val withLogLevel:
-   logLevel: LogLevel            ->
-   next    : IHttpNext<'TSource>
-          -> IHttpNext<'TSource>
-
+   logLevel: LogLevel ->
+   source  : IHttpHandler<'TSource>
+          -> IHttpHandler<'TSource>
+          
 val withLogMessage:
    msg : string              ->
    next: IHttpNext<'TSource>
       -> IHttpNext<'TSource>
 
 val withLogMessage:
-   msg : string              ->
-   next: IHttpNext<'TSource>
-      -> IHttpNext<'TSource>
+   msg   : string ->
+   source: IHttpHandler<'TSource>
+        -> IHttpHandler<'TSource>
 ```
 
 Oryx may also emit metrics using the `IMetrics` interface (Oryx specific) that you can use with e.g Prometheus.
@@ -540,6 +541,42 @@ let urlBuilder (request: HttpRequest) : string =
     let items = request.Items
     ...
 ```
+## What is new in Oryx v5
+
+Oryx v5 continues to simplify the HTTP handlers by reducing the number of 
+generic parameters so you only need to specify the type the handler is producing (not what it's consuming).
+
+```fs
+type IHttpNext<'TSource> =
+    abstract member OnNextAsync: ctx: HttpContext * content: 'TSource -> ValueTask
+    abstract member OnErrorAsync: ctx: HttpContext * error: exn -> ValueTask
+
+type IHttpHandler<'TSource> =
+    abstract member Use: next: IHttpNext<'TResult> -> ValueTask
+```
+
+The great advantage is that you can now use normal functional composition (`>>`) instead of Kleisli composition (`>=>`). This also enables normal pipelining 
+using the pipe (`|>`) operator which will also give you type hints most IDEs.
+
+```fs
+use client = new HttpClient()
+
+let common =
+    empty
+    |> GET
+    |> withHttpClient client
+    |> withUrl Url
+    |> cache
+
+let! result =
+    request common "F#"
+    |> runUnsafeAsync
+printfn $"Result: {result}"
+
+let! result =
+    request common "C#"
+    |> runUnsafeAsync
+```
 
 ## What is new in Oryx v4
 
@@ -552,7 +589,7 @@ let urlBuilder (request: HttpRequest) : string =
   complete handling. E.g not allowed to call `OnNextAsync()` after
   `OnErrorAsync()`.
 
-- The sematics of the `choose` operator have been modified so it
+- The semantics of the `choose` operator have been modified so it
   continues processing the next handler if the current handler produces
   error i.e `OnErrorAsync`. Previously it was triggered by not calling
   `.OnNextAsync()`
@@ -646,6 +683,12 @@ type Context<'T> =
         Response: HttpResponse<'T>
     }
 ```
+
+## Upgrade from Oryx v4 to v5
+
+The context builders are gone. In Oryx v5 there is only HTTP handlers (`HttpHandler`). This means that there is only one way to build and transform the context.
+This might seem inefficient when you need to reuse the same part of the context for multiple requests. The way to handle this is to use the `cache` handler. 
+
 ## Upgrade from Oryx v3 to v4
 
 The `throw` operator have been renamed to `fail`. The `throw` operator

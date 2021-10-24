@@ -10,17 +10,21 @@ let main argv =
     use client = new HttpClient()
 
     let context =
-        Context.defaultContext
-        |> Context.withHttpClient client
+        empty
+        |> withHttpClient client
 
     let request =
         GET
-        >=> withUrl "https://api.github.com/repos/cognitedata/oryx/releases/latest"
-        >=> fetch
-        >=> json (Decode.field "tag_name" Decode.string)
+        >> withUrl "https://api.github.com/repos/cognitedata/oryx/releases/latest"
+        >> fetch
+        >> json (Decode.field "tag_name" Decode.string)
 
     task {
-        let! tag = request |> runAsync context
+        let! tag =
+            context
+            |> request
+            |> runAsync
+
         printfn "%A" tag
 
         return 0

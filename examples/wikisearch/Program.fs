@@ -27,8 +27,8 @@ let options = JsonSerializerOptions()
 
 let query term = [ struct ("action", "opensearch"); struct ("search", term) ]
 
-let request common term =
-    common
+let request ctx term =
+    ctx
     |> withQuery (query term)
     |> fetch
     |> json wikiDataItemsDecoders
@@ -37,7 +37,7 @@ let asyncMain argv =
     task {
         use client = new HttpClient()
 
-        let common =
+        let ctx =
             empty
             |> GET
             |> withHttpClient client
@@ -45,7 +45,7 @@ let asyncMain argv =
             |> cache
 
         let! result =
-            request common "F#"
+            request ctx "F#"
             |> runUnsafeAsync
         printfn $"Result: {result}"
 

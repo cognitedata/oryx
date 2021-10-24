@@ -134,19 +134,19 @@ module HttpHandler =
 
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } |> source.Use }
 
-    (*
+
     /// Chunks a sequence of HTTP handlers into sequential and concurrent batches.
     let chunk<'TSource, 'TNext, 'TResult> =
         Core.chunk<HttpContext, 'TSource, 'TNext, 'TResult> HttpContext.merge
-*)
+
     /// Run list of HTTP handlers sequentially.
     let sequential<'TSource, 'TResult> =
         Core.sequential<HttpContext, 'TSource, 'TResult> HttpContext.merge
-(*
+
     /// Run list of HTTP handlers concurrently.
     let concurrent<'TSource, 'TResult> =
-        Core.concurrent<HttpContext, 'TSousrce, 'TResult> HttpContext.merge
-*)
+        Core.concurrent<HttpContext, 'TSource, 'TResult> HttpContext.merge
+
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
     let catch<'TSource> = Error.catch<HttpContext, 'TSource>
 
