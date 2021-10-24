@@ -28,6 +28,7 @@ module HttpHandler =
     /// Map the content of the HTTP handler.
     let map<'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
     let mapContext<'TSource> = Core.mapContext<HttpContext, 'TSource>
+    let bind<'TSource, 'TResult> = Core.bind<HttpContext, 'TSource, 'TResult>
 
     /// Add HTTP header to context.
     let withHeader (header: string * string) =
@@ -168,9 +169,6 @@ module HttpHandler =
 
     /// Handler that skips (ignores) the content and outputs unit.
     let skip<'TSource> = Core.skip<HttpContext, 'TSource>
-
-    /// Retrieves the content.
-    let get<'TSource> () = map<'TSource, 'TSource> id
 
     /// Parse response stream to a user specified type synchronously.
     let parse<'TResult> (parser: Stream -> 'TResult) (source: IHttpHandler<HttpContent>) : IHttpHandler<'TResult> =

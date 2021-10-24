@@ -8,8 +8,8 @@ open Oryx.Middleware
 type RequestBuilder () =
     member _.Zero() : IHttpHandler<unit> = empty
 
-    member _.Yield(content: 'TResult) : IHttpHandler<'TResult> = singleton HttpContext.defaultContext content
-    member _.Return(content: 'TResult) : IHttpHandler<'TResult> = singleton HttpContext.defaultContext content
+    member _.Yield(content: 'TResult) : IHttpHandler<'TResult> = singleton content
+    member _.Return(content: 'TResult) : IHttpHandler<'TResult> = singleton content
     member _.ReturnFrom(req: IHttpHandler<'TResult>) : IHttpHandler<'TResult> = req
     member _.Delay(fn) = fn ()
     member _.Combine(source, other) = [ source; other ] |> sequential
@@ -34,4 +34,4 @@ type RequestBuilder () =
 [<AutoOpen>]
 module Builder =
     /// Request builder for an async context of request/result
-    let req = RequestBuilder()
+    let http = RequestBuilder()

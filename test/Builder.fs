@@ -12,10 +12,10 @@ open Tests.Common
 let ``Zero builder is Ok`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
+        let req =  http { () }
 
         // Act
-        let! result = req { () } |> runAsync
+        let! result = req |> runAsync
 
         // Assert
         test <@ Result.isOk result @>
@@ -25,12 +25,10 @@ let ``Zero builder is Ok`` () =
 let ``Simple unit handler in builder is Ok`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-
         // Act
         let! result =
             let a =
-                req {
+                http {
                     let! value = singleton 42
                     return value
                 }
@@ -45,12 +43,10 @@ let ``Simple unit handler in builder is Ok`` () =
 let ``Simple return from unit handler in builder is Ok`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-
-        let a = singleton 42 |> skip |> runAsync
+        let _ = singleton 42 |> skip |> runAsync
 
         // Act
-        let! result = req { return! singleton 42 } |> runUnsafeAsync
+        let! result = http { return! singleton 42 } |> runUnsafeAsync
 
         // Assert
         test <@ result = 42 @>
@@ -60,11 +56,8 @@ let ``Simple return from unit handler in builder is Ok`` () =
 let ``Multiple handlers in builder is Ok`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-
-        // Act
         let request =
-            req {
+            http {
                 let! a = singleton 10
                 let! b = singleton 20
 
@@ -73,6 +66,7 @@ let ``Multiple handlers in builder is Ok`` () =
                     |> validate (fun value -> value = 10 + 20)
             }
 
+        // Act
         let! result = request |> runUnsafeAsync
 
         // Assert
@@ -80,44 +74,20 @@ let ``Multiple handlers in builder is Ok`` () =
     }
 
 [<Fact>]
-let ``Get value is Ok`` () =
-    task {
-        // Arrange
-        let ctx = HttpContext.defaultContext
-
-        // Act
-        let request =
-            req {
-                let! a =
-                    HttpHandler.get ()
-                    >> (validate (fun value -> value = 42))
-
-                return a
-            }
-
-        let! result = singleton 42 |> request |> runUnsafeAsync
-
-        // Assert
-        test <@ result = 42 @>
-    }
-
-[<Fact>]
 let ``Get value 2 is Ok`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
+        let request =
+            http {
+                yield 42
+            }
+            |> HttpHandler.bind(fun a ->
+                http {
+                    return a + 1
+                })
 
         // Act
-        let request =
-            req {
-                yield 42
-
-                let! a = HttpHandler.get ()
-
-                return a + 1
-            }
-
-        let! result = request |> runUnsafeAsync ctx
+        let! result = request |> runUnsafeAsync
 
         // Assert
         test <@ result = 43 @>
@@ -127,20 +97,18 @@ let ``Get value 2 is Ok`` () =
 let ``Iterate handlers is Ok`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-
-        // Act
         let request =
-            req {
+            http {
                 let! h =
-                    req {
-                        for a in 1 .. 10 do
+                    http {
+                        for _ in 1 .. 10 do
                             yield 42
                     }
 
                 return List.sum h
             }
 
+        // Act
         let! result = request |> runUnsafeAsync
 
         // Assert

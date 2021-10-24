@@ -45,7 +45,7 @@ let ``Get with return expression is Ok`` () =
 
         // Act
         let request =
-            req {
+            http {
                 let! result = get ()
                 return result + 1
             }
@@ -93,7 +93,7 @@ let ``Post url encoded with return expression is Ok`` () =
 
         // Act
         let request =
-            req {
+            http {
                 let! result = post (fun _ -> content)
                 return result
             }
@@ -136,7 +136,7 @@ let ``Get with logging is OK`` () =
 
         // Act
         let request =
-            req {
+            http {
                 let! result = get ()
                 return result + 2
             }
@@ -228,7 +228,7 @@ let ``Multiple post with logging is OK`` () =
 
         // Act
         let! result =
-            req {
+            http {
                 let! a = withLogMessage "first" >=> post (content 41)
                 let! b = withLogMessage "second" >=> post (content 42)
                 return a + b
@@ -275,7 +275,7 @@ let ``Post with disabled logging does not log`` () =
 
         // Act
         let request =
-            req {
+            http {
                 let! result = withLogMessage msg >> post content
                 return result
             }
@@ -321,7 +321,7 @@ let ``Fetch with internal error will log error`` () =
         let request =
             let content = fun () -> new PushStreamContent("testing") :> HttpContent
 
-            req {
+            http {
                 let! result = post content
                 return result
             }

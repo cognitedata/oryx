@@ -64,26 +64,22 @@ let add (a: int) (b: int) = singleton (a + b)
 exception TestException of code: int * message: string with
     override this.ToString() = this.message
 
-let error msg (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> = fail (TestException(code = 400, message = msg)) source
-let panic msg (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> = panic (TestException(code = 400, message = msg)) source
+let error msg : IHttpHandler<'TSource> = fail (TestException(code = 400, message = msg))
+let panic msg : IHttpHandler<'TSource> = panic (TestException(code = 400, message = msg))
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
-let badRequestHandler<'TSource> (response: 'TSource) (error: exn) (source: IHttpHandler<unit>) : IHttpHandler<'TSource> =
+let badRequestHandler<'TSource> (response: 'TSource) (ctx: HttpContext) (error: exn) : IHttpHandler<'TSource> =
     { new IHttpHandler<'TSource> with
         member _.Use(next) =
-            { new IHttpNext<unit> with
-                member _.OnNextAsync(ctx, _) =
-                    unitVtask {
-                        match error with
-                        | :? TestException as ex ->
-                            match enum<HttpStatusCode> ex.code with
-                            | HttpStatusCode.BadRequest -> return! next.OnNextAsync(ctx, response)
+            unitVtask {
+                match error with
+                | :? TestException as ex ->
+                    match enum<HttpStatusCode> ex.code with
+                    | HttpStatusCode.BadRequest -> return! next.OnNextAsync(ctx, response)
 
-                            | _ -> return! next.OnErrorAsync(ctx, error)
-                        | _ -> return! next.OnErrorAsync(ctx, error)
-                    }
-
-                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } |> source.Use }
+                    | _ -> return! next.OnErrorAsync(ctx, error)
+                | _ -> return! next.OnErrorAsync(ctx, error)
+            }}
 
 let shouldRetry (error: exn) : bool =
     match error with

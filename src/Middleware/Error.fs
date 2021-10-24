@@ -41,7 +41,7 @@ module Error =
 
     /// Handler for catching errors and then delegating to the error handler on what to do.
     let catch<'TContext, 'TSource>
-        (errorHandler: exn -> IAsyncHandler<'TContext, 'TSource>)
+        (errorHandler: 'TContext -> exn -> IAsyncHandler<'TContext, 'TSource>)
         (source: IAsyncHandler<'TContext, 'TSource>)
         : IAsyncHandler<'TContext, 'TSource> =
         { new IAsyncHandler<'TContext, 'TSource> with
@@ -59,7 +59,7 @@ module Error =
                             match err with
                             | PanicException error -> return! next.OnErrorAsync(ctx, error)
                             | _ ->
-                                do! (errorHandler err).Use(next)
+                                do! (errorHandler ctx err).Use(next)
                         }
 
                     } |> source.Use }
