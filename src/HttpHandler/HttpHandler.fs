@@ -27,12 +27,13 @@ module HttpHandler =
 
     /// Map the content of the HTTP handler.
     let map<'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
-    let mapContext<'TSource> = Core.mapContext<HttpContext, 'TSource>
-    let bind<'TSource, 'TResult> = Core.bind<HttpContext, 'TSource, 'TResult>
+    /// Update (map) the context.
+    let update<'TSource> = Core.update<HttpContext, 'TSource>
+    let bind<'TSource, 'TResult> fn source = Core.bind<HttpContext, 'TSource, 'TResult> fn source
 
     /// Add HTTP header to context.
     let withHeader (header: string * string) =
-        mapContext (fun ctx ->
+        update (fun ctx ->
             { ctx with
                   Request =
                       { ctx.Request with
@@ -40,7 +41,7 @@ module HttpHandler =
 
     /// Replace all headers in the context.
     let withHeaders (headers: Map<string, string>) =
-        mapContext (fun ctx ->
+        update (fun ctx ->
             { ctx with
                   Request =
                       { ctx.Request with
@@ -52,16 +53,16 @@ module HttpHandler =
         withHeader header
 
     /// Set the HTTP client to use for the requests.
-    let withHttpClient (client: HttpClient) =
-         mapContext (fun ctx ->
+    let withHttpClient (client: HttpClient) source : IHttpHandler<'TSource> =
+         update (fun ctx ->
             { ctx with
                   Request =
                       { ctx.Request with
-                            HttpClient = (fun () -> client) } })
+                            HttpClient = (fun () -> client) } }) source
 
     /// Set the HTTP client factory to use for the requests.
     let withHttpClientFactory (factory: unit -> HttpClient) =
-        mapContext (fun ctx ->
+        update (fun ctx ->
             { ctx with
                   Request =
                       { ctx.Request with
@@ -69,7 +70,7 @@ module HttpHandler =
 
     /// Set the URL builder to use.
     let withUrlBuilder (builder: HttpRequest -> string) =
-         mapContext (fun ctx ->
+         update (fun ctx ->
               { ctx with
                   Request =
                       { ctx.Request with
@@ -77,7 +78,7 @@ module HttpHandler =
 
     /// Set a cancellation token to use for the requests.
     let withCancellationToken (token: CancellationToken) =
-         mapContext (fun ctx ->
+         update (fun ctx ->
               { ctx with
                   Request =
                       { ctx.Request with
@@ -85,7 +86,7 @@ module HttpHandler =
 
     /// Set the logger (ILogger) to use.
     let withLogger (logger: ILogger) =
-         mapContext (fun ctx ->
+         update (fun ctx ->
             { ctx with
                   Request =
                       { ctx.Request with
@@ -93,7 +94,7 @@ module HttpHandler =
 
     /// Set the log level to use (default is LogLevel.None).
     let withLogLevel (logLevel: LogLevel) =
-        mapContext (fun ctx ->
+        update (fun ctx ->
             { ctx with
                   Request =
                       { ctx.Request with
@@ -101,13 +102,13 @@ module HttpHandler =
 
     /// Set the log format to use.
     let withLogFormat (format: string) =
-        mapContext (fun ctx ->
+        update (fun ctx ->
             { ctx with
                   Request = { ctx.Request with LogFormat = format } })
 
     /// Set the log message to use (normally you would like to use the withLogMessage handler instead)
     let withLogMessage (msg: string) =
-        mapContext (fun ctx ->
+        update (fun ctx ->
             { ctx with
                   Request =
                       { ctx.Request with
@@ -115,7 +116,7 @@ module HttpHandler =
 
     /// Set the metrics (IMetrics) to use.
     let withMetrics (metrics: IMetrics) =
-        mapContext (fun ctx ->
+        update (fun ctx ->
             { ctx with
                   Request = { ctx.Request with Metrics = metrics } })
 
@@ -158,17 +159,19 @@ module HttpHandler =
     let choose<'TSource, 'TResult> = Error.choose<HttpContext, 'TSource, 'TResult>
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
-    let fail<'TSource> = Error.fail<HttpContext, 'TSource>
+    let fail<'TSource, 'TResult> error source = Error.fail<HttpContext, 'TSource, 'TResult> error source
 
     /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
     /// the any error handling e.g `choose` or `catch`•.
-    let panic<'TSource> = Error.panic<HttpContext, 'TSource>
+    let panic<'TSource, 'TResult> error source = Error.panic<HttpContext, 'TSource, 'TResult> error source
 
     /// Validate content using a predicate function.
     let validate<'TSource> = Core.validate<HttpContext, 'TSource>
 
     /// Handler that skips (ignores) the content and outputs unit.
     let skip<'TSource> = Core.skip<HttpContext, 'TSource>
+
+    let replace<'TSource, 'TResult> = Core.replace<HttpContext, 'TSource, 'TResult>
 
     /// Parse response stream to a user specified type synchronously.
     let parse<'TResult> (parser: Stream -> 'TResult) (source: IHttpHandler<HttpContent>) : IHttpHandler<'TResult> =
@@ -241,7 +244,7 @@ module HttpHandler =
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) } |> source.Use }
 
     // A basic way to set the request URL. Use custom builders for more advanced usage.
-    let withUrl (url: string) = withUrlBuilder (fun _ -> url)
+    let withUrl (url: string) source = withUrlBuilder (fun _ -> url) source
 
     /// HTTP GET request. Also clears any content set in the context.
     let GET<'TSource> (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> =

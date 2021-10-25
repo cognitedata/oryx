@@ -25,7 +25,7 @@ let main argv =
             |> request
             |> runAsync
 
-        printfn "%A" tag
+        printfn $"{tag}"
 
         return 0
     }

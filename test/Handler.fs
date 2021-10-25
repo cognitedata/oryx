@@ -34,44 +34,11 @@ let ``Simple error handler is Error`` () =
         let ctx = empty
 
         // Act
-        let! result = empty |> error "failed" |> runAsync
+        let! result = error "failed" |> runAsync
 
         // Assert
         test <@ Result.isError result @>
 
-        match result with
-        | Ok _ -> failwith "error"
-        | Error err -> test <@ err.ToString() = "failed" @>
-    }
-
-[<Fact>]
-let ``Simple error then ok is Error`` () =
-    task {
-        // Arrange
-        let ctx = empty
-        let req = error "failed" >> singleton 42
-
-        // Act
-        let! result = req |> runAsync
-
-        // Assert
-        test <@ Result.isError result @>
-
-        match result with
-        | Ok _ -> failwith "error"
-        | Error err -> test <@ err.ToString() = "failed" @>
-    }
-
-[<Fact>]
-let ``Simple ok then error is Error`` () =
-    task {
-        // Arrange
-        let req = singleton 42 |> error "failed"
-
-        // Act
-        let! result = req |> runAsync
-
-        // Assert
         match result with
         | Ok _ -> failwith "error"
         | Error err -> test <@ err.ToString() = "failed" @>
@@ -102,8 +69,7 @@ let ``Catching errors is Ok`` () =
         let errorHandler = badRequestHandler 420
 
         let req =
-            singleton 42
-            |> error "failed"
+            error "failed"
             |> catch errorHandler
 
         // Act
@@ -120,8 +86,7 @@ let ``Catching panic is not possible`` () =
         let errorHandler = badRequestHandler 420
 
         let req =
-            singleton 42
-            |> panic "panic!"
+            panic "panic!"
             |> catch errorHandler
 
         // Act
@@ -237,10 +202,10 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
 let ``Choose handlers is Ok`` () =
     task {
         // Arrange
-        let req = choose [ error "1"; singleton 2; error "3"; singleton 4 ]
+        let req = empty |> choose [ error "1"; singleton 2; error "3"; singleton 4 ]
 
         // Act
-        let! result = empty |> req |> runUnsafeAsync
+        let! result = req |> runUnsafeAsync
         test <@ result = 2 @>
     }
 
@@ -248,11 +213,11 @@ let ``Choose handlers is Ok`` () =
 let ``Choose panic is Error`` () =
     task {
         // Arrange
-        let req = choose [ error "1"; panic "2"; error "3"; singleton 4 ]
+        let req : IHttpHandler<int> = empty |> choose [ error "1"; panic "2"; error "3"; replace 4 ]
 
         // Act
         try
-            let! result = empty |> req |> runUnsafeAsync
+            let! result = req |> runUnsafeAsync
             assert false
         with
         | PanicException (_) -> ()
@@ -265,7 +230,7 @@ let ``Choose panic is not skipped`` () =
         // Arrange
         let req =
             empty
-            |> choose [ error "1"; choose [ panic "2"; singleton 42; error "3" ]; singleton 4 ]
+            |> choose [ error "1"; choose [ panic "2"; replace 42; error "3" ]; replace 4 ]
 
         // Act
         try

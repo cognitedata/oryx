@@ -23,7 +23,8 @@ module Error =
                             | false ->
                                 try
                                     return! next.OnNextAsync(ctx, content)
-                                with err ->
+                                with
+                                | err ->
                                     stopped <- true
                                     return! next.OnErrorAsync(ctx, err)
                             | _ -> ()
@@ -36,8 +37,8 @@ module Error =
                                 stopped <- true
                                 return! next.OnErrorAsync(ctx, err)
                             | _ -> ()
-                        }
-                } |> source.Use }
+                        } }
+                |> source.Use }
 
     /// Handler for catching errors and then delegating to the error handler on what to do.
     let catch<'TContext, 'TSource>
@@ -51,18 +52,17 @@ module Error =
                         unitVtask {
                             try
                                 return! next.OnNextAsync(ctx, content)
-                            with err -> return! next.OnErrorAsync(ctx, err)
+                            with
+                            | err -> return! next.OnErrorAsync(ctx, err)
                         }
 
                     member _.OnErrorAsync(ctx, err) =
                         unitVtask {
                             match err with
                             | PanicException error -> return! next.OnErrorAsync(ctx, error)
-                            | _ ->
-                                do! (errorHandler ctx err).Use(next)
-                        }
-
-                    } |> source.Use }
+                            | _ -> do! (errorHandler ctx err).Use(next)
+                        } }
+                |> source.Use }
 
     [<RequireQualifiedAccess>]
     type ChooseState =
@@ -73,18 +73,22 @@ module Error =
     /// Choose from a list of middlewares to use. The first middleware that succeeds will be used. Handlers will be
     /// tried until one does not produce any error, or a `PanicException`.
     let choose<'TContext, 'TSource, 'TResult>
-        (handlers: IAsyncHandler<'TContext, 'TResult> seq)
+        (handlers: (IAsyncHandler<'TContext, 'TSource> -> IAsyncHandler<'TContext, 'TResult>) seq)
         (source: IAsyncHandler<'TContext, 'TSource>)
         : IAsyncHandler<'TContext, 'TResult> =
         { new IAsyncHandler<'TContext, 'TResult> with
             member _.Use(next) =
-                let exns : ResizeArray<exn> = ResizeArray()
+                let exns: ResizeArray<exn> = ResizeArray()
 
                 { new IAsyncNext<'TContext, 'TSource> with
                     member _.OnNextAsync(ctx, content) =
                         let mutable state = ChooseState.Error
 
                         unitVtask {
+                            let obs =
+                                { new IAsyncHandler<'TContext, 'TSource> with
+                                    member _.Use(next) = unitVtask { return! next.OnNextAsync(ctx, content) } }
+
                             let obv =
                                 { new IAsyncNext<'TContext, 'TResult> with
                                     member _.OnNextAsync(ctx, content) =
@@ -110,15 +114,13 @@ module Error =
                                             | _, _ ->
                                                 state <- ChooseState.Error
                                                 exns.Add(error)
-                                        }
-
-                                    }
+                                        } }
 
                             /// Proces handlers until `NoError` or `Panic`.
                             for handler in handlers do
                                 if state = ChooseState.Error then
                                     state <- ChooseState.NoError
-                                    do! handler.Use(obv)
+                                    do! handler(obs).Use(obv)
 
                             match state, exns with
                             | ChooseState.Panic, _ ->
@@ -130,31 +132,46 @@ module Error =
                             | ChooseState.Error, _ ->
                                 return! next.OnErrorAsync(ctx, SkipException "Choose: No hander matched")
                             | ChooseState.NoError, _ -> ()
+
                         }
 
                     member _.OnErrorAsync(ctx, error) =
                         exns.Clear()
-                        next.OnErrorAsync(ctx, error)
-
-                   } |> source.Use }
-
+                        next.OnErrorAsync(ctx, error) }
+                |> source.Use }
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
-    let fail<'TContext, 'TSource> (error: Exception)
+    let fail<'TContext, 'TSource, 'TResult>
+        (error: Exception)
         (source: IAsyncHandler<'TContext, 'TSource>)
-        : IAsyncHandler<'TContext, 'TSource> =
-        { new IAsyncHandler<'TContext, 'TSource> with
+        : IAsyncHandler<'TContext, 'TResult> =
+        { new IAsyncHandler<'TContext, 'TResult> with
             member _.Use(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
                     member _.OnNextAsync(ctx, _) = next.OnErrorAsync(ctx, error)
-                    member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error)  } |> source.Use }
+                    member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error) }
+                |> source.Use }
 
     /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
     /// the any error handling e.g `choose` or `catch`•.
-    let panic<'TContext, 'TSource> (error: Exception) (source: IAsyncHandler<'TContext, 'TSource>)
-        : IAsyncHandler<'TContext, 'TSource> =
-        { new IAsyncHandler<'TContext, 'TSource> with
+    let panic<'TContext, 'TSource, 'TResult>
+        (error: Exception)
+        (source: IAsyncHandler<'TContext, 'TSource>)
+        : IAsyncHandler<'TContext, 'TResult> =
+        { new IAsyncHandler<'TContext, 'TResult> with
             member _.Use(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
                     member _.OnNextAsync(ctx, _) = next.OnErrorAsync(ctx, PanicException error)
-                    member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error) } |> source.Use }
+                    member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error) }
+                |> source.Use }
+
+    /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
+    let ofError<'TContext, 'TSource> (ctx: 'TContext) (error: Exception) : IAsyncHandler<'TContext, 'TSource> =
+        { new IAsyncHandler<'TContext, 'TSource> with
+            member _.Use(next) = next.OnErrorAsync(ctx, error) }
+
+    /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
+    /// the any error handling e.g `choose` or `catch`•.
+    let ofPanic<'TContext, 'TSource> (ctx: 'TContext) (error: Exception) : IAsyncHandler<'TContext, 'TSource> =
+        { new IAsyncHandler<'TContext, 'TSource> with
+            member _.Use(next) = next.OnErrorAsync(ctx, PanicException error) }

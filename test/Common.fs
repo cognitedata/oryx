@@ -64,8 +64,8 @@ let add (a: int) (b: int) = singleton (a + b)
 exception TestException of code: int * message: string with
     override this.ToString() = this.message
 
-let error msg : IHttpHandler<'TSource> = fail (TestException(code = 400, message = msg))
-let panic msg : IHttpHandler<'TSource> = panic (TestException(code = 400, message = msg))
+let error msg source: IHttpHandler<'TSource> = fail (TestException(code = 400, message = msg)) source
+let panic msg source : IHttpHandler<'TSource> = panic (TestException(code = 400, message = msg)) source
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
 let badRequestHandler<'TSource> (response: 'TSource) (ctx: HttpContext) (error: exn) : IHttpHandler<'TSource> =
@@ -86,7 +86,7 @@ let shouldRetry (error: exn) : bool =
     | :? TestException -> true
     | _ -> false
 
-let errorHandler (response: HttpResponse) (_: HttpContent) =
+let errorHandler (response: HttpResponse) (ctx: HttpContext) (_: HttpContent) =
     task { return TestException(code = int response.StatusCode, message = "Got error") }
 
 let options = JsonSerializerOptions()

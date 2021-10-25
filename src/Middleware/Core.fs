@@ -88,22 +88,6 @@ module Core =
                     member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) }
                 |> source.Use }
 
-    let mapContext<'TContext, 'TSource>
-        (mapper: 'TContext -> 'TContext)
-        (source: IAsyncHandler<'TContext, 'TSource>)
-        : IAsyncHandler<'TContext, 'TSource> =
-        { new IAsyncHandler<'TContext, 'TSource> with
-            member _.Use(next) =
-                { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, content) =
-                        try
-                            next.OnNextAsync(mapper ctx, content)
-                        with
-                        | error -> next.OnErrorAsync(ctx, error)
-
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) }
-                |> source.Use }
-
     /// Bind the content of the middleware.
     let bind<'TContext, 'TSource, 'TResult>
         (fn: 'TSource -> IAsyncHandler<'TContext, 'TResult>)
@@ -250,7 +234,6 @@ module Core =
         { new IAsyncHandler<'TContext, unit> with
             member _.Use(next) =
                 unitVtask {
-                    printfn "Running empty"
                     return! next.OnNextAsync(ctx, ())
                 } }
 
@@ -291,40 +274,52 @@ module Core =
     /// Retrieves the content.
     let await<'TContext, 'TSource> () = map<'TContext, 'TSource, 'TSource> id
 
-/// Returns the current environment.
+    /// Returns the current environment.
     let ask (source: IAsyncHandler<'TContext, 'TSource>) =
         { new IAsyncHandler<'TContext, 'TContext> with
             member _.Use(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
                     member _.OnNextAsync(ctx, _) = next.OnNextAsync(ctx, ctx)
-                    member __.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error) } |> source.Use }
+                    member __.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error) }
+                |> source.Use }
 
-//    /// Update (asks) the context.
-    let update (update: 'TContext -> 'TContext) (source: IAsyncHandler<'TContext, 'TSource>) =
+    /// Update (asks) the context.
+    let update<'TContext, 'TSource> (update: 'TContext -> 'TContext) (source: IAsyncHandler<'TContext, 'TSource>) =
         { new IAsyncHandler<'TContext, 'TSource> with
             override _.Use(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, content) = next.OnNextAsync(update ctx, content)
-                    member __.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error) } |> source.Use}
+                    member _.OnNextAsync(ctx, content) =
+                        try
+                            next.OnNextAsync(update ctx, content)
+                        with
+                        | error -> next.OnErrorAsync(ctx, error)
+
+                    member __.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error) }
+                |> source.Use }
+
+    /// Replaces the value with a constant.
+    let replace<'TContext, 'TSource, 'TResult> (value: 'TResult) (source: IAsyncHandler<'TContext, 'TSource>) =
+        map (fun _ -> value) source
+
 //[<AutoOpen>]
 module Extensions =
     type IAsyncHandler<'TResource, 'TSource> with
         /// Subscribe using plain task returning functions.
-        member _.Use
-            (
-                ?onNextAsync: 'TSource -> ValueTask,
-                ?onErrorAsync: exn -> ValueTask
-            ) =
+        member _.Use(?onNextAsync: 'TSource -> ValueTask, ?onErrorAsync: exn -> ValueTask) =
             { new IAsyncNext<'TContext, 'TSource> with
-                member _.OnNextAsync(ctx, content) = unitVtask {
-                    match onNextAsync with
-                    | Some fn -> return! fn content
-                    | None -> return ()
-                }
-                member _.OnErrorAsync(ctx, exn) = unitVtask {
-                    match onErrorAsync with
-                    | Some fn -> return! fn exn
-                    | None -> return ()  }}
+                member _.OnNextAsync(ctx, content) =
+                    unitVtask {
+                        match onNextAsync with
+                        | Some fn -> return! fn content
+                        | None -> return ()
+                    }
+
+                member _.OnErrorAsync(ctx, exn) =
+                    unitVtask {
+                        match onErrorAsync with
+                        | Some fn -> return! fn exn
+                        | None -> return ()
+                    } }
 
         /// Subscribe using a task returning function taking a result. Invokations of `OnNextAsync` will result in `Ok`
         /// while `OnErrorAsync` and `OnCompletedAsync` will produce `Error`. `OnCompletedAsync` will produce
@@ -332,4 +327,4 @@ module Extensions =
         member _.Use(next: Result<'TSource, exn> -> ValueTask) =
             { new IAsyncNext<'TContext, 'TSource> with
                 member _.OnNextAsync(ctx, content) = next (Ok content)
-                member _.OnErrorAsync(ctx, exn) = next (Error exn)  }
+                member _.OnErrorAsync(ctx, exn) = next (Error exn) }
