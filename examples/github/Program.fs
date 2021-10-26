@@ -9,7 +9,7 @@ open Thoth.Json.Net
 let main argv =
     use client = new HttpClient()
 
-    let context = empty |> withHttpClient client
+    let ctx = httpRequest |> withHttpClient client
 
     let request =
         GET
@@ -18,7 +18,7 @@ let main argv =
         >> json (Decode.field "tag_name" Decode.string)
 
     task {
-        let! tag = context |> request |> runAsync
+        let! tag = ctx |> request |> runAsync
 
         printfn $"{tag}"
 

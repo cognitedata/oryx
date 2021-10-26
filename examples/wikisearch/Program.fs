@@ -38,7 +38,7 @@ let asyncMain argv =
         use client = new HttpClient()
 
         let ctx =
-            empty
+            httpRequest
             |> GET
             |> withHttpClient client
             |> withUrl Url
@@ -47,7 +47,7 @@ let asyncMain argv =
         let! result = request ctx "F#" |> runUnsafeAsync
         printfn $"Result: {result}"
 
-        let! result = request common "C#" |> runUnsafeAsync
+        let! result = request ctx "C#" |> runUnsafeAsync
         printfn $"Result: {result}"
     }
 

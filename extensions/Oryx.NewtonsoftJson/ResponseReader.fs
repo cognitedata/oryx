@@ -10,7 +10,6 @@ module ResponseReader =
     /// <summary>
     /// JSON decode response and map decode error string to exception so we don't get more response error types.
     /// </summary>
-    /// <param name="decoder">Decoder to use. </param>
     /// <param name="source">The upstream source handler.</param>
     /// <returns>Decoded context.</returns>
     let json<'TResult> (source: IHttpHandler<HttpContent>) : IHttpHandler<'TResult> =
