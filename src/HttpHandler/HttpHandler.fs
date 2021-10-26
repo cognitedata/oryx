@@ -165,6 +165,7 @@ module HttpHandler =
     /// the any error handling e.g `choose` or `catch`•.
     let panic<'TSource, 'TResult> error source = Error.panic<HttpContext, 'TSource, 'TResult> error source
 
+    let ofError<'TSource> error = Error.ofError<HttpContext, 'TSource> HttpContext.defaultContext error
     /// Validate content using a predicate function.
     let validate<'TSource> = Core.validate<HttpContext, 'TSource>
 
@@ -365,6 +366,7 @@ module HttpHandler =
 
                     member _.OnErrorAsync(ctx, err) = next.OnErrorAsync(ctx, err) } |> source.Use }
 
-    let empty<'TSource> = Core.empty<HttpContext> HttpContext.defaultContext
+    let httpRequest<'TSource> = Core.empty<HttpContext> HttpContext.defaultContext
     let cache<'TSource> = Core.cache<HttpContext, 'TSource>
-    let httpRequest = empty
+    /// Asks for the given HTTP context.
+    let ask<'TSource> = Core.ask<HttpContext, 'TSource>

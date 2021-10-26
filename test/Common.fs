@@ -65,6 +65,7 @@ exception TestException of code: int * message: string with
     override this.ToString() = this.message
 
 let error msg source: IHttpHandler<'TSource> = fail (TestException(code = 400, message = msg)) source
+let ofError msg: IHttpHandler<'TSource> = ofError (TestException(code = 400, message = msg))
 let panic msg source : IHttpHandler<'TSource> = panic (TestException(code = 400, message = msg)) source
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
@@ -86,33 +87,31 @@ let shouldRetry (error: exn) : bool =
     | :? TestException -> true
     | _ -> false
 
-let errorHandler (response: HttpResponse) (ctx: HttpContext) (_: HttpContent) =
+let errorHandler (response: HttpResponse) (_: HttpContent) =
     task { return TestException(code = int response.StatusCode, message = "Got error") }
 
 let options = JsonSerializerOptions()
 
 let get () =
-    empty
-    |> GET
-    |> protect
-    |> withUrl "http://test.org"
-    |> withQuery [ struct ("debug", "true") ]
-    |> fetch
-    |> withError errorHandler
-    |> json options
-    |> log
+    GET
+    >> protect
+    >> withUrl "http://test.org"
+    >> withQuery [ struct ("debug", "true") ]
+    >> fetch<'TSource>
+    >> withError errorHandler
+    >> json options
+    >> log
 
 let post content =
-    empty
-    |> POST
-    |> protect
-    |> withResponseType ResponseType.JsonValue
-    |> withContent content
-    |> withCompletion HttpCompletionOption.ResponseHeadersRead
-    |> fetch
-    |> withError errorHandler
-    |> json options
-    |> log
+    POST
+    >> protect
+    >> withResponseType ResponseType.JsonValue
+    >> withContent content
+    >> withCompletion HttpCompletionOption.ResponseHeadersRead
+    >> fetch
+    >> withError errorHandler
+    >> json options
+    >> log
 
 //let retryCount = 5
 //let retry next ctx = retry shouldRetry 500<ms> retryCount next ctx
@@ -132,7 +131,7 @@ type TestLogger<'a> () =
         member this.Log<'TState>
             (
                 logLevel: LogLevel,
-                eventId: EventId,
+                _: EventId,
                 state: 'TState,
                 exception': exn,
                 formatter: Func<'TState, exn, string>
@@ -140,8 +139,8 @@ type TestLogger<'a> () =
             this.Output <- this.Output + formatter.Invoke(state, exception')
             this.LoggerLevel <- logLevel
 
-        member this.IsEnabled(logLevel: LogLevel) : bool = true
-        member this.BeginScope<'TState>(state: 'TState) : IDisposable = this :> IDisposable
+        member this.IsEnabled(_: LogLevel) : bool = true
+        member this.BeginScope<'TState>(_: 'TState) : IDisposable = this :> IDisposable
 
 type TestMetrics () =
     member val Fetches = 0L with get, set

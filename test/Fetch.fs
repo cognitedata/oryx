@@ -38,7 +38,7 @@ let ``Get with return expression is Ok`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
         let ctx =
-            empty
+            httpRequest
             |> withHttpClient client
             |> withUrlBuilder (fun _ -> "http://test.org/")
             |> withHeader ("api-key", "test-key")
@@ -46,7 +46,7 @@ let ``Get with return expression is Ok`` () =
         // Act
         let request =
             http {
-                let! result = get ()
+                let! result = ctx |> get ()
                 return result + 1
             }
 
@@ -83,7 +83,7 @@ let ``Post url encoded with return expression is Ok`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
         let ctx =
-            empty
+            httpRequest
             |> withHttpClient client
             |> withUrlBuilder (fun _ -> "http://test.org/")
             |> withHeader ("api-key", "test-key")
@@ -94,7 +94,7 @@ let ``Post url encoded with return expression is Ok`` () =
         // Act
         let request =
             http {
-                let! result = post (fun _ -> content)
+                let! result = ctx |> post (fun _ -> content)
                 return result
             }
 
@@ -125,7 +125,7 @@ let ``Get with logging is OK`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
         let ctx =
-            empty
+            httpRequest
             |> withHttpClient client
             |> withUrlBuilder (fun _ -> "http://test.org/")
             |> withHeader ("api-key", "test-key")
@@ -137,7 +137,9 @@ let ``Get with logging is OK`` () =
         // Act
         let request =
             http {
-                let! result = get ()
+                let! result =
+                    ctx
+                    |> get ()
                 return result + 2
             }
 
@@ -175,7 +177,7 @@ let ``Post with logging is OK`` () =
         let content () = new StringableContent(json) :> HttpContent
 
         let ctx =
-            empty
+            httpRequest
             |> withHttpClientFactory (fun () -> client)
             |> withUrlBuilder (fun _ -> "http://testing.org/")
             |> withHeader ("api-key", "test-key")
@@ -185,7 +187,9 @@ let ``Post with logging is OK`` () =
 
         // Act
         let! result =
-            withLogMessage msg >=> post content
+            ctx
+            |> withLogMessage msg
+            |> post content
             |> runAsync
 
         let retries' = retries
@@ -219,7 +223,7 @@ let ``Multiple post with logging is OK`` () =
 
 
         let ctx =
-            empty
+            httpRequest
             |> withHttpClientFactory (fun () -> client)
             |> withUrlBuilder (fun _ -> "http://testing.org/")
             |> withHeader ("api-key", "test-key")
@@ -229,8 +233,8 @@ let ``Multiple post with logging is OK`` () =
         // Act
         let! result =
             http {
-                let! a = withLogMessage "first" >=> post (content 41)
-                let! b = withLogMessage "second" >=> post (content 42)
+                let! a = ctx |> withLogMessage "first" |> post (content 41)
+                let! b = ctx |> withLogMessage "second" |> post (content 42)
                 return a + b
             }
             |> runAsync
@@ -265,7 +269,7 @@ let ``Post with disabled logging does not log`` () =
         let content () = new StringableContent(json) :> HttpContent
 
         let ctx =
-            empty
+            httpRequest
             |> withHttpClient client
             |> withUrlBuilder (fun _ -> "http://test.org/")
             |> withHeader ("api-key", "test-key")
@@ -276,7 +280,7 @@ let ``Post with disabled logging does not log`` () =
         // Act
         let request =
             http {
-                let! result = withLogMessage msg >> post content
+                let! result = ctx |> withLogMessage msg |> post content
                 return result
             }
 
@@ -309,7 +313,7 @@ let ``Fetch with internal error will log error`` () =
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
         let ctx =
-            empty
+            httpRequest
             |> withHttpClient client
             |> withUrlBuilder (fun _ -> "http://test.org/")
             |> withHeader ("api-key", "test-key")
@@ -322,7 +326,7 @@ let ``Fetch with internal error will log error`` () =
             let content = fun () -> new PushStreamContent("testing") :> HttpContent
 
             http {
-                let! result = post content
+                let! result = ctx |> post content
                 return result
             }
 

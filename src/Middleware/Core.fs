@@ -275,7 +275,7 @@ module Core =
     let await<'TContext, 'TSource> () = map<'TContext, 'TSource, 'TSource> id
 
     /// Returns the current environment.
-    let ask (source: IAsyncHandler<'TContext, 'TSource>) =
+    let ask<'TContext, 'TSource> (source: IAsyncHandler<'TContext, 'TSource>) =
         { new IAsyncHandler<'TContext, 'TContext> with
             member _.Use(next) =
                 { new IAsyncNext<'TContext, 'TSource> with
