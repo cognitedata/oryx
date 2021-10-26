@@ -14,21 +14,11 @@ type RequestBuilder () =
     member _.Delay(fn) = fn ()
     member _.Combine(source, other) = [ source; other ] |> sequential
 
-    member _.For
-        (
-            source: 'TSource seq,
-            func: 'TSource -> IHttpHandler<'TResult>
-        ) : IHttpHandler<'TResult list> =
-        source
-        |> Seq.map func
-        |> sequential
+    member _.For(source: 'TSource seq, func: 'TSource -> IHttpHandler<'TResult>) : IHttpHandler<'TResult list> =
+        source |> Seq.map func |> sequential
 
     /// Binds value of 'TValue for let! All handlers runs in same context within the builder.
-    member _.Bind
-        (
-            source: IHttpHandler<'TSource>,
-            fn: 'TSource -> IHttpHandler<'TResult>
-        ) : IHttpHandler<'TResult> =
+    member _.Bind(source: IHttpHandler<'TSource>, fn: 'TSource -> IHttpHandler<'TResult>) : IHttpHandler<'TResult> =
         source |> Core.bind fn
 
 [<AutoOpen>]

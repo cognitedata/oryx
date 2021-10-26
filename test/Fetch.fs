@@ -137,9 +137,7 @@ let ``Get with logging is OK`` () =
         // Act
         let request =
             http {
-                let! result =
-                    ctx
-                    |> get ()
+                let! result = ctx |> get ()
                 return result + 2
             }
 
@@ -234,7 +232,12 @@ let ``Multiple post with logging is OK`` () =
         let! result =
             http {
                 let! a = ctx |> withLogMessage "first" |> post (content 41)
-                let! b = ctx |> withLogMessage "second" |> post (content 42)
+
+                let! b =
+                    ctx
+                    |> withLogMessage "second"
+                    |> post (content 42)
+
                 return a + b
             }
             |> runAsync

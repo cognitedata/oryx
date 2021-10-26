@@ -232,10 +232,7 @@ module Core =
     /// Completes the current request.
     let empty<'TContext> (ctx: 'TContext) =
         { new IAsyncHandler<'TContext, unit> with
-            member _.Use(next) =
-                unitVtask {
-                    return! next.OnNextAsync(ctx, ())
-                } }
+            member _.Use(next) = unitVtask { return! next.OnNextAsync(ctx, ()) } }
 
     /// Filter content using a predicate function.
     let filter<'TContext, 'TSource>

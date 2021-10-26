@@ -142,7 +142,7 @@ module HttpContext =
           ReasonPhrase = String.Empty }
 
     /// The default context.
-    let defaultContext : HttpContext =
+    let defaultContext: HttpContext =
         { Request = defaultRequest
           Response = defaultResponse }
 

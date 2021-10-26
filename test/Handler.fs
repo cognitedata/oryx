@@ -16,12 +16,10 @@ open Tests.Common
 let ``Simple unit handler is Ok`` () =
     task {
         // Arrange
-        let req =  singleton 43
+        let req = singleton 43
 
         // Act
-        let! content =
-            req
-            |> runUnsafeAsync
+        let! content = req |> runUnsafeAsync
 
         // Assert
         test <@ content = 43 @>
@@ -31,9 +29,7 @@ let ``Simple unit handler is Ok`` () =
 let ``Simple error handler is Error`` () =
     task {
         // Arrange
-        let req =
-            httpRequest
-            |> error "failed"
+        let req = httpRequest |> error "failed"
 
         // Act
         let! result = req |> runAsync
@@ -70,9 +66,7 @@ let ``Catching errors is Ok`` () =
         // Arrange
         let errorHandler = badRequestHandler 420
 
-        let req =
-            ofError "failed"
-            |> catch errorHandler
+        let req = ofError "failed" |> catch errorHandler
 
         // Act
         let! content = req |> runUnsafeAsync
@@ -219,7 +213,7 @@ let ``Choose handlers is Ok`` () =
 let ``Choose panic is Error`` () =
     task {
         // Arrange
-        let req : IHttpHandler<int> =
+        let req: IHttpHandler<int> =
             httpRequest
             |> choose [ error "1"; panic "2"; error "3"; replace 4 ]
 
@@ -238,15 +232,7 @@ let ``Choose panic is not skipped`` () =
         // Arrange
         let req =
             httpRequest
-            |> choose [
-                error "1"
-                choose [
-                    panic "2"
-                    replace 42
-                    error "3"
-                ]
-                replace 4
-            ]
+            |> choose [ error "1"; choose [ panic "2"; replace 42; error "3" ]; replace 4 ]
 
         // Act
         try

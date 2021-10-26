@@ -12,7 +12,7 @@ open Tests.Common
 let ``Zero builder is Ok`` () =
     task {
         // Arrange
-        let req =  http { () }
+        let req = http { () }
 
         // Act
         let! result = req |> runAsync
@@ -61,9 +61,7 @@ let ``Multiple handlers in builder is Ok`` () =
                 let! a = singleton 10
                 let! b = singleton 20
 
-                return!
-                    add a b
-                    |> validate (fun value -> value = 10 + 20)
+                return! add a b |> validate (fun value -> value = 10 + 20)
             }
 
         // Act
@@ -78,13 +76,8 @@ let ``Get value 2 is Ok`` () =
     task {
         // Arrange
         let request =
-            http {
-                yield 42
-            }
-            |> HttpHandler.bind(fun a ->
-                http {
-                    return a + 1
-                })
+            http { yield 42 }
+            |> HttpHandler.bind (fun a -> http { return a + 1 })
 
         // Act
         let! result = request |> runUnsafeAsync

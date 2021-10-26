@@ -65,7 +65,7 @@ let request term =
 let asyncMain argv = task {
     use client = new HttpClient ()
     let ctx =
-        empty
+        httpRequest
         |> withHttpClient client
 
     let! result = ctx |> request "F#" |> runAsync
@@ -80,9 +80,9 @@ let main argv =
 
 ## Fundamentals
 
-The main building blocks in Oryx are the `HttpContext` and the `HttpHandler`. The context contains all the state needed for
-making the request, and also contains any response metadata such as headers, response code, etc received from the remote
-server:
+The main building blocks in Oryx are the `HttpContext` and the `HttpHandler`. The context contains all the state needed
+for making the request, and also contains any response metadata such as headers, response code, etc received from the
+remote server:
 
 ```fs
 type Context = {
@@ -209,7 +209,7 @@ SDK](https://github.com/cognitedata/cognite-sdk-dotnet/blob/master/Oryx.Cognite/
         >> json jsonOptions
 ```
 
-The function `listAssets` is now also an `IHttpHandler` and may be composed with other handlers to create complex chains
+The function `list` is now also an `IHttpHandler` and may be composed with other handlers to create complex chains
 for doing multiple sequential or concurrent to a web service. And you can do this without having to worry about error
 handling.
 
@@ -281,8 +281,8 @@ bypass a `catch` operator.
 
 ```fs
 val catch:
-  errorhandler: (exn -> IHttpHandler<'TSource>  -> 
-  source: IHttpHandler<'TSource> 
+  errorhandler: (exn -> IHttpHandler<'TSource>  ->
+  source: IHttpHandler<'TSource>
               -> IHttpHandler<HttpContent>
 ```
 
@@ -449,12 +449,12 @@ val withLogger:
    logger: ILogger ->
    source: IHttpHandler<'TSource>
         -> IHttpHandler<'TSource>
-        
+
 val withLogLevel:
    logLevel: LogLevel ->
    source  : IHttpHandler<'TSource>
           -> IHttpHandler<'TSource>
-          
+
 val withLogMessage:
    msg : string              ->
    next: IHttpNext<'TSource>
@@ -543,7 +543,7 @@ let urlBuilder (request: HttpRequest) : string =
 ```
 ## What is new in Oryx v5
 
-Oryx v5 continues to simplify the HTTP handlers by reducing the number of 
+Oryx v5 continues to simplify the HTTP handlers by reducing the number of
 generic parameters so you only need to specify the type the handler is producing (not what it's consuming).
 
 ```fs
@@ -555,14 +555,14 @@ type IHttpHandler<'TSource> =
     abstract member Use: next: IHttpNext<'TResult> -> ValueTask
 ```
 
-The great advantage is that you can now use normal functional composition (`>>`) instead of Kleisli composition (`>=>`). This also enables normal pipelining 
-using the pipe (`|>`) operator which will also give you type hints most IDEs.
+The great advantage is that you can now use normal functional composition (`>>`) instead of Kleisli composition (`>=>`).
+This also enables normal pipelining using the pipe (`|>`) operator which will also give you type hints most IDEs.
 
 ```fs
 use client = new HttpClient()
 
 let common =
-    empty
+    httpRequest
     |> GET
     |> withHttpClient client
     |> withUrl Url
@@ -686,8 +686,9 @@ type Context<'T> =
 
 ## Upgrade from Oryx v4 to v5
 
-The context builders are gone. In Oryx v5 there is only HTTP handlers (`HttpHandler`). This means that there is only one way to build and transform the context.
-This might seem inefficient when you need to reuse the same part of the context for multiple requests. The way to handle this is to use the `cache` handler. 
+The context builders are gone. In Oryx v5 there is only HTTP handlers (`HttpHandler`). This means that there is only one
+way to build and transform the context. This might seem inefficient when you need to reuse the same part of the context
+for multiple requests. The way to handle this is to use the `cache` handler.
 
 ## Upgrade from Oryx v3 to v4
 
