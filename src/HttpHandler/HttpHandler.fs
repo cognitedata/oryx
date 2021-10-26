@@ -261,7 +261,7 @@ module HttpHandler =
                 |> source.Use }
 
     // A basic way to set the request URL. Use custom builders for more advanced usage.
-    let withUrl (url: string) source = withUrlBuilder (fun _ -> url) source
+    let withUrl<'TSource> (url: string) source : IHttpHandler<'TSource> = withUrlBuilder (fun _ -> url) source
 
     /// HTTP GET request. Also clears any content set in the context.
     let GET<'TSource> (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> =
@@ -398,7 +398,8 @@ module HttpHandler =
                     member _.OnErrorAsync(ctx, err) = next.OnErrorAsync(ctx, err) }
                 |> source.Use }
 
-    let httpRequest<'TSource> = Core.empty<HttpContext> HttpContext.defaultContext
+    let httpRequest<'TSource> : IHttpHandler<unit> = Core.empty<HttpContext> HttpContext.defaultContext
     let cache<'TSource> = Core.cache<HttpContext, 'TSource>
     /// Asks for the given HTTP context.
-    let ask<'TSource> = Core.ask<HttpContext, 'TSource>
+    let ask<'TSource> (source: IHttpHandler<'TSource>) : IHttpHandler<HttpContext> =
+        Core.ask<HttpContext, 'TSource> source
