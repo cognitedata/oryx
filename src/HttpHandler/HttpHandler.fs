@@ -21,6 +21,7 @@ module HttpHandler =
     /// Run the HTTP handler in the given context. Returns content and throws exception if any error occured.
     let runUnsafeAsync<'TResult> (handler: IHttpHandler<'TResult>) = Core.runUnsafeAsync<HttpContext, 'TResult> handler
 
+    /// Produce a single value using the default context.
     let singleton<'TSource> =
         Core.singleton<HttpContext, 'TSource> HttpContext.defaultContext
 
@@ -28,6 +29,7 @@ module HttpHandler =
     let map<'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
     /// Update (map) the context.
     let update<'TSource> = Core.update<HttpContext, 'TSource>
+    /// Bind the content.
     let bind<'TSource, 'TResult> fn source = Core.bind<HttpContext, 'TSource, 'TResult> fn source
 
     /// Add HTTP header to context.
@@ -397,9 +399,10 @@ module HttpHandler =
 
                     member _.OnErrorAsync(ctx, err) = next.OnErrorAsync(ctx, err) }
                 |> source.Use }
-
+    /// Starts a pipeline using an empty request with the default context.
     let httpRequest<'TSource> : IHttpHandler<unit> = Core.empty<HttpContext> HttpContext.defaultContext
+    /// Caches the last content value and context.
     let cache<'TSource> = Core.cache<HttpContext, 'TSource>
-    /// Asks for the given HTTP context.
+    /// Asks for the given HTTP context and produces a content value using the context.
     let ask<'TSource> (source: IHttpHandler<'TSource>) : IHttpHandler<HttpContext> =
         Core.ask<HttpContext, 'TSource> source

@@ -8,7 +8,6 @@ open System
 open FSharp.Control.Tasks
 open Oryx
 
-[<AutoOpen>]
 module Error =
     /// Handler for protecting the pipeline from exceptions and protocol violations.
     let protect<'TContext, 'TSource> (source: IAsyncHandler<'TContext, 'TSource>) =
