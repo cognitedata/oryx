@@ -13,7 +13,7 @@ module ResponseReader =
     /// <param name="decoder">Decoder to use. </param>
     /// <param name="source">The upstream source handler.</param>
     /// <returns>Decoded context.</returns>
-    let json<'TResult> (source: IHttpHandler<HttpContent>): IHttpHandler<'TResult> =
+    let json<'TResult> (source: IHttpHandler<HttpContent>) : IHttpHandler<'TResult> =
 
         let parser (stream: Stream) =
             use sr = new StreamReader(stream)
