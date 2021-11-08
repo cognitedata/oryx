@@ -43,7 +43,7 @@ let ``Simple unit handler in builder is Ok`` () =
 let ``Simple return from unit handler in builder is Ok`` () =
     task {
         // Arrange
-        let _ = singleton 42 |> skip |> runAsync
+        let _ = singleton 42 |> ignoreContent |> runAsync
 
         // Act
         let! result = http { return! singleton 42 } |> runUnsafeAsync

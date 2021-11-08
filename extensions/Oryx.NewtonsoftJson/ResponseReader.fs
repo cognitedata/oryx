@@ -12,8 +12,7 @@ module ResponseReader =
     /// </summary>
     /// <param name="source">The upstream source handler.</param>
     /// <returns>Decoded context.</returns>
-    let json<'TResult> (source: IHttpHandler<HttpContent>) : IHttpHandler<'TResult> =
-
+    let json<'TResult> (source: HttpHandler<HttpContent>) : HttpHandler<'TResult> =
         let parser (stream: Stream) =
             use sr = new StreamReader(stream)
             let serializer = JsonSerializer()

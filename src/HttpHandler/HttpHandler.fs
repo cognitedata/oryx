@@ -8,18 +8,21 @@ open System.Threading.Tasks
 open Microsoft.Extensions.Logging
 
 open FSharp.Control.Tasks
+open Oryx
 open Oryx.Middleware
 
-type IHttpNext<'TSource> = IAsyncNext<HttpContext, 'TSource>
-type IHttpHandler<'TResult> = IAsyncHandler<HttpContext, 'TResult>
+type HttpNext<'TSource> = NextAsync<HttpContext, 'TSource>
+type HttpHandler<'TResult> = HandlerAsync<HttpContext, 'TResult>
+
+exception HttpException of HttpContext * exn
 
 [<AutoOpen>]
 module HttpHandler =
     /// Run the HTTP handler in the given context. Returns content as result type.
-    let runAsync<'TResult> (handler: IHttpHandler<'TResult>) = Core.runAsync<HttpContext, 'TResult> handler
+    let runAsync<'TResult> (handler: HttpHandler<'TResult>) = Core.runAsync<HttpContext, 'TResult> handler
 
     /// Run the HTTP handler in the given context. Returns content and throws exception if any error occured.
-    let runUnsafeAsync<'TResult> (handler: IHttpHandler<'TResult>) = Core.runUnsafeAsync<HttpContext, 'TResult> handler
+    let runUnsafeAsync<'TResult> (handler: HttpHandler<'TResult>) = Core.runUnsafeAsync<HttpContext, 'TResult> handler
 
     /// Produce a single value using the default context.
     let singleton<'TSource> =
@@ -28,7 +31,7 @@ module HttpHandler =
     /// Map the content of the HTTP handler.
     let map<'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
     /// Update (map) the context.
-    let update<'TSource> = Core.update<HttpContext, 'TSource>
+    let update<'TSource> (update: HttpContext -> HttpContext) source : HttpHandler<'TSource> = Core.update<HttpContext, 'TSource> update source
     /// Bind the content.
     let bind<'TSource, 'TResult> fn source = Core.bind<HttpContext, 'TSource, 'TResult> fn source
 
@@ -54,7 +57,7 @@ module HttpHandler =
         withHeader header
 
     /// Set the HTTP client to use for the requests.
-    let withHttpClient (client: HttpClient) source : IHttpHandler<'TSource> =
+    let withHttpClient<'TSource> (client: HttpClient) source : HttpHandler<'TSource> =
         update
             (fun ctx ->
                 { ctx with
@@ -131,19 +134,15 @@ module HttpHandler =
 
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
-    let withQuery (query: seq<struct (string * string)>) (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> =
-        { new IHttpHandler<'TSource> with
-            member _.Use(next) =
-                { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, content) =
-                        next.OnNextAsync(
-                            { ctx with
-                                  Request = { ctx.Request with Query = query } },
-                            content = content
-                        )
+    let withQuery (query: seq<struct (string * string)>) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        fun next ->
+            fun ctx ->
+                next
+                    { ctx with
+                          Request = { ctx.Request with Query = query } }
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) }
-                |> source.Use }
+            |> source
+
 
 
     /// Chunks a sequence of HTTP handlers into sequential and concurrent batches.
@@ -179,109 +178,84 @@ module HttpHandler =
     let validate<'TSource> = Core.validate<HttpContext, 'TSource>
 
     /// Handler that skips (ignores) the content and outputs unit.
-    let skip<'TSource> = Core.skip<HttpContext, 'TSource>
+    let ignoreContent<'TSource> = Core.ignoreContent<HttpContext, 'TSource>
 
     let replace<'TSource, 'TResult> = Core.replace<HttpContext, 'TSource, 'TResult>
 
     /// Parse response stream to a user specified type synchronously.
-    let parse<'TResult> (parser: Stream -> 'TResult) (source: IHttpHandler<HttpContent>) : IHttpHandler<'TResult> =
-        { new IHttpHandler<'TResult> with
-            member _.Use(next) =
-                { new IHttpNext<HttpContent> with
-                    member _.OnNextAsync(ctx, content) =
-                        unitVtask {
-                            let! stream = content.ReadAsStreamAsync()
+    let parse<'TResult> (parser: Stream -> 'TResult) (source: HttpHandler<HttpContent>) : HttpHandler<'TResult> =
+        fun next ->
+            fun ctx (content: HttpContent) ->
+                unitVtask {
+                    let! stream = content.ReadAsStreamAsync()
 
-                            try
-                                let item = parser stream
-                                return! next.OnNextAsync(ctx, item)
-                            with
-                            | ex ->
-                                ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
-                                return! next.OnErrorAsync(ctx, ex)
-                        }
-
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) }
-                |> source.Use }
+                    try
+                        let item = parser stream
+                        return! next ctx item
+                    with
+                    | ex ->
+                        ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
+                        ServiceError.error(ex)
+                }
+            |> source
 
 
     /// Parse response stream to a user specified type asynchronously.
     let parseAsync<'TResult>
         (parser: Stream -> Task<'TResult>)
-        (source: IHttpHandler<HttpContent>)
-        : IHttpHandler<'TResult> =
-        { new IHttpHandler<'TResult> with
-            member _.Use(next) =
-                { new IHttpNext<HttpContent> with
-                    member _.OnNextAsync(ctx, content) =
-                        unitVtask {
-                            let! stream = content.ReadAsStreamAsync()
+        (source: HttpHandler<HttpContent>)
+        : HttpHandler<'TResult> =
+        fun next ->
+           fun ctx (content: HttpContent) ->
+                unitVtask {
+                    let! stream = content.ReadAsStreamAsync()
 
-                            try
-                                let! item = parser stream
-                                return! next.OnNextAsync(ctx, item)
-                            with
-                            | ex ->
-                                ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
-                                return! next.OnErrorAsync(ctx, ex)
-                        }
-
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) }
-                |> source.Use }
+                    try
+                        let! item = parser stream
+                        return! next ctx item
+                    with
+                    | ex ->
+                        ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
+                        ServiceError.error(ex)
+                }
+          |> source
 
     /// HTTP handler for setting the expected response type.
-    let withResponseType<'TSource> (respType: ResponseType) (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> =
-        { new IHttpHandler<'TSource> with
-            member _.Use(next) =
-                { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, content) =
-                        next.OnNextAsync(
-                            { ctx with
-                                  Request =
-                                      { ctx.Request with
-                                            ResponseType = respType } },
-                            content = content
-                        )
-
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) }
-                |> source.Use }
+    let withResponseType<'TSource> (respType: ResponseType) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        fun next ->
+            fun ctx ->
+                next
+                    { ctx with
+                          Request =
+                              { ctx.Request with
+                                    ResponseType = respType } }
+            |> source
 
     /// HTTP handler for setting the method to be used for requests using this context. You will normally want to use
     /// the `GET`, `POST`, `PUT`, `DELETE`, or `OPTIONS` HTTP handlers instead of this one.
-    let withMethod<'TSource> (method: HttpMethod) (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> =
-        { new IHttpHandler<'TSource> with
-            member _.Use(next) =
-                { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, content) =
-                        next.OnNextAsync(
-                            { ctx with
-                                  Request = { ctx.Request with Method = method } },
-                            content = content
-                        )
+    let withMethod<'TSource> (method: HttpMethod) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        fun next ->
+            fun ctx ->
+                next
+                    { ctx with
+                          Request = { ctx.Request with Method = method } }
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) }
-                |> source.Use }
+            |> source
 
     // A basic way to set the request URL. Use custom builders for more advanced usage.
-    let withUrl<'TSource> (url: string) source : IHttpHandler<'TSource> = withUrlBuilder (fun _ -> url) source
+    let withUrl<'TSource> (url: string) source : HttpHandler<'TSource> = withUrlBuilder (fun _ -> url) source
 
     /// HTTP GET request. Also clears any content set in the context.
-    let GET<'TSource> (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> =
-        { new IHttpHandler<'TSource> with
-            member _.Use(next) =
-                { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, content) =
-                        next.OnNextAsync(
-                            { ctx with
-                                  Request =
-                                      { ctx.Request with
-                                            Method = HttpMethod.Get
-                                            ContentBuilder = None } },
-                            content = content
-                        )
-
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) }
-                |> source.Use }
+    let GET<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        fun next ->
+            fun ctx ->
+                next
+                    { ctx with
+                          Request =
+                              { ctx.Request with
+                                    Method = HttpMethod.Get
+                                    ContentBuilder = None } }
+            |> source
 
     /// HTTP POST request.
     let POST<'TSource> = withMethod<'TSource> HttpMethod.Post
@@ -296,38 +270,34 @@ module HttpHandler =
     /// fail the request if it's unable to authenticate.
     let withTokenRenewer<'TSource>
         (tokenProvider: CancellationToken -> Task<Result<string, exn>>)
-        (source: IHttpHandler<'TSource>)
-        : IHttpHandler<'TSource> =
-        { new IHttpHandler<'TSource> with
-            member _.Use(next) =
-                { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, content) =
-                        unitVtask {
-                            let! result =
-                                task {
-                                    try
-                                        return! tokenProvider ctx.Request.CancellationToken
-                                    with
-                                    | ex -> return Error ex
-                                }
-
-                            match result with
-                            | Ok token ->
-                                let name, value = ("Authorization", $"Bearer {token}")
-
-                                return!
-                                    next.OnNextAsync(
-                                        { ctx with
-                                              Request =
-                                                  { ctx.Request with
-                                                        Headers = ctx.Request.Headers.Add(name, value) } },
-                                        content
-                                    )
-                            | Error err -> return! next.OnErrorAsync(ctx, err)
+        (source: HttpHandler<'TSource>)
+        : HttpHandler<'TSource> =
+        fun next ->
+            fun ctx content ->
+                unitVtask {
+                    let! result =
+                        task {
+                            try
+                                return! tokenProvider ctx.Request.CancellationToken
+                            with
+                            | ex -> return Error ex
                         }
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) }
-                |> source.Use }
+                    match result with
+                    | Ok token ->
+                        let name, value = ("Authorization", $"Bearer {token}")
+
+                        return!
+                            next
+                                { ctx with
+                                      Request =
+                                          { ctx.Request with
+                                                Headers = ctx.Request.Headers.Add(name, value) } }
+                                content
+
+                    | Error err -> ServiceError.error(err)
+            }
+            |> source
 
 
     /// Use the given `completionMode` to change when the Response is considered to be 'complete'.
@@ -340,69 +310,54 @@ module HttpHandler =
     /// not forcing the file stream to buffer in memory.
     let withCompletion<'TSource>
         (completionMode: HttpCompletionOption)
-        (source: IHttpHandler<'TSource>)
-        : IHttpHandler<'TSource> =
-        { new IHttpHandler<'TSource> with
-            member _.Use(next) =
-                { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, content) =
-                        next.OnNextAsync(
-                            { ctx with
-                                  Request =
-                                      { ctx.Request with
-                                            CompletionMode = completionMode } },
-                            content = content
-                        )
-
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) }
-                |> source.Use }
+        (source: HttpHandler<'TSource>)
+        : HttpHandler<'TSource> =
+        fun next ->
+            fun ctx ->
+                next
+                    { ctx with
+                          Request =
+                              { ctx.Request with
+                                    CompletionMode = completionMode } }
+            |> source
 
     /// HTTP handler for adding content builder to context. These
     /// content will be added to the HTTP body of requests that uses
     /// this context.
-    let withContent<'TSource> (builder: unit -> HttpContent) (source: IHttpHandler<'TSource>) : IHttpHandler<'TSource> =
-        { new IHttpHandler<'TSource> with
-            member _.Use(next) =
-                { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, content) =
-                        next.OnNextAsync(
-                            { ctx with
-                                  Request =
-                                      { ctx.Request with
-                                            ContentBuilder = Some builder } },
-                            content = content
-                        )
+    let withContent<'TSource> (builder: unit -> HttpContent) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        fun next ->
+            fun ctx ->
+                next
+                    { ctx with
+                          Request =
+                              { ctx.Request with
+                                    ContentBuilder = Some builder } }
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn) }
-                |> source.Use }
+            |> source
 
     /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
     let withError
         (errorHandler: HttpResponse -> HttpContent -> Task<exn>)
-        (source: IHttpHandler<HttpContent>)
-        : IHttpHandler<HttpContent> =
-        { new IHttpHandler<HttpContent> with
-            member _.Use(next) =
-                { new IHttpNext<HttpContent> with
-                    member _.OnNextAsync(ctx, content) =
-                        unitVtask {
-                            let response = ctx.Response
+        (source: HttpHandler<HttpContent>)
+        : HttpHandler<HttpContent> =
+        fun next ->
+            fun ctx content ->
+                unitVtask {
+                    let response = ctx.Response
 
-                            match response.IsSuccessStatusCode with
-                            | true -> return! next.OnNextAsync(ctx, content = content)
-                            | false ->
-                                ctx.Request.Metrics.Counter Metric.FetchErrorInc Map.empty 1L
+                    match response.IsSuccessStatusCode with
+                    | true -> return! next ctx content
+                    | false ->
+                        ctx.Request.Metrics.Counter Metric.FetchErrorInc Map.empty 1L
 
-                                let! err = errorHandler response content
-                                return! next.OnErrorAsync(ctx, err)
-                        }
-
-                    member _.OnErrorAsync(ctx, err) = next.OnErrorAsync(ctx, err) }
-                |> source.Use }
+                        let! err = errorHandler response content
+                        return! ServiceError.error(HttpException(ctx, err))
+                }
+            |> source
     /// Starts a pipeline using an empty request with the default context.
-    let httpRequest<'TSource> : IHttpHandler<unit> = Core.empty<HttpContext> HttpContext.defaultContext
+    let httpRequest : HttpHandler<unit> = Core.empty<HttpContext> HttpContext.defaultContext
     /// Caches the last content value and context.
     let cache<'TSource> = Core.cache<HttpContext, 'TSource>
     /// Asks for the given HTTP context and produces a content value using the context.
-    let ask<'TSource> (source: IHttpHandler<'TSource>) : IHttpHandler<HttpContext> =
+    let ask<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<HttpContext> =
         Core.ask<HttpContext, 'TSource> source

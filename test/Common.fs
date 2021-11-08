@@ -64,23 +64,21 @@ let add (a: int) (b: int) = singleton (a + b)
 exception TestException of code: int * message: string with
     override this.ToString() = this.message
 
-let error msg source : IHttpHandler<'TSource> = fail (TestException(code = 400, message = msg)) source
-let ofError msg : IHttpHandler<'TSource> = ofError (TestException(code = 400, message = msg))
-let panic msg source : IHttpHandler<'TSource> = panic (TestException(code = 400, message = msg)) source
+let error msg source : HttpHandler<'TSource> = fail (TestException(code = 400, message = msg)) source
+let ofError msg : HttpHandler<'TSource> = ofError (TestException(code = 400, message = msg))
+let panic msg source : HttpHandler<'TSource> = panic (TestException(code = 400, message = msg)) source
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
-let badRequestHandler<'TSource> (response: 'TSource) (ctx: HttpContext) (error: exn) : IHttpHandler<'TSource> =
-    { new IHttpHandler<'TSource> with
-        member _.Use(next) =
-            unitVtask {
-                match error with
-                | :? TestException as ex ->
-                    match enum<HttpStatusCode> ex.code with
-                    | HttpStatusCode.BadRequest -> return! next.OnNextAsync(ctx, response)
-
-                    | _ -> return! next.OnErrorAsync(ctx, error)
-                | _ -> return! next.OnErrorAsync(ctx, error)
-            } }
+let badRequestHandler<'TSource> (response: 'TSource) (ctx: HttpContext) (error: exn) : HttpHandler<'TSource> =
+    fun next ->
+        unitVtask {
+            match error with
+            | :? TestException as ex ->
+                match enum<HttpStatusCode> ex.code with
+                | HttpStatusCode.BadRequest -> return! next ctx response
+                | _ -> raise (HttpException(ctx, error))
+            | _ -> raise (HttpException(ctx, error))
+        }
 
 let shouldRetry (error: exn) : bool =
     match error with

@@ -1,3 +1,4 @@
+open System
 open System.Net.Http
 open System.Text.Json
 
@@ -33,11 +34,11 @@ let request ctx term =
     |> fetch
     |> json wikiDataItemsDecoders
 
-let asyncMain argv =
+let asyncMain _ =
     task {
         use client = new HttpClient()
 
-        let ctx =
+        let ctx : HttpHandler<unit> =
             httpRequest
             |> GET
             |> withHttpClient client

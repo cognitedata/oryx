@@ -213,7 +213,7 @@ let ``Choose handlers is Ok`` () =
 let ``Choose panic is Error`` () =
     task {
         // Arrange
-        let req: IHttpHandler<int> =
+        let req: HttpHandler<int> =
             httpRequest
             |> choose [ error "1"; panic "2"; error "3"; replace 4 ]
 
@@ -222,7 +222,7 @@ let ``Choose panic is Error`` () =
             let! _ = req |> runUnsafeAsync
             assert false
         with
-        | PanicException _ -> ()
+        | ServiceException(ServiceError.Panic _) -> ()
         | _ -> failwith "Should be panic"
     }
 
@@ -239,7 +239,7 @@ let ``Choose panic is not skipped`` () =
             let! _ = req |> runUnsafeAsync
             assert false
         with
-        | PanicException _ -> ()
+        | ServiceException(ServiceError.Panic _) -> ()
         | _ -> failwith "Should be panic"
     }
 
@@ -254,7 +254,7 @@ let ``Choose empty is SkipException`` () =
             let! _ = req |> runUnsafeAsync
             assert false
         with
-        | SkipException _ -> ()
+        | ServiceException(ServiceError.Panic _) -> ()
         | _ -> failwith "Should be skip"
 
     }

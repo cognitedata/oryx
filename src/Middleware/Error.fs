@@ -10,58 +10,38 @@ open Oryx
 
 module Error =
     /// Handler for protecting the pipeline from exceptions and protocol violations.
-    let protect<'TContext, 'TSource> (source: IAsyncHandler<'TContext, 'TSource>) =
-        { new IAsyncHandler<'TContext, 'TSource> with
-            member _.Use(next) =
-                let mutable stopped = false
+    let protect<'TContext, 'TSource> (source: HandlerAsync<'TContext, 'TSource>) : HandlerAsync<'TContext, 'TSource> =
+        fun next ->
+            let mutable stopped = false
 
-                { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, content) =
-                        unitVtask {
-                            match stopped with
-                            | false ->
-                                try
-                                    return! next.OnNextAsync(ctx, content)
-                                with
-                                | err ->
-                                    stopped <- true
-                                    return! next.OnErrorAsync(ctx, err)
-                            | _ -> ()
-                        }
-
-                    member _.OnErrorAsync(ctx, err) =
-                        unitVtask {
-                            match stopped with
-                            | false ->
-                                stopped <- true
-                                return! next.OnErrorAsync(ctx, err)
-                            | _ -> ()
-                        } }
-                |> source.Use }
+            fun ctx content ->
+                unitVtask {
+                    match stopped with
+                    | false ->
+                        try
+                            return! next ctx content
+                        with
+                        | err ->
+                            stopped <- true
+                            ServiceError.error(err)
+                    | _ -> ()
+                }
+            |> source
 
     /// Handler for catching errors and then delegating to the error handler on what to do.
     let catch<'TContext, 'TSource>
-        (errorHandler: 'TContext -> exn -> IAsyncHandler<'TContext, 'TSource>)
-        (source: IAsyncHandler<'TContext, 'TSource>)
-        : IAsyncHandler<'TContext, 'TSource> =
-        { new IAsyncHandler<'TContext, 'TSource> with
-            member _.Use(next) =
-                { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, content) =
-                        unitVtask {
-                            try
-                                return! next.OnNextAsync(ctx, content)
-                            with
-                            | err -> return! next.OnErrorAsync(ctx, err)
-                        }
-
-                    member _.OnErrorAsync(ctx, err) =
-                        unitVtask {
-                            match err with
-                            | PanicException error -> return! next.OnErrorAsync(ctx, error)
-                            | _ -> do! (errorHandler ctx err).Use(next)
-                        } }
-                |> source.Use }
+        (errorHandler: 'TContext -> exn -> HandlerAsync<'TContext, 'TSource>)
+        (source: HandlerAsync<'TContext, 'TSource>)
+        : HandlerAsync<'TContext, 'TSource> =
+        fun next ->
+            fun ctx content ->
+                unitVtask {
+                    try
+                        return! next ctx content
+                    with
+                    | err -> return! (errorHandler ctx err) next
+                    }
+            |> source
 
     [<RequireQualifiedAccess>]
     type ChooseState =
@@ -72,105 +52,70 @@ module Error =
     /// Choose from a list of middlewares to use. The first middleware that succeeds will be used. Handlers will be
     /// tried until one does not produce any error, or a `PanicException`.
     let choose<'TContext, 'TSource, 'TResult>
-        (handlers: (IAsyncHandler<'TContext, 'TSource> -> IAsyncHandler<'TContext, 'TResult>) seq)
-        (source: IAsyncHandler<'TContext, 'TSource>)
-        : IAsyncHandler<'TContext, 'TResult> =
-        { new IAsyncHandler<'TContext, 'TResult> with
-            member _.Use(next) =
-                let exns: ResizeArray<exn> = ResizeArray()
+        (handlers: (HandlerAsync<'TContext, 'TSource> -> HandlerAsync<'TContext, 'TResult>) list)
+        (source: HandlerAsync<'TContext, 'TSource>)
+        : HandlerAsync<'TContext, 'TResult> =
+        fun next ->
+            let exns: ResizeArray<exn> = ResizeArray()
 
-                { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, content) =
-                        let mutable state = ChooseState.Error
+            fun ctx content ->
+                unitVtask {
+                    let next' ctx content = unitVtask {
+                        do! next ctx content
+                    }
 
-                        unitVtask {
-                            let obs =
-                                { new IAsyncHandler<'TContext, 'TSource> with
-                                    member _.Use(next) = unitVtask { return! next.OnNextAsync(ctx, content) } }
+                    /// Proces handlers until `NoError` or `Panic`.
+                    let rec chooser (handlers: (HandlerAsync<'TContext, 'TSource> -> HandlerAsync<'TContext, 'TResult>) list) = unitVtask {
+                        match handlers with
+                        | handler :: xs ->
+                            try
+                                do! next' |> handler source
+                            with
+                            | error ->
+                                match error with
+                                | ServiceException (ServiceError.Panic _) -> () //reraise ()
+                                | ServiceException (ServiceError.Skip _) -> ()
+                                | _ -> exns.Add(error)
+                                do! chooser xs
+                        | [] -> ()
+                    }
 
-                            let obv =
-                                { new IAsyncNext<'TContext, 'TResult> with
-                                    member _.OnNextAsync(ctx, content) =
-                                        unitVtask {
-                                            exns.Clear() // Clear to avoid buildup of exceptions in streaming scenarios.
+                    do! chooser handlers
 
-                                            if state = ChooseState.NoError then
-                                                return! next.OnNextAsync(ctx, content)
-                                        }
+                    match exns.Count with
+                    | 0 -> ()
+                    | 1 -> raise exns.[0]
+                    | _ ->
+                        raise (AggregateException(exns))
+                }
 
-                                    member _.OnErrorAsync(_, error) =
-                                        unitVtask {
-                                            match error, state with
-                                            | PanicException _, st when st <> ChooseState.Panic ->
-                                                state <- ChooseState.Panic
-                                                return! next.OnErrorAsync(ctx, error)
-                                            | SkipException _, st when st = ChooseState.NoError ->
-                                                // Flag error, but do not record skips.
-                                                state <- ChooseState.Error
-                                            | _, ChooseState.Panic ->
-                                                // Already panic. Ignoring additional error.
-                                                ()
-                                            | _, _ ->
-                                                state <- ChooseState.Error
-                                                exns.Add(error)
-                                        } }
-
-                            /// Proces handlers until `NoError` or `Panic`.
-                            for handler in handlers do
-                                if state = ChooseState.Error then
-                                    state <- ChooseState.NoError
-                                    do! handler(obs).Use(obv)
-
-                            match state, exns with
-                            | ChooseState.Panic, _ ->
-                                // Panic is sent immediately above
-                                ()
-                            | ChooseState.Error, exns when exns.Count > 1 ->
-                                return! next.OnErrorAsync(ctx, AggregateException(exns))
-                            | ChooseState.Error, exns when exns.Count = 1 -> return! next.OnErrorAsync(ctx, exns.[0])
-                            | ChooseState.Error, _ ->
-                                return! next.OnErrorAsync(ctx, SkipException "Choose: No hander matched")
-                            | ChooseState.NoError, _ -> ()
-
-                        }
-
-                    member _.OnErrorAsync(ctx, error) =
-                        exns.Clear()
-                        next.OnErrorAsync(ctx, error) }
-                |> source.Use }
+           |> source
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
     let fail<'TContext, 'TSource, 'TResult>
-        (error: Exception)
-        (source: IAsyncHandler<'TContext, 'TSource>)
-        : IAsyncHandler<'TContext, 'TResult> =
-        { new IAsyncHandler<'TContext, 'TResult> with
-            member _.Use(next) =
-                { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, _) = next.OnErrorAsync(ctx, error)
-                    member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error) }
-                |> source.Use }
+        (err: Exception)
+        (source: HandlerAsync<'TContext, 'TSource>)
+        : HandlerAsync<'TContext, 'TResult> =
+        fun next ->
+            fun ctx _ -> ServiceError.error(err)
+            |> source
 
     /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
     /// the any error handling e.g `choose` or `catch`•.
     let panic<'TContext, 'TSource, 'TResult>
         (error: Exception)
-        (source: IAsyncHandler<'TContext, 'TSource>)
-        : IAsyncHandler<'TContext, 'TResult> =
-        { new IAsyncHandler<'TContext, 'TResult> with
-            member _.Use(next) =
-                { new IAsyncNext<'TContext, 'TSource> with
-                    member _.OnNextAsync(ctx, _) = next.OnErrorAsync(ctx, PanicException error)
-                    member _.OnErrorAsync(ctx, error) = next.OnErrorAsync(ctx, error) }
-                |> source.Use }
+        (source: HandlerAsync<'TContext, 'TSource>)
+        : HandlerAsync<'TContext, 'TResult> =
+        fun next ->
+            fun ctx _ -> ServiceError.panic(error)
+            |> source
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
-    let ofError<'TContext, 'TSource> (ctx: 'TContext) (error: Exception) : IAsyncHandler<'TContext, 'TSource> =
-        { new IAsyncHandler<'TContext, 'TSource> with
-            member _.Use(next) = next.OnErrorAsync(ctx, error) }
+    let ofError<'TContext, 'TSource> (ctx: 'TContext) (err: Exception) : HandlerAsync<'TContext, 'TSource> =
+        fun next -> ServiceError.error err
 
     /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
     /// the any error handling e.g `choose` or `catch`•.
-    let ofPanic<'TContext, 'TSource> (ctx: 'TContext) (error: Exception) : IAsyncHandler<'TContext, 'TSource> =
-        { new IAsyncHandler<'TContext, 'TSource> with
-            member _.Use(next) = next.OnErrorAsync(ctx, PanicException error) }
+    let ofPanic<'TContext, 'TSource> (ctx: 'TContext) (error: Exception) : HandlerAsync<'TContext, 'TSource> =
+        fun next ->
+            ServiceError.panic error
