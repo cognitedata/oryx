@@ -230,11 +230,6 @@ module HttpContext =
         { ctx with
               Request = { ctx.Request with Metrics = metrics } }
 
-    /// Set labels (can be used for labelling metrics)
-    let withLabels (labels: Generic.IDictionary<string, string>) (ctx: HttpContext) =
-        { ctx with
-              Request = { ctx.Request with Labels = labels } }
-
     /// Merge the list of context objects. Used by the sequential and concurrent HTTP handlers.
     let merge (ctxs: List<HttpContext>) : HttpContext =
         let ctxs =
