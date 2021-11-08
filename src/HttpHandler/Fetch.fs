@@ -77,14 +77,14 @@ module Fetch =
                             try
                                 use request = buildRequest client ctx
                                 timer.Start()
-                                ctx.Request.Metrics.Counter Metric.FetchInc Map.empty 1L
+                                ctx.Request.Metrics.Counter Metric.FetchInc ctx.Request.Labels 1L
 
                                 let! response = client.SendAsync(request, ctx.Request.CompletionMode, cancellationToken)
                                 timer.Stop()
 
                                 ctx.Request.Metrics.Gauge
                                     Metric.FetchLatencyUpdate
-                                    Map.empty
+                                    ctx.Request.Labels
                                     (float timer.ElapsedMilliseconds)
 
                                 let items =

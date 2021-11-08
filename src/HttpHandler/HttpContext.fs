@@ -4,6 +4,7 @@
 namespace Oryx
 
 open System
+open System.Collections
 open System.Diagnostics
 open System.Net
 open System.Net.Http
@@ -83,6 +84,8 @@ and HttpRequest =
       LogFormat: string
       /// Optional Metrics for recording metrics.
       Metrics: IMetrics
+      /// Optional Labels to label the request
+      Labels: Generic.IDictionary<string, string>
       /// Extra state used to e.g build the URL. Clients are free to utilize this property for adding extra
       /// information to the context.
       Items: Map<string, Value>
@@ -129,6 +132,7 @@ module HttpContext =
           LogLevel = LogLevel.None
           LogFormat = defaultLogFormat
           Metrics = EmptyMetrics()
+          Labels = dict []
           Items = Map.empty
           CompletionMode = HttpCompletionOption.ResponseContentRead }
 
@@ -225,6 +229,11 @@ module HttpContext =
     let withMetrics (metrics: IMetrics) (ctx: HttpContext) =
         { ctx with
               Request = { ctx.Request with Metrics = metrics } }
+
+    /// Set labels (can be used for labelling metrics)
+    let withLabels (labels: Generic.IDictionary<string, string>) (ctx: HttpContext) =
+        { ctx with
+              Request = { ctx.Request with Labels = labels } }
 
     /// Merge the list of context objects. Used by the sequential and concurrent HTTP handlers.
     let merge (ctxs: List<HttpContext>) : HttpContext =

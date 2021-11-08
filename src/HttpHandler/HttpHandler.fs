@@ -105,7 +105,7 @@ module HttpHandler =
                                 let item = parser stream
                                 return! next.OnNextAsync(ctx, item)
                             with ex ->
-                                ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
+                                ctx.Request.Metrics.Counter Metric.DecodeErrorInc ctx.Request.Labels 1L
                                 return! next.OnErrorAsync(ctx, ex)
                         }
 
@@ -126,7 +126,7 @@ module HttpHandler =
                                 let! item = parser stream
                                 return! next.OnNextAsync(ctx, item)
                             with ex ->
-                                ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
+                                ctx.Request.Metrics.Counter Metric.DecodeErrorInc ctx.Request.Labels 1L
                                 return! next.OnErrorAsync(ctx, ex)
                         }
 
@@ -315,7 +315,7 @@ module HttpHandler =
                             match response.IsSuccessStatusCode with
                             | true -> return! next.OnNextAsync(ctx, content = content)
                             | false ->
-                                ctx.Request.Metrics.Counter Metric.FetchErrorInc Map.empty 1L
+                                ctx.Request.Metrics.Counter Metric.FetchErrorInc ctx.Request.Labels 1L
 
                                 let! err = errorHandler response content
                                 return! next.OnErrorAsync(ctx, err)
