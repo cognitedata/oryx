@@ -5,7 +5,7 @@ group Main
     framework: netstandard2.0
 
     nuget Microsoft.Extensions.Logging
-    nuget FSharp.Core >= 4.7
+    nuget FSharp.Core ~> 4.7
     nuget Ply
     nuget FsToolkit.ErrorHandling ~> 2
 
@@ -14,46 +14,46 @@ group Json
     storage: none
 
     framework: netstandard2.0
-    nuget FSharp.Core >= 4.7
+    nuget FSharp.Core ~> 4.7
     nuget System.Text.Json
     nuget Ply
-    nuget Oryx >= 3 prerelease
+    nuget Oryx
 
 group Newtonsoft
     source https://www.nuget.org/api/v2
     storage: none
 
     framework: netstandard2.0
-    nuget FSharp.Core >= 4.7
+    nuget FSharp.Core ~> 4.7
     nuget Newtonsoft.Json
     nuget Ply
-    nuget Oryx >= 3 prerelease
+    nuget Oryx
 
 group Thoth
     source https://www.nuget.org/api/v2
     storage: none
 
     framework: netstandard2.0
-    nuget FSharp.Core >= 4.7
+    nuget FSharp.Core ~> 4.7
     nuget Thoth.Json.Net
     nuget Ply
-    nuget Oryx >= 3 prerelease
+    nuget Oryx
 
 group Google
     source https://www.nuget.org/api/v2
     storage: none
 
     framework: netstandard2.0
-    nuget FSharp.Core >= 4.7
+    nuget FSharp.Core ~> 4.7
     nuget Google.Protobuf ~> 3
     nuget Ply
-    nuget Oryx >= 3 prerelease
+    nuget Oryx
 
 group Test
     source https://www.nuget.org/api/v2
     storage: none
 
-    nuget FSharp.Core >= 4.7
+    nuget FSharp.Core ~> 4.7
     nuget coverlet.msbuild ~> 3
     nuget Unquote ~> 5
     nuget xunit ~> 2
@@ -69,6 +69,6 @@ group Examples
 
     nuget Ply
     nuget Thoth.Json.Net
-    nuget Oryx prerelease
-    nuget Oryx.ThothJsonNet prerelease
+    nuget Oryx
+    nuget Oryx.ThothJsonNet
     nuget Newtonsoft.Json
