@@ -66,7 +66,7 @@ module Fetch =
     /// to the log format.
     let fetch<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<HttpContent> =
         fun next ->
-            fun ctx content ->
+            fun ctx _ ->
                 unitVtask {
                     let timer = Stopwatch()
                     let client = ctx.Request.HttpClient()
@@ -80,10 +80,7 @@ module Fetch =
                         let! response = client.SendAsync(request, ctx.Request.CompletionMode, cancellationToken)
                         timer.Stop()
 
-                        ctx.Request.Metrics.Gauge
-                            Metric.FetchLatencyUpdate
-                            Map.empty
-                            (float timer.ElapsedMilliseconds)
+                        ctx.Request.Metrics.Gauge Metric.FetchLatencyUpdate Map.empty (float timer.ElapsedMilliseconds)
 
                         let items =
                             ctx

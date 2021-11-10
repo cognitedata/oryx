@@ -18,9 +18,7 @@ module Error =
         fun next ->
             fun ctx content ->
                 unitVtask {
-                    let handlerNext : HandlerAsync<'TContext, 'TSource> = fun next -> unitVtask {
-                        do! next ctx content
-                    }
+                    let handlerNext: HandlerAsync<'TContext, 'TSource> = fun next -> unitVtask { do! next ctx content }
 
                     try
                         do! next |> handlerToCatch handlerNext
@@ -47,27 +45,29 @@ module Error =
             fun ctx content ->
                 unitVtask {
                     let mutable found = false
-                    let handlerNext : HandlerAsync<'TContext, 'TSource> = fun next -> unitVtask {
-                        do! next ctx content
-                    }
+                    let handlerNext: HandlerAsync<'TContext, 'TSource> = fun next -> unitVtask { do! next ctx content }
 
                     /// Proces handlers until `NoError` or `Panic`.
-                    let rec chooser (handlers: (HandlerAsync<'TContext, 'TSource> -> HandlerAsync<'TContext, 'TResult>) list) = unitVtask {
-                        match handlers with
-                        | handler :: xs ->
-                            try
-                                // Use handler
-                                do! next |> handler handlerNext
-                                found <- true
-                            with
-                            | error ->
-                                match error with
-                                | :? PanicException -> raise error
-                                | :? SkipException -> ()
-                                | _ -> exns.Add(error)
-                                do! chooser xs
-                        | [] -> ()
-                    }
+                    let rec chooser
+                        (handlers: (HandlerAsync<'TContext, 'TSource> -> HandlerAsync<'TContext, 'TResult>) list)
+                        =
+                        unitVtask {
+                            match handlers with
+                            | handler :: xs ->
+                                try
+                                    // Use handler
+                                    do! next |> handler handlerNext
+                                    found <- true
+                                with
+                                | error ->
+                                    match error with
+                                    | :? PanicException -> raise error
+                                    | :? SkipException -> ()
+                                    | _ -> exns.Add(error)
+
+                                    do! chooser xs
+                            | [] -> ()
+                        }
 
                     do! chooser handlers
 
@@ -75,12 +75,11 @@ module Error =
                     | true, _ -> ()
                     | false, 0 -> raise (SkipException("No choice was given."))
                     | false, 1 -> raise exns.[0]
-                    | false, _ ->
-                        raise (AggregateException(exns))
+                    | false, _ -> raise (AggregateException(exns))
 
                 }
 
-           |> source
+            |> source
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
     let fail<'TContext, 'TSource, 'TResult>
@@ -108,5 +107,4 @@ module Error =
     /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
     /// the any error handling e.g `choose` or `catch`•.
     let ofPanic<'TContext, 'TSource> (ctx: 'TContext) (error: Exception) : HandlerAsync<'TContext, 'TSource> =
-        fun _ ->
-            raise (PanicException(error))
+        fun _ -> raise (PanicException(error))

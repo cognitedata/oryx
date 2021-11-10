@@ -6,7 +6,7 @@ open Oryx.ThothJsonNet.ResponseReader
 open Thoth.Json.Net
 
 [<EntryPoint>]
-let main argv =
+let main _ =
     use client = new HttpClient()
 
     let ctx = httpRequest |> withHttpClient client

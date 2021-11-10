@@ -48,14 +48,9 @@ let ``Catching ok is Ok`` () =
         // Arrange
         let errorHandler = badRequestHandler 420
 
-        let mapper =
-            map (fun a -> a * 10)
-            |> catch errorHandler
+        let mapper = map (fun a -> a * 10) |> catch errorHandler
 
-        let req =
-            singleton 42
-            |> mapper
-            |> map id
+        let req = singleton 42 |> mapper |> map id
 
         // Act
         let! content = req |> runUnsafeAsync
@@ -70,13 +65,9 @@ let ``Catching errors is Ok`` () =
         // Arrange
         let errorHandler = badRequestHandler 420
 
-        let handleError =
-            error "failed"
-            |> catch errorHandler
+        let handleError = error "failed" |> catch errorHandler
 
-        let req =
-            httpRequest
-            |> handleError
+        let req = httpRequest |> handleError
 
         // Act
         let! content = req |> runUnsafeAsync
@@ -91,13 +82,9 @@ let ``Catching panic is not possible`` () =
         // Arrange
         let errorHandler = badRequestHandler 420
 
-        let handleError =
-            panic "panic!"
-            |> catch errorHandler
+        let handleError = panic "panic!" |> catch errorHandler
 
-        let req =
-            httpRequest
-            |> handleError
+        let req = httpRequest |> handleError
 
         // Act
         let! result = req |> runAsync
@@ -119,9 +106,7 @@ let ``Not catching errors is Error`` () =
             |> catch errorHandler
             >> error "second!"
 
-        let req =
-            singleton 42
-            |> handleError
+        let req = singleton 42 |> handleError
 
         // Act
         let! result = req |> runAsync

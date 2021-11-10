@@ -14,11 +14,10 @@ open Oryx.Middleware
 type HttpNext<'TSource> = NextAsync<HttpContext, 'TSource>
 type HttpHandler<'TResult> = HandlerAsync<HttpContext, 'TResult>
 
-exception HttpException of HttpContext * exn
-    with
-        member this.ToString () =
-            match this :> exn with
-            | HttpException(_, err) -> err.ToString ()
+exception HttpException of HttpContext * exn with
+    member this.ToString() =
+        let (HttpException (_, err)) = this :> exn
+        err.ToString()
 
 [<AutoOpen>]
 module HttpHandler =
@@ -35,7 +34,8 @@ module HttpHandler =
     /// Map the content of the HTTP handler.
     let map<'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
     /// Update (map) the context.
-    let update<'TSource> (update: HttpContext -> HttpContext) source : HttpHandler<'TSource> = Core.update<HttpContext, 'TSource> update source
+    let update<'TSource> (update: HttpContext -> HttpContext) source : HttpHandler<'TSource> =
+        Core.update<HttpContext, 'TSource> update source
     /// Bind the content.
     let bind<'TSource, 'TResult> fn source = Core.bind<HttpContext, 'TSource, 'TResult> fn source
 
@@ -207,7 +207,7 @@ module HttpHandler =
         (source: HttpHandler<HttpContent>)
         : HttpHandler<'TResult> =
         fun next ->
-           fun ctx (content: HttpContent) ->
+            fun ctx (content: HttpContent) ->
                 unitVtask {
                     let! stream = content.ReadAsStreamAsync()
 
@@ -219,7 +219,7 @@ module HttpHandler =
                         ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
                         raise ex
                 }
-          |> source
+            |> source
 
     /// HTTP handler for setting the expected response type.
     let withResponseType<'TSource> (respType: ResponseType) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
@@ -297,7 +297,7 @@ module HttpHandler =
                                 content
 
                     | Error err -> raise err
-            }
+                }
             |> source
 
 
@@ -356,7 +356,7 @@ module HttpHandler =
                 }
             |> source
     /// Starts a pipeline using an empty request with the default context.
-    let httpRequest : HttpHandler<unit> = Core.empty<HttpContext> HttpContext.defaultContext
+    let httpRequest: HttpHandler<unit> = Core.empty<HttpContext> HttpContext.defaultContext
     /// Caches the last content value and context.
     let cache<'TSource> = Core.cache<HttpContext, 'TSource>
     /// Asks for the given HTTP context and produces a content value using the context.

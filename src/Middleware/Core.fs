@@ -15,8 +15,6 @@ type NextAsync<'TContext, 'TSource> = 'TContext -> 'TSource -> ValueTask
 /// Middleware handler. Use the `Use` method to chain additional middleware handlers after this one.
 type HandlerAsync<'TContext, 'TSource> = NextAsync<'TContext, 'TSource> -> ValueTask
 
-type ContentHandlerAsync<'TContext, 'TSource> = NextAsync<'TContext, 'TSource> -> ValueTask
-
 module Core =
     /// A next continuation for observing the final result.
     let finish (tcs: TaskCompletionSource<'TResult>) = fun _ response -> unitVtask { tcs.SetResult response }
@@ -66,7 +64,7 @@ module Core =
             fun _ value ->
                 unitVtask {
                     let handler = fn value
-                    return! handler(next)
+                    return! handler (next)
                 }
             |> source
 
@@ -76,8 +74,7 @@ module Core =
         : HandlerAsync<'TContext, 'TResult list> =
         fun next ->
             unitVtask {
-                let res: Result<'TContext * 'TResult, 'TContext * exn> array =
-                    Array.zeroCreate (Seq.length handlers)
+                let res: Result<'TContext * 'TResult, 'TContext * exn> array = Array.zeroCreate (Seq.length handlers)
 
                 let obv n ctx content = unitVtask { res.[n] <- Ok(ctx, content) }
 

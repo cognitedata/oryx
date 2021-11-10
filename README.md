@@ -94,29 +94,25 @@ type Context = {
 The `HttpContext` is constructed using a series of asynchronous HTTP handlers.
 
 ```fs
-type IHttpNext<'TSource> =
-    abstract member OnNextAsync: ctx: HttpContext * content: 'TSource -> ValueTask
-    abstract member OnErrorAsync: ctx: HttpContext * error: exn -> ValueTask
+type HttpNext<'TSource> = HttpContext -> 'TSource -> ValueTask
 
-type IHttpHandler<'TSource, 'TResult> =
-    abstract member Use : next: IAsyncNext<'TSource> -> ValueTask
+type HttpHandler<'TSource> = HttpNext<'TSource> -> ValueTask
 ```
 
 The relationship can be seen as:
 ```fs
-do! handler1.Use(handler2)
+do! handler next
 ```
 
-An HTTP handler (`IHttpHandler`) is a middleware that uses or subscribes `.Use()` the given HTTP next handler
-(`IHttpNext<'TResult>`), and return a `ValueTask` of nothing.
+An HTTP handler (`HttpHandler`) is a middleware that uses or subscribes `handler next` the given HTTP next handler
+(`HttpNext<'TResult>`), and return a `ValueTask` of nothing.
 
-Each `IHttpHandler` usually transforms the `HttpRequest`, `HttpResponse` or the `content` before passing it down the
-pipeline by invoking the next `IHttpNext`'s `.OnNextAsync()` member. It may also signal an error by calling the
-`.OnErrorAsync()` member to fail the processing of the pipeline.
+Each `HttpHandler` usually transforms the `HttpRequest`, `HttpResponse` or the `content` before passing it down the
+pipeline by invoking the next `HttpNext` continuation. It may also signal an error by raising an exception to fail the processing of the pipeline.
 
-The easiest way to get your head around the Oryx `IHttpHandler` is to think of it as a functional web request processing
+The easiest way to get your head around the Oryx `HttpHandler` is to think of it as a functional web request processing
 pipeline. Each handler has the `HttpContext` and `content` at its disposal and can decide whether it wants to fail the
-request by calling "error", or continue the request by calling the "next" handler.
+request, or continue the request by calling the "next" handler.
 
 ## HTTP Handlers
 
@@ -132,13 +128,12 @@ are like lego bricks and may be composed into more complex HTTP handlers. The HT
 - `fail`- Fails the pipeline and pushes an exception downstream.
 - `fetch` - Fetches from remote using the current context
 - `skip` - Handler that skips (ignores) the content and outputs unit.
-- `get` - Retrieves the content (for use in `req` builder)
+- `get` - Retrieves the content (for use in `http` builder)
 - `log` - Log information about the given request.
 - `map` - Map the content of the HTTP handler.
 - `panic` - Fails the pipeline and pushes an exception downstream. This error cannot be catched or skipped.
 - `parse` - Parse response stream to a user-specified type synchronously.
 - `parseAsync` - Parse response stream to a user-specified type asynchronously.
-- `protect` - Handler for protecting the pipeline from exceptions and protocol violations.
 - `sequential` - Runs a sequence of HTTP handlers sequentially.
 - `singleton` - Handler that produces a single content value.
 - `validate` - Validate content using a predicate function.
@@ -190,8 +185,8 @@ The HTTP verbs are convenience functions using the `withMethod` under the hood:
 
 ## Composition
 
-The real magic of Oryx is composition. The fact that everything is an `IHttpHandler` makes it easy to compose HTTP
-handlers together. You can think of them as Lego bricks that you can fit together. Two or more `IHttpHandler` functions
+The real magic of Oryx is composition. The fact that everything is an `HttpHandler` makes it easy to compose HTTP
+handlers together. You can think of them as Lego bricks that you can fit together. Two or more `HttpHandler` functions
 may be composed together using functional composition, i.e using the `>>` operator. This enables you to compose your
 web requests and decode the response, e.g as we do when listing Assets in the [Cognite Data Fusion
 SDK](https://github.com/cognitedata/cognite-sdk-dotnet/blob/master/Oryx.Cognite/src/Handler.fs):
@@ -209,7 +204,7 @@ SDK](https://github.com/cognitedata/cognite-sdk-dotnet/blob/master/Oryx.Cognite/
         >> json jsonOptions
 ```
 
-The function `list` is now also an `IHttpHandler` and may be composed with other handlers to create complex chains
+The function `list` is now also an `HttpHandler` and may be composed with other handlers to create complex chains
 for doing multiple sequential or concurrent to a web service. And you can do this without having to worry about error
 handling.
 
@@ -224,18 +219,18 @@ A `sequential` operator for running a list of HTTP handlers in sequence.
 
 ```fs
 val sequential:
-   handlers: seq<IHttpHandler<'TSource,'TResult>> ->
-   next    : IHttpNext<list<'TResult>>
-          -> IHttpNext<'TSource>
+   handlers: seq<HttpHandler<'TSource,'TResult>> ->
+   next    : HttpNext<list<'TResult>>
+          -> HttpNext<'TSource>
 ```
 
 And a `concurrent` operator that runs a list of HTTP handlers in parallel.
 
 ```fs
 val concurrent:
-   handlers: seq<IHttpHandler<'TSource,'TResult>> ->
-   next    : IHttpNext<list<'TResult>>
-          -> IHttpNext<'TSource>
+   handlers: seq<HttpHandler<'TSource,'TResult>> ->
+   next    : HttpNext<list<'TResult>>
+          -> HttpNext<'TSource>
 ```
 
 You can also combine sequential and concurrent requests by chunking the request. The `chunk` handler uses `chunkSize`
@@ -247,9 +242,9 @@ multiple requests.
 val chunk:
    chunkSize     : int         ->
    maxConcurrency: int         ->
-   handler       : seq<'TNext> -> IHttpHandler<'TSource,seq<'TResult>> ->
+   handler       : seq<'TNext> -> HttpHandler<'TSource,seq<'TResult>> ->
    items         : seq<'TNext>
-                -> IHttpHandler<'TSource,seq<'TResult>>
+                -> HttpHandler<'TSource,seq<'TResult>>
 
 ```
 
@@ -259,45 +254,41 @@ open a PR so we can include them in the library.
 
 ## Error handling
 
-Errors are handled by the main handler logic. Every `IHttpNext` has a member `OnErrorAsync` that takes the context and
-an exception. Thus every stage in the pipeline may be short-circuited by calling the error handler.
-
 To produce a custom error response you can use the `withError` handler _after_ e.g `fetch`. The supplied `errorHandler`
 is given full access the the `HttpResponse` and the `HttpContent` and may produce a custom `exception`.
 
 ```fs
 val withError:
    errorHandler: (HttpResponse -> HttpContent -> Task<exn>) ->
-   source      : IHttpHandler<HttpContent>
-              -> IHttpHandler<HttpContent>
+   source      : HttpHandler<HttpContent>
+              -> HttpHandler<HttpContent>
 ```
 
-It's also possible to catch errors using the `catch` handler _after_ e.g `fetch`. The function takes an `errorHandler`
+It's also possible to catch errors using the `catch` handler _before_ e.g `fetch`. The function takes an `errorHandler`
 that is given the returned error and produces a new `HttpHandler` that may then decide to transform the error and
 continue processing or fail with an error. This is very helpful when a failed request not necessarily means an error,
 e.g if you need to check if an object with a given id exists at the server. It's not possible to catch a
-`PanicException`, so wrapping an excption in a `PanicException` can be used if you need to signal a fatal error and
+`PanicException`, so wrapping an exception in a `PanicException` can be used if you need to signal a fatal error and
 bypass a `catch` operator.
 
 ```fs
 val catch:
-  errorhandler: (exn -> IHttpHandler<'TSource>  ->
-  source: IHttpHandler<'TSource>
-              -> IHttpHandler<HttpContent>
+  errorhandler: (exn -> HttpHandler<'TSource>  ->
+  source: HttpHandler<'TSource>
+              -> HttpHandler<HttpContent>
 ```
 
 A `choose` operator takes a list of HTTP handlers and tries each of them until one of them succeeds. The `choose`
-operator will record every error that happes except for `SkipException` that can be used for skipping to the next
+operator will record every error that happens except for `SkipException` that can be used for skipping to the next
 handler. Other errors will be recorded. If multiple error happens they will be provided as an `AggregateException`. If
 you need break out of `choose` and force an exception without skipping to the next handler you can use the
 `PanicException`.
 
 ```fs
 val choose:
-    handlers: seq<IHttpHandler<'TResult>> ->
-    source: IHttpHandler<'TSource>
-           -> IAsyncMiddleware<HttpContext,'TSource,'TResult>
-
+    handlers: seq<HttpHandler<'TSource> -> HttpHandler<'TResult>> ->
+    source: HttpHandler<'TSource>
+           -> HttpHandler<'TResult>
 ```
 
 ## JSON and Protobuf Content Handling
@@ -319,7 +310,7 @@ The `json` decode HTTP handler takes a `JsonSerializerOptions` to decode the res
 ```fs
 val json:
    options: JsonSerializerOptions
-         -> HttpHandler<HttpContent,'TResult>
+         -> HttpHandler<'TResult>
 ```
 
 Content can be handled using `type JsonPushStreamContent<'a> (content : 'T, options : JsonSerializerOptions)`.
@@ -347,7 +338,7 @@ The `json` decoder takes a `Decoder` from `Thoth.Json.Net` to decode the respons
 ```fs
 val json:
    decoder: Decoder<'TResult>
-         -> IHttpHandler<HttpContent,'TResult>
+         -> HttpHandler<'TResult>
 ```
 
 Content can be handled using `type JsonPushStreamContent (content : JsonValue)`.
@@ -361,7 +352,7 @@ The `protobuf` decoder takes a `Stream -> 'T` usually generated by `Google.Proto
 defined type of `'T`.
 
 ```fs
-val protobuf: (System.IO.Stream -> 'TResult) -> IHttpNext<'TResult> -> IHttpNext<System.Net.Http.HttpContent>
+val protobuf: (System.IO.Stream -> 'TResult) ->  HttpHandler<System.Net.Http.HttpContent> -> HttpHandler<'TResult>
 ```
 
 Both encode and decode uses streaming all the way so no large strings or arrays will be allocated in the process.
@@ -372,10 +363,10 @@ Content can be handled using `type ProtobufPushStreamContent (content : IMessage
 
 Working with `HttpContext` objects can be a bit painful. To make it simpler to handle multiple requests using handlers
 you can use the `req` builder that will let you work with the `content` and hide the complexity of both the `Context`
-and the `IHttpNext`.
+and the `HttpNext`.
 
 ```fs
-req {
+http {
     let! assetDto = Assets.Entity.get key
 
     let asset = assetDto |> Asset.FromAssetReadDto
@@ -396,7 +387,7 @@ To run a handler you can use the `runAsync` function.
 ```fs
 val runAsync:
    ctx    : HttpContext ->
-   handler: IHttpHandler<unit,'TResult>
+   handler: HttpHandler<unit,'TResult>
          -> Task<Result<'TResult,exn>>
 ```
 
@@ -405,7 +396,7 @@ or the unsafe version that may throw exceptions:
 ```fs
 val runUnsafeAsync:
    ctx    : HttpContext ->
-   handler: IHttpHandler<unit,'TResult>
+   handler: HttpHandler<unit,'TResult>
          -> Task<'TResult>
 ```
 
@@ -447,13 +438,13 @@ after error handling (`withError`), and to log decoded responses the log handler
 ```fs
 val withLogger:
    logger: ILogger ->
-   source: IHttpHandler<'TSource>
-        -> IHttpHandler<'TSource>
+   source: HttpHandler<'TSource>
+        -> HttpHandler<'TSource>
 
 val withLogLevel:
    logLevel: LogLevel ->
-   source  : IHttpHandler<'TSource>
-          -> IHttpHandler<'TSource>
+   source  : HttpHandler<'TSource>
+          -> HttpHandler<'TSource>
 
 val withLogMessage:
    msg : string              ->
@@ -462,8 +453,8 @@ val withLogMessage:
 
 val withLogMessage:
    msg   : string ->
-   source: IHttpHandler<'TSource>
-        -> IHttpHandler<'TSource>
+   source: HttpHandler<'TSource>
+        -> HttpHandler<'TSource>
 ```
 
 Oryx may also emit metrics using the `IMetrics` interface (Oryx specific) that you can use with e.g Prometheus.
@@ -489,32 +480,16 @@ Labels are currently not set but are added for future use, e.g setting the error
 
 ## Extending Oryx
 
-It's easy to extend Oryx with your own custom context builders and HTTP handlers. Everything is functions, so you can
-easily add your own context builders and HTTP handlers.
-
-### Custom Context Builders
-
-Custom context builders are just a function that takes a `Context` and returns a `Context`:
-
-```fs
-let withAppId (appId: string) (ctx: EmptyContext) =
-    { ctx
-        with Request = {
-            ctx.Request with
-                Headers = ("x-cdp-app", appId) :: ctx.Request.Headers
-                Items = ctx.Request.Items.Add("hasAppId", String "true")
-         }
-    }
-```
+It's easy to extend Oryx with your own HTTP handlers. Everything is functions, so you can easily add your own HTTP handlers.
 
 ### Custom HTTP Handlers
 
 Custom HTTP handlers may e.g populate the context, make asynchronous web requests and parse response content. HTTP
-handlers are functions that takes an `IHttpNext<'TResult>`, and returns an `IHttpNext<'TSource>`. Example:
+handlers are functions that takes an `HttpHandler'TSource>`, and returns an `HttpHandler<'TSource>`. Example:
 
 ```fs
 let withResource (resource: string): HttpHandler<'TSource> =
-    { new IHttpHandler<'TSource, 'TResult> with
+    { new HttpHandler<'TSource, 'TResult> with
         member _.Subscribe(next) =
             { new IHttpNext<'TSource> with
                 member _.OnNextAsync(ctx, content) =
@@ -544,19 +519,18 @@ let urlBuilder (request: HttpRequest) : string =
 ## What is new in Oryx v5
 
 Oryx v5 continues to simplify the HTTP handlers by reducing the number of
-generic parameters so you only need to specify the type the handler is producing (not what it's consuming).
+generic parameters so you only need to specify the type the handler is producing (not what it's consuming). 
+The handlers have also been reduced to plain functions.
 
 ```fs
-type IHttpNext<'TSource> =
-    abstract member OnNextAsync: ctx: HttpContext * content: 'TSource -> ValueTask
-    abstract member OnErrorAsync: ctx: HttpContext * error: exn -> ValueTask
+type HttpNext<'TSource> = HttpContext -> 'TSource -> ValueTask
 
-type IHttpHandler<'TSource> =
-    abstract member Use: next: IHttpNext<'TResult> -> ValueTask
+type HttpHandler<'TSource> = HttpNext<'TSource> -> ValueTask
 ```
 
 The great advantage is that you can now use normal functional composition (`>>`) instead of Kleisli composition (`>=>`).
-This also enables normal pipelining using the pipe (`|>`) operator which will also give you type hints most IDEs.
+This also enables normal pipelining using the pipe (`|>`) operator which will also give you better type hinting and 
+debugging in  most IDEs.
 
 ```fs
 use client = new HttpClient()
@@ -602,10 +576,10 @@ type IHttpNext<'TSource> =
     abstract member OnErrorAsync: ctx: HttpContext * error: exn -> Task<unit>
     abstract member OnCompletedAsync: ctx: HttpContext -> Task<unit>
 
-type IHttpHandler<'TSource, 'TResult> =
+type HttpHandler<'TSource, 'TResult> =
     abstract member Subscribe: next: IHttpNext<'TResult> -> IHttpNext<'TSource>
 
-type IHttpHandler<'TSource> = IHttpHandler<'TSource, 'TSource>
+type HttpHandler<'TSource> = HttpHandler<'TSource, 'TSource>
 ```
 
 ## What is new in Oryx v3
@@ -723,7 +697,7 @@ Needs to be refactored to:
 
 ```fs
 let withResource (resource: string): HttpHandler<'TSource> =
-    { new IHttpHandler<'TSource, 'TResult> with
+    { new HttpHandler<'TSource, 'TResult> with
         member _.Subscribe(next) =
             { new IHttpNext<'TSource> with
                 member _.OnNextAsync(ctx, content) =
@@ -748,7 +722,7 @@ Oryx v3 is mostly backwards compatible with v2. Your chains of operators will fo
 same. There are however some notable changes:
 
 - `Context` have been renamed to `HttpContext`.
-- `HttpHandler` have been renamed `IHttpHandler`. This is because `IHttpHandler` is now an interface.
+- `HttpHandler` have been renamed `HttpHandler`. This is because `HttpHandler` is now an interface.
 - The `retry` operator has been deprecated for now. Use [Polly](https://github.com/App-vNext/Polly) instead.
 - The `catch` operator needs to run __after__ the error producing operator e.g `fetch` (not before). This is because
   Oryx v3 pushes results "down" instead of returning them "up" the chain of operators. The good thing with this change
@@ -774,7 +748,7 @@ Needs to be refactored to:
 
 ```fs
 let withResource (resource: string): HttpHandler<'TSource> =
-    { new IHttpHandler<'TSource, 'TResult> with
+    { new HttpHandler<'TSource, 'TResult> with
         member _.Subscribe(next) =
             { new IHttpNext<'TSource> with
                 member _.OnNextAsync(ctx, ?content) =

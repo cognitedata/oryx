@@ -1,4 +1,3 @@
-open System
 open System.Net.Http
 open System.Text.Json
 
@@ -38,7 +37,7 @@ let asyncMain _ =
     task {
         use client = new HttpClient()
 
-        let ctx : HttpHandler<unit> =
+        let ctx: HttpHandler<unit> =
             httpRequest
             |> GET
             |> withHttpClient client
