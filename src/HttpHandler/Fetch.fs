@@ -111,6 +111,6 @@ module Fetch =
                         response.Dispose()
                         return result
                     with
-                    | ex -> raise (HttpException(ctx, ex))
+                    | ex when not (ex :? HttpException) -> raise (HttpException(ctx, ex))
                 }
             |> source

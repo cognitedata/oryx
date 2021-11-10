@@ -9,38 +9,24 @@ open FSharp.Control.Tasks
 open Oryx
 
 module Error =
-    /// Handler for protecting the pipeline from exceptions and protocol violations.
-    let protect<'TContext, 'TSource> (source: HandlerAsync<'TContext, 'TSource>) : HandlerAsync<'TContext, 'TSource> =
-        fun next ->
-            let mutable stopped = false
-
-            fun ctx content ->
-                unitVtask {
-                    match stopped with
-                    | false ->
-                        try
-                            return! next ctx content
-                        with
-                        | err ->
-                            stopped <- true
-                            ServiceError.error(err)
-                    | _ -> ()
-                }
-            |> source
-
     /// Handler for catching errors and then delegating to the error handler on what to do.
-    let catch<'TContext, 'TSource>
-        (errorHandler: 'TContext -> exn -> HandlerAsync<'TContext, 'TSource>)
+    let catch<'TContext, 'TSource, 'TResult>
+        (errorHandler: 'TContext -> exn -> HandlerAsync<'TContext, 'TResult>)
+        (handlerToCatch: HandlerAsync<'TContext, 'TSource> -> HandlerAsync<'TContext, 'TResult>)
         (source: HandlerAsync<'TContext, 'TSource>)
-        : HandlerAsync<'TContext, 'TSource> =
+        : HandlerAsync<'TContext, 'TResult> =
         fun next ->
             fun ctx content ->
                 unitVtask {
-                    try
-                        return! next ctx content
-                    with
-                    | err -> return! (errorHandler ctx err) next
+                    let handlerNext : HandlerAsync<'TContext, 'TSource> = fun next -> unitVtask {
+                        do! next ctx content
                     }
+
+                    try
+                        do! next |> handlerToCatch handlerNext
+                    with
+                    | err when not (err :? PanicException) -> return! (errorHandler ctx err) next
+                }
             |> source
 
     [<RequireQualifiedAccess>]
@@ -60,7 +46,8 @@ module Error =
 
             fun ctx content ->
                 unitVtask {
-                    let next' ctx content = unitVtask {
+                    let mutable found = false
+                    let handlerNext : HandlerAsync<'TContext, 'TSource> = fun next -> unitVtask {
                         do! next ctx content
                     }
 
@@ -69,12 +56,14 @@ module Error =
                         match handlers with
                         | handler :: xs ->
                             try
-                                do! next' |> handler source
+                                // Use handler
+                                do! next |> handler handlerNext
+                                found <- true
                             with
                             | error ->
                                 match error with
-                                | ServiceException (ServiceError.Panic _) -> () //reraise ()
-                                | ServiceException (ServiceError.Skip _) -> ()
+                                | :? PanicException -> raise error
+                                | :? SkipException -> ()
                                 | _ -> exns.Add(error)
                                 do! chooser xs
                         | [] -> ()
@@ -82,11 +71,13 @@ module Error =
 
                     do! chooser handlers
 
-                    match exns.Count with
-                    | 0 -> ()
-                    | 1 -> raise exns.[0]
-                    | _ ->
+                    match found, exns.Count with
+                    | true, _ -> ()
+                    | false, 0 -> raise (SkipException("No choice was given."))
+                    | false, 1 -> raise exns.[0]
+                    | false, _ ->
                         raise (AggregateException(exns))
+
                 }
 
            |> source
@@ -96,8 +87,8 @@ module Error =
         (err: Exception)
         (source: HandlerAsync<'TContext, 'TSource>)
         : HandlerAsync<'TContext, 'TResult> =
-        fun next ->
-            fun ctx _ -> ServiceError.error(err)
+        fun _ ->
+            fun _ _ -> raise err
             |> source
 
     /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
@@ -107,15 +98,15 @@ module Error =
         (source: HandlerAsync<'TContext, 'TSource>)
         : HandlerAsync<'TContext, 'TResult> =
         fun next ->
-            fun ctx _ -> ServiceError.panic(error)
+            fun _ _ -> raise (PanicException(error))
             |> source
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
     let ofError<'TContext, 'TSource> (ctx: 'TContext) (err: Exception) : HandlerAsync<'TContext, 'TSource> =
-        fun next -> ServiceError.error err
+        fun _ -> raise err
 
     /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
     /// the any error handling e.g `choose` or `catch`•.
     let ofPanic<'TContext, 'TSource> (ctx: 'TContext) (error: Exception) : HandlerAsync<'TContext, 'TSource> =
-        fun next ->
-            ServiceError.panic error
+        fun _ ->
+            raise (PanicException(error))

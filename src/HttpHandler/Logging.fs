@@ -107,10 +107,11 @@ module Logging =
                     try
                         do! next ctx content
                     with
-                    | error ->
+                    | HttpException(ctx, error) ->
                         match ctx.Request.LogLevel with
                         | LogLevel.None -> ()
                         | _ -> log' LogLevel.Error ctx (Some error)
+                        raise error
 
                 }
             |> source

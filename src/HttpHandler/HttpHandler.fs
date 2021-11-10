@@ -15,6 +15,10 @@ type HttpNext<'TSource> = NextAsync<HttpContext, 'TSource>
 type HttpHandler<'TResult> = HandlerAsync<HttpContext, 'TResult>
 
 exception HttpException of HttpContext * exn
+    with
+        member this.ToString () =
+            match this :> exn with
+            | HttpException(_, err) -> err.ToString ()
 
 [<AutoOpen>]
 module HttpHandler =
@@ -53,7 +57,7 @@ module HttpHandler =
 
     /// Helper for setting Bearer token as Authorization header.
     let withBearerToken (token: string) =
-        let header = ("Authorization", $"Bearer {token}")
+        let header = ("Authorization", sprintf "Bearer %s" token)
         withHeader header
 
     /// Set the HTTP client to use for the requests.
@@ -158,10 +162,7 @@ module HttpHandler =
         Core.concurrent<HttpContext, 'TSource, 'TResult> HttpContext.merge
 
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
-    let catch<'TSource> = Error.catch<HttpContext, 'TSource>
-
-    /// Handler for protecting the pipeline from exceptions and protocol violations.
-    let protect<'TSource> = Error.protect<HttpContext, 'TSource>
+    let catch<'TSource, 'TResult> = Error.catch<HttpContext, 'TSource, 'TResult>
 
     /// Choose from a list of handlers to use. The first handler that succeeds will be used.
     let choose<'TSource, 'TResult> = Error.choose<HttpContext, 'TSource, 'TResult>
@@ -195,7 +196,7 @@ module HttpHandler =
                     with
                     | ex ->
                         ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
-                        ServiceError.error(ex)
+                        raise ex
                 }
             |> source
 
@@ -216,7 +217,7 @@ module HttpHandler =
                     with
                     | ex ->
                         ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
-                        ServiceError.error(ex)
+                        raise ex
                 }
           |> source
 
@@ -285,7 +286,7 @@ module HttpHandler =
 
                     match result with
                     | Ok token ->
-                        let name, value = ("Authorization", $"Bearer {token}")
+                        let name, value = ("Authorization", sprintf "Bearer %s" token)
 
                         return!
                             next
@@ -295,7 +296,7 @@ module HttpHandler =
                                                 Headers = ctx.Request.Headers.Add(name, value) } }
                                 content
 
-                    | Error err -> ServiceError.error(err)
+                    | Error err -> raise err
             }
             |> source
 
@@ -351,7 +352,7 @@ module HttpHandler =
                         ctx.Request.Metrics.Counter Metric.FetchErrorInc Map.empty 1L
 
                         let! err = errorHandler response content
-                        return! ServiceError.error(HttpException(ctx, err))
+                        return! raise (HttpException(ctx, err))
                 }
             |> source
     /// Starts a pipeline using an empty request with the default context.

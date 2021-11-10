@@ -15,6 +15,8 @@ type NextAsync<'TContext, 'TSource> = 'TContext -> 'TSource -> ValueTask
 /// Middleware handler. Use the `Use` method to chain additional middleware handlers after this one.
 type HandlerAsync<'TContext, 'TSource> = NextAsync<'TContext, 'TSource> -> ValueTask
 
+type ContentHandlerAsync<'TContext, 'TSource> = NextAsync<'TContext, 'TSource> -> ValueTask
+
 module Core =
     /// A next continuation for observing the final result.
     let finish (tcs: TaskCompletionSource<'TResult>) = fun _ response -> unitVtask { tcs.SetResult response }
@@ -24,13 +26,12 @@ module Core =
         let tcs = TaskCompletionSource<'TResult>()
 
         task {
-            do! handler (finish tcs)
-
             try
+                do! handler (finish tcs)
                 let! value = tcs.Task
                 return Ok value
             with
-            | err -> return Error err
+            | error -> return Error error
         }
 
     /// Run the HTTP handler in the given context. Returns content and throws exception if any error occured.
@@ -188,7 +189,7 @@ module Core =
                 if predicate value then
                     next ctx value
                 else
-                    ServiceError.skip "Validation failed"
+                    raise (SkipException "Validation failed")
             |> source
 
     /// Retrieves the content.

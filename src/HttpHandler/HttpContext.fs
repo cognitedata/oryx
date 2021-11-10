@@ -117,7 +117,7 @@ module HttpContext =
 
     /// Default request to use.
     let defaultRequest =
-        let ua = sprintf $"Oryx / v{fileVersion} (Cognite)"
+        let ua = sprintf "Oryx / v%s (Cognite)" fileVersion
 
         { HttpClient = (fun () -> failwith "Must set HttpClient")
           Method = HttpMethod.Get

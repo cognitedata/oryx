@@ -48,10 +48,14 @@ let ``Catching ok is Ok`` () =
         // Arrange
         let errorHandler = badRequestHandler 420
 
+        let mapper =
+            map (fun a -> a * 10)
+            |> catch errorHandler
+
         let req =
             singleton 42
-            |> map (fun a -> a * 10)
-            |> catch errorHandler
+            |> mapper
+            |> map id
 
         // Act
         let! content = req |> runUnsafeAsync
@@ -66,7 +70,13 @@ let ``Catching errors is Ok`` () =
         // Arrange
         let errorHandler = badRequestHandler 420
 
-        let req = ofError "failed" |> catch errorHandler
+        let handleError =
+            error "failed"
+            |> catch errorHandler
+
+        let req =
+            httpRequest
+            |> handleError
 
         // Act
         let! content = req |> runUnsafeAsync
@@ -81,10 +91,13 @@ let ``Catching panic is not possible`` () =
         // Arrange
         let errorHandler = badRequestHandler 420
 
+        let handleError =
+            panic "panic!"
+            |> catch errorHandler
+
         let req =
             httpRequest
-            |> panic "panic!"
-            |> catch errorHandler
+            |> handleError
 
         // Act
         let! result = req |> runAsync
@@ -101,10 +114,14 @@ let ``Not catching errors is Error`` () =
         // Arrange
         let errorHandler = badRequestHandler 420
 
+        let handleError =
+            error "first!"
+            |> catch errorHandler
+            >> error "second!"
+
         let req =
             singleton 42
-            |> catch errorHandler
-            |> error "failed"
+            |> handleError
 
         // Act
         let! result = req |> runAsync
@@ -112,7 +129,7 @@ let ``Not catching errors is Error`` () =
         // Assert
         match result with
         | Ok _ -> failwith "error"
-        | Error err -> test <@ err.ToString() = "failed" @>
+        | Error err -> test <@ err.ToString() = "second!" @>
     }
 
 [<Fact>]
@@ -222,7 +239,7 @@ let ``Choose panic is Error`` () =
             let! _ = req |> runUnsafeAsync
             assert false
         with
-        | ServiceException(ServiceError.Panic _) -> ()
+        | :? PanicException -> ()
         | _ -> failwith "Should be panic"
     }
 
@@ -239,7 +256,7 @@ let ``Choose panic is not skipped`` () =
             let! _ = req |> runUnsafeAsync
             assert false
         with
-        | ServiceException(ServiceError.Panic _) -> ()
+        | :? PanicException -> ()
         | _ -> failwith "Should be panic"
     }
 
@@ -254,7 +271,7 @@ let ``Choose empty is SkipException`` () =
             let! _ = req |> runUnsafeAsync
             assert false
         with
-        | ServiceException(ServiceError.Panic _) -> ()
+        | :? SkipException -> ()
         | _ -> failwith "Should be skip"
 
     }

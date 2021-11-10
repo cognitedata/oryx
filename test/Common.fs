@@ -92,7 +92,6 @@ let options = JsonSerializerOptions()
 
 let get () =
     GET
-    >> protect
     >> withUrl "http://test.org"
     >> withQuery [ struct ("debug", "true") ]
     >> fetch<'TSource>
@@ -102,7 +101,6 @@ let get () =
 
 let post content =
     POST
-    >> protect
     >> withResponseType ResponseType.JsonValue
     >> withContent content
     >> withCompletion HttpCompletionOption.ResponseHeadersRead

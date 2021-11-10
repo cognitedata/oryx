@@ -300,7 +300,6 @@ let ``Post with disabled logging does not log`` () =
 let ``Fetch with internal error will log error`` () =
     task {
         // Arrange
-        let metrics = TestMetrics()
         let json = """{ "code": 500, "message": "failed" }"""
         let logger = new TestLogger<string>()
 
@@ -322,6 +321,7 @@ let ``Fetch with internal error will log error`` () =
             |> withHeader ("api-key", "test-key")
             |> withLogger logger
             |> withLogLevel LogLevel.Debug
+            |> logException
             |> cache
 
         // Act
