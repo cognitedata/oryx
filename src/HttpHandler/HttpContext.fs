@@ -4,6 +4,7 @@
 namespace Oryx
 
 open System
+open System.Collections
 open System.Net
 open System.Net.Http
 open System.Reflection
@@ -85,6 +86,8 @@ and HttpRequest =
       LogFormat: string
       /// Optional Metrics for recording metrics.
       Metrics: IMetrics
+      /// Optional Labels to label the request
+      Labels: Generic.IDictionary<string, string>
       /// Extra state used to e.g build the URL. Clients are free to utilize this property for adding extra
       /// information to the context.
       Items: Map<string, Value>
@@ -131,6 +134,7 @@ module HttpContext =
           LogLevel = LogLevel.None
           LogFormat = defaultLogFormat
           Metrics = EmptyMetrics()
+          Labels = dict []
           Items = Map.empty
           CompletionMode = HttpCompletionOption.ResponseContentRead }
 

@@ -14,10 +14,12 @@ open Oryx.Middleware
 type HttpNext<'TSource> = NextAsync<HttpContext, 'TSource>
 type HttpHandler<'TResult> = HandlerAsync<HttpContext, 'TResult>
 
-exception HttpException of HttpContext * exn with
-    member this.ToString() =
-        let (HttpException (_, err)) = this :> exn
-        err.ToString()
+exception HttpException of (HttpContext * exn) with
+    override this.ToString() =
+        match this :> exn with
+        | HttpException (_, err) ->
+            err.ToString()
+        | _ -> failwith "This should not never happen."
 
 [<AutoOpen>]
 module HttpHandler =
@@ -195,7 +197,7 @@ module HttpHandler =
                         return! next ctx item
                     with
                     | ex ->
-                        ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
+                        ctx.Request.Metrics.Counter Metric.DecodeErrorInc ctx.Request.Labels 1L
                         raise ex
                 }
             |> source
@@ -216,7 +218,7 @@ module HttpHandler =
                         return! next ctx item
                     with
                     | ex ->
-                        ctx.Request.Metrics.Counter Metric.DecodeErrorInc Map.empty 1L
+                        ctx.Request.Metrics.Counter Metric.DecodeErrorInc ctx.Request.Labels 1L
                         raise ex
                 }
             |> source
@@ -349,7 +351,7 @@ module HttpHandler =
                     match response.IsSuccessStatusCode with
                     | true -> return! next ctx content
                     | false ->
-                        ctx.Request.Metrics.Counter Metric.FetchErrorInc Map.empty 1L
+                        ctx.Request.Metrics.Counter Metric.FetchErrorInc ctx.Request.Labels 1L
 
                         let! err = errorHandler response content
                         return! raise (HttpException(ctx, err))
