@@ -10,8 +10,8 @@ let main argv =
     use client = new HttpClient()
 
     let context =
-        Context.defaultContext
-        |> Context.withHttpClient client
+        HttpContext.defaultContext
+        |> HttpContext.withHttpClient client
 
     let request =
         GET
