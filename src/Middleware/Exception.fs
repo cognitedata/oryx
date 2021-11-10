@@ -13,13 +13,13 @@ exception SkipException of string with
 /// handlers. A PanicException cannot be catched by `catch` and will
 /// not be skipped by `choose`
 exception PanicException of exn with
+    override this.ToString() =
+        match this :> exn with
+        | PanicException err -> err.ToString()
+        | _ -> failwith "This should not never happen."
+
     /// Ensures that the exception is a `PanicException`, but will not
     /// wrap a `PanicException` in another `PanicException`.
-
-    override this.ToString() =
-        let (PanicException err) = this :> _
-        err.ToString()
-
     static member Ensure(error) =
         match error with
         | PanicException _ -> error

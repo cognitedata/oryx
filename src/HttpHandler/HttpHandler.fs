@@ -17,8 +17,7 @@ type HttpHandler<'TResult> = HandlerAsync<HttpContext, 'TResult>
 exception HttpException of (HttpContext * exn) with
     override this.ToString() =
         match this :> exn with
-        | HttpException (_, err) ->
-            err.ToString()
+        | HttpException (_, err) -> err.ToString()
         | _ -> failwith "This should not never happen."
 
 [<AutoOpen>]
