@@ -4,7 +4,8 @@ group Main
 
     framework: netstandard2.0
 
-    nuget Microsoft.Extensions.Logging
+    nuget Microsoft.Extensions.Logging ~> 5
+    nuget Microsoft.Extensions.DependencyInjection ~> 5
     nuget FSharp.Core ~> 4.7
     nuget Ply
     nuget FsToolkit.ErrorHandling ~> 2
@@ -15,7 +16,7 @@ group Json
 
     framework: netstandard2.0
     nuget FSharp.Core ~> 4.7
-    nuget System.Text.Json
+    nuget System.Text.Json ~> 5
     nuget Ply
     nuget Oryx
 
@@ -24,6 +25,7 @@ group Newtonsoft
     storage: none
 
     framework: netstandard2.0
+    nuget Microsoft.NETCore.Platforms ~> 5
     nuget FSharp.Core ~> 4.7
     nuget Newtonsoft.Json
     nuget Ply
@@ -44,6 +46,7 @@ group Google
     storage: none
 
     framework: netstandard2.0
+    nuget Microsoft.NETCore.Platforms ~> 5
     nuget FSharp.Core ~> 4.7
     nuget Google.Protobuf ~> 3
     nuget Ply
