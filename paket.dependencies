@@ -6,7 +6,7 @@ group Main
 
     nuget Microsoft.Extensions.Logging ~> 5
     nuget Microsoft.Extensions.DependencyInjection ~> 5
-    nuget FSharp.Core ~> 4.7
+    nuget FSharp.Core ~> 5
     nuget Ply
     nuget FsToolkit.ErrorHandling ~> 2
 
@@ -15,10 +15,10 @@ group Json
     storage: none
 
     framework: netstandard2.0
-    nuget FSharp.Core ~> 4.7
+    nuget FSharp.Core ~> 5
     nuget System.Text.Json ~> 5
     nuget Ply
-    nuget Oryx
+    nuget Oryx ~> 4
 
 group Newtonsoft
     source https://www.nuget.org/api/v2
@@ -26,20 +26,20 @@ group Newtonsoft
 
     framework: netstandard2.0
     nuget Microsoft.NETCore.Platforms ~> 5
-    nuget FSharp.Core ~> 4.7
+    nuget FSharp.Core ~> 5
     nuget Newtonsoft.Json
     nuget Ply
-    nuget Oryx
+    nuget Oryx ~> 4
 
 group Thoth
     source https://www.nuget.org/api/v2
     storage: none
 
     framework: netstandard2.0
-    nuget FSharp.Core ~> 4.7
+    nuget FSharp.Core ~> 5
     nuget Thoth.Json.Net
     nuget Ply
-    nuget Oryx
+    nuget Oryx ~> 4
 
 group Google
     source https://www.nuget.org/api/v2
@@ -47,16 +47,16 @@ group Google
 
     framework: netstandard2.0
     nuget Microsoft.NETCore.Platforms ~> 5
-    nuget FSharp.Core ~> 4.7
+    nuget FSharp.Core ~> 5
     nuget Google.Protobuf ~> 3
     nuget Ply
-    nuget Oryx
+    nuget Oryx ~> 4
 
 group Test
     source https://www.nuget.org/api/v2
     storage: none
 
-    nuget FSharp.Core ~> 4.7
+    nuget FSharp.Core ~> 5
     nuget coverlet.msbuild ~> 3
     nuget Unquote ~> 5
     nuget xunit ~> 2
@@ -72,6 +72,6 @@ group Examples
 
     nuget Ply
     nuget Thoth.Json.Net
-    nuget Oryx
+    nuget Oryx ~> 4
     nuget Oryx.ThothJsonNet
     nuget Newtonsoft.Json
