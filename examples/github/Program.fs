@@ -11,11 +11,12 @@ let main _ =
 
     let ctx = httpRequest |> withHttpClient client
 
-    let request =
-        GET
-        >> withUrl "https://api.github.com/repos/cognitedata/oryx/releases/latest"
-        >> fetch
-        >> json (Decode.field "tag_name" Decode.string)
+    let request ctx =
+        ctx
+        |> GET
+        |> withUrl "https://api.github.com/repos/cognitedata/oryx/releases/latest"
+        |> fetch
+        |> json (Decode.field "tag_name" Decode.string)
 
     task {
         let! tag = ctx |> request |> runAsync
