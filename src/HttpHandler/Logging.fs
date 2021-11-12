@@ -11,42 +11,6 @@ open FSharp.Control.Tasks
 
 [<AutoOpen>]
 module Logging =
-
-    /// Set the logger (ILogger) to use. Usually you would use `HttpContext.withLogger` instead to set the logger for
-    /// all requests.
-    let withLogger (logger: ILogger) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun next ->
-            fun ctx content ->
-                next
-                    { ctx with
-                          Request =
-                              { ctx.Request with
-                                    Logger = Some logger } }
-                    content
-            |> source
-
-    /// Set the log level to use (default is LogLevel.None).
-    let withLogLevel (logLevel: LogLevel) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun next ->
-            fun ctx ->
-                next
-                    { ctx with
-                          Request = { ctx.Request with LogLevel = logLevel } }
-
-            |> source
-
-    /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
-    let withLogMessage<'TSource> (msg: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun next ->
-            fun ctx ->
-                next
-                    { ctx with
-                          Request =
-                              { ctx.Request with
-                                    Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } }
-
-            |> source
-
     // Pre-compiled
     let private reqex =
         Regex(@"\{(.+?)\}", RegexOptions.Multiline ||| RegexOptions.Compiled)
@@ -86,6 +50,47 @@ module Logging =
             logger.Log(level, format, values)
         | _ -> ()
 
+    /// Set the logger (ILogger) to use. Usually you would use `HttpContext.withLogger` instead to set the logger for
+    /// all requests.
+    let withLogger (logger: ILogger) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        fun next ->
+            fun ctx content ->
+                next
+                    { ctx with
+                          Request =
+                              { ctx.Request with
+                                    Logger = Some logger } }
+                    content
+            |> source
+
+    /// Set the log level to use (default is LogLevel.None).
+    let withLogLevel (logLevel: LogLevel) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        fun next ->
+            fun ctx content -> unitVtask {
+                try
+                    do! next { ctx with Request = { ctx.Request with LogLevel = logLevel } } content
+                with
+                | HttpException (ctx, error) ->
+                    match ctx.Request.LogLevel with
+                    | LogLevel.None -> ()
+                    | _ -> log' LogLevel.Error ctx (Some error)
+
+                    raise error 
+            }   
+            |> source
+
+    /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
+    let withLogMessage<'TSource> (msg: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        fun next ->
+            fun ctx ->
+                next
+                    { ctx with
+                          Request =
+                              { ctx.Request with
+                                    Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } }
+
+            |> source
+
     /// Logger handler with message. Should be composed in pipeline after both the `fetch` handler, and the `withError`
     /// in order to log both requests, responses and errors.
     let log (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
@@ -100,19 +105,3 @@ module Logging =
                 }
             |> source
 
-    let logException (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun next ->
-            fun ctx content ->
-                unitVtask {
-                    try
-                        do! next ctx content
-                    with
-                    | HttpException (ctx, error) ->
-                        match ctx.Request.LogLevel with
-                        | LogLevel.None -> ()
-                        | _ -> log' LogLevel.Error ctx (Some error)
-
-                        raise error
-
-                }
-            |> source

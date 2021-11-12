@@ -321,7 +321,6 @@ let ``Fetch with internal error will log error`` () =
             |> withHeader ("api-key", "test-key")
             |> withLogger logger
             |> withLogLevel LogLevel.Debug
-            |> logException
             |> cache
 
         // Act

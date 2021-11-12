@@ -97,39 +97,6 @@ module HttpHandler =
                       Request =
                           { ctx.Request with
                                 CancellationToken = token } })
-
-    /// Set the logger (ILogger) to use.
-    let withLogger (logger: ILogger) =
-        update
-            (fun ctx ->
-                { ctx with
-                      Request =
-                          { ctx.Request with
-                                Logger = Some logger } })
-
-    /// Set the log level to use (default is LogLevel.None).
-    let withLogLevel (logLevel: LogLevel) =
-        update
-            (fun ctx ->
-                { ctx with
-                      Request = { ctx.Request with LogLevel = logLevel } })
-
-    /// Set the log format to use.
-    let withLogFormat (format: string) =
-        update
-            (fun ctx ->
-                { ctx with
-                      Request = { ctx.Request with LogFormat = format } })
-
-    /// Set the log message to use (normally you would like to use the withLogMessage handler instead)
-    let withLogMessage (msg: string) =
-        update
-            (fun ctx ->
-                { ctx with
-                      Request =
-                          { ctx.Request with
-                                Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } })
-
     /// Set the metrics (IMetrics) to use.
     let withMetrics (metrics: IMetrics) =
         update
