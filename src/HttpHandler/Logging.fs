@@ -35,7 +35,7 @@ module Logging =
 
             |> source
 
-    /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
+    /// Set the log message to use. Use in the pipeline somewhere before the `log` handler.
     let withLogMessage<'TSource> (msg: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         fun next ->
             fun ctx ->
@@ -60,13 +60,13 @@ module Logging =
 
             // Create an array with values in the same order as in the format string. Important to be lazy and not
             // stringify any values here. Only pass references to the objects themselves so the logger can stringify
-            // when / if the values are acutally being used / logged.
+            // when / if the values are actually being used / logged.
             let getValues _ =
                 matches
                 |> Seq.cast
                 |> Seq.map
-                    (fun (matche: Match) ->
-                        match matche.Groups.[1].Value with
+                    (fun (match': Match) ->
+                        match match'.Groups.[1].Value with
                         | PlaceHolder.HttpMethod -> box request.Method
                         | PlaceHolder.RequestContent ->
                             ctx.Request.ContentBuilder
