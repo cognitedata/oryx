@@ -66,17 +66,22 @@ module Logging =
     /// Set the log level to use (default is LogLevel.None).
     let withLogLevel (logLevel: LogLevel) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         fun next ->
-            fun ctx content -> unitVtask {
-                try
-                    do! next { ctx with Request = { ctx.Request with LogLevel = logLevel } } content
-                with
-                | HttpException (ctx, error) ->
-                    match ctx.Request.LogLevel with
-                    | LogLevel.None -> ()
-                    | _ -> log' LogLevel.Error ctx (Some error)
+            fun ctx content ->
+                unitVtask {
+                    try
+                        do!
+                            next
+                                { ctx with
+                                      Request = { ctx.Request with LogLevel = logLevel } }
+                                content
+                    with
+                    | HttpException (ctx, error) ->
+                        match ctx.Request.LogLevel with
+                        | LogLevel.None -> ()
+                        | _ -> log' LogLevel.Error ctx (Some error)
 
-                    raise error 
-            }   
+                        raise error
+                }
             |> source
 
     /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
@@ -104,4 +109,3 @@ module Logging =
                     return! next ctx content
                 }
             |> source
-

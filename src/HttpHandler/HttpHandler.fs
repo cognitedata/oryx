@@ -5,8 +5,6 @@ open System.Net.Http
 open System.Threading
 open System.Threading.Tasks
 
-open Microsoft.Extensions.Logging
-
 open FSharp.Control.Tasks
 open Oryx
 open Oryx.Middleware
@@ -115,8 +113,6 @@ module HttpHandler =
 
             |> source
 
-
-
     /// Chunks a sequence of HTTP handlers into sequential and concurrent batches.
     let chunk<'TSource, 'TNext, 'TResult> =
         Core.chunk<HttpContext, 'TSource, 'TNext, 'TResult> HttpContext.merge
@@ -167,7 +163,6 @@ module HttpHandler =
                         raise ex
                 }
             |> source
-
 
     /// Parse response stream to a user specified type asynchronously.
     let parseAsync<'TResult>
@@ -268,7 +263,6 @@ module HttpHandler =
                 }
             |> source
 
-
     /// Use the given `completionMode` to change when the Response is considered to be 'complete'.
     ///
     /// Using `HttpCompletionOption.ResponseContentRead` (the default) means that the entire response content will be
@@ -323,10 +317,13 @@ module HttpHandler =
                         return! raise (HttpException(ctx, err))
                 }
             |> source
+
     /// Starts a pipeline using an empty request with the default context.
     let httpRequest: HttpHandler<unit> = Core.empty<HttpContext> HttpContext.defaultContext
+
     /// Caches the last content value and context.
     let cache<'TSource> = Core.cache<HttpContext, 'TSource>
+
     /// Asks for the given HTTP context and produces a content value using the context.
     let ask<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<HttpContext> =
         Core.ask<HttpContext, 'TSource> source
