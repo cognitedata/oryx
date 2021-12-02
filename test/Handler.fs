@@ -50,7 +50,7 @@ let ``Catching ok is Ok`` () =
 
         let mapper = map (fun a -> a * 10) |> catch errorHandler
 
-        let req = singleton 42 |> mapper |> map id
+        let req = singleton 42 |> mapper
 
         // Act
         let! content = req |> runUnsafeAsync

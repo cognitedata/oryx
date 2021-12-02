@@ -70,7 +70,7 @@ and HttpRequest =
       ContentBuilder: (unit -> HttpContent) option
       /// Query parameters
       Query: seq<struct (string * string)>
-      /// Responsetype. JSON or Protobuf
+      /// Response type. JSON or Protobuf
       ResponseType: ResponseType
       /// Map of headers to be sent
       Headers: Map<string, string>
@@ -184,7 +184,7 @@ module HttpContext =
             ctxs
             |> List.map (fun ctx -> ctx.Response.Headers)
             |> List.fold
-                (fun state hdr -> merge state hdr (fun k (a, b) -> if a = b then a else Seq.append a b))
+                (fun state hdr -> merge state hdr (fun _ (a, b) -> if a = b then a else Seq.append a b))
                 Map.empty
 
         { Request =

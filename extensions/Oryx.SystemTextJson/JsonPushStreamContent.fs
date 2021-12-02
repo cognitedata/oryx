@@ -28,6 +28,7 @@ type JsonPushStreamContent<'T> (content: 'T, options: JsonSerializerOptions) =
         }
         :> _
 
+
     override this.TryComputeLength(length: byref<int64>) : bool =
         length <- -1L
         false

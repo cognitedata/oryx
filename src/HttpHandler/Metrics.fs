@@ -23,8 +23,8 @@ module Metric =
     let DecodeErrorInc = "MetricDecodeErrorInc"
 
 type IMetrics =
-    abstract Counter : metric: string -> labels: IDictionary<string, string> -> increase: int64 -> unit
-    abstract Gauge : metric: string -> labels: IDictionary<string, string> -> value: float -> unit
+    abstract Counter: metric: string -> labels: IDictionary<string, string> -> increase: int64 -> unit
+    abstract Gauge: metric: string -> labels: IDictionary<string, string> -> value: float -> unit
 
 type EmptyMetrics () =
     interface IMetrics with

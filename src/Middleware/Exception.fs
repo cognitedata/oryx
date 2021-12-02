@@ -10,7 +10,7 @@ exception SkipException of string with
     static member Create() = SkipException String.Empty
 
 /// Wrapping an exception as a PanicException will short-circuit the
-/// handlers. A PanicException cannot be catched by `catch` and will
+/// handlers. A PanicException cannot be caught by `catch` and will
 /// not be skipped by `choose`
 exception PanicException of exn with
     override this.ToString() =

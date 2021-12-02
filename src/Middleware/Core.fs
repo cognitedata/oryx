@@ -19,27 +19,23 @@ module Core =
     /// A next continuation for observing the final result.
     let finish (tcs: TaskCompletionSource<'TResult>) = fun _ response -> unitVtask { tcs.SetResult response }
 
-    /// Run the HTTP handler in the given context. Returns content as result type.
-    let runAsync<'TContext, 'TResult> (handler: HandlerAsync<'TContext, 'TResult>) : Task<Result<'TResult, exn>> =
+    /// Run the HTTP handler in the given context. Returns content and throws exception if any error occured.
+    let runUnsafeAsync<'TContext, 'TResult> (handler: HandlerAsync<'TContext, 'TResult>) : Task<'TResult> =
         let tcs = TaskCompletionSource<'TResult>()
 
         task {
+            do! handler (finish tcs)
+            return! tcs.Task
+        }
+
+    /// Run the HTTP handler in the given context. Returns content as result type.
+    let runAsync<'TContext, 'TResult> (handler: HandlerAsync<'TContext, 'TResult>) : Task<Result<'TResult, exn>> =
+        task {
             try
-                do! handler (finish tcs)
-                let! value = tcs.Task
+                let! value = runUnsafeAsync handler
                 return Ok value
             with
             | error -> return Error error
-        }
-
-    /// Run the HTTP handler in the given context. Returns content and throws exception if any error occured.
-    let runUnsafeAsync<'TContext, 'TResult> (handler: HandlerAsync<'TContext, 'TResult>) : Task<'TResult> =
-        task {
-            let! result = runAsync handler
-
-            match result with
-            | Ok value -> return value
-            | Error err -> return raise err
         }
 
     /// Produce the given content.
@@ -64,7 +60,7 @@ module Core =
             fun _ value ->
                 unitVtask {
                     let handler = fn value
-                    return! handler (next)
+                    return! handler next
                 }
             |> source
 
@@ -160,8 +156,7 @@ module Core =
     let never _ = unitVtask { () }
 
     /// Completes the current request.
-    let empty<'TContext> (ctx: 'TContext) : HandlerAsync<'TContext, unit> =
-        fun next -> unitVtask { return! next ctx () }
+    let empty<'TContext> (ctx: 'TContext) : HandlerAsync<'TContext, unit> = fun next -> next ctx ()
 
     /// Filter content using a predicate function.
     let filter<'TContext, 'TSource>

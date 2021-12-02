@@ -47,7 +47,7 @@ module Error =
                     let mutable found = false
                     let handlerNext: HandlerAsync<'TContext, 'TSource> = fun next -> unitVtask { do! next ctx content }
 
-                    /// Proces handlers until `NoError` or `Panic`.
+                    /// Process handlers until `NoError` or `Panic`.
                     let rec chooser
                         (handlers: (HandlerAsync<'TContext, 'TSource> -> HandlerAsync<'TContext, 'TResult>) list)
                         =
@@ -96,15 +96,15 @@ module Error =
         (error: Exception)
         (source: HandlerAsync<'TContext, 'TSource>)
         : HandlerAsync<'TContext, 'TResult> =
-        fun next ->
+        fun _ ->
             fun _ _ -> raise (PanicException(error))
             |> source
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
-    let ofError<'TContext, 'TSource> (ctx: 'TContext) (err: Exception) : HandlerAsync<'TContext, 'TSource> =
+    let ofError<'TContext, 'TSource> (_: 'TContext) (err: Exception) : HandlerAsync<'TContext, 'TSource> =
         fun _ -> raise err
 
     /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
     /// the any error handling e.g `choose` or `catch`•.
-    let ofPanic<'TContext, 'TSource> (ctx: 'TContext) (error: Exception) : HandlerAsync<'TContext, 'TSource> =
+    let ofPanic<'TContext, 'TSource> (_: 'TContext) (error: Exception) : HandlerAsync<'TContext, 'TSource> =
         fun _ -> raise (PanicException(error))
