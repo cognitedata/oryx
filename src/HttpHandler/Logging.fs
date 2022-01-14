@@ -7,7 +7,7 @@ open System
 open System.Text.RegularExpressions
 
 open Microsoft.Extensions.Logging
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 
 [<AutoOpen>]
 module Logging =
@@ -28,22 +28,21 @@ module Logging =
             let getValues _ =
                 matches
                 |> Seq.cast
-                |> Seq.map
-                    (fun (match': Match) ->
-                        match match'.Groups.[1].Value with
-                        | PlaceHolder.HttpMethod -> box request.Method
-                        | PlaceHolder.RequestContent ->
-                            ctx.Request.ContentBuilder
-                            |> Option.map (fun builder -> builder ())
-                            |> Option.toObj
-                            :> _
-                        | PlaceHolder.ResponseContent -> content :> _
-                        | key ->
-                            // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
-                            // placeholders to the format string.
-                            match ctx.Request.Items.TryFind key with
-                            | Some value -> value :> _
-                            | _ -> String.Empty :> _)
+                |> Seq.map (fun (match': Match) ->
+                    match match'.Groups.[1].Value with
+                    | PlaceHolder.HttpMethod -> box request.Method
+                    | PlaceHolder.RequestContent ->
+                        ctx.Request.ContentBuilder
+                        |> Option.map (fun builder -> builder ())
+                        |> Option.toObj
+                        :> _
+                    | PlaceHolder.ResponseContent -> content :> _
+                    | key ->
+                        // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
+                        // placeholders to the format string.
+                        match ctx.Request.Items.TryFind key with
+                        | Some value -> value :> _
+                        | _ -> String.Empty :> _)
                 |> Array.ofSeq
 
             let level, values = logLevel, getValues content
@@ -54,26 +53,16 @@ module Logging =
     /// all requests.
     let withLogger (logger: ILogger) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         fun next ->
-            fun ctx content ->
-                next
-                    { ctx with
-                          Request =
-                              { ctx.Request with
-                                    Logger = Some logger } }
-                    content
+            fun ctx content -> next { ctx with Request = { ctx.Request with Logger = Some logger } } content
             |> source
 
     /// Set the log level to use (default is LogLevel.None).
     let withLogLevel (logLevel: LogLevel) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         fun next ->
             fun ctx content ->
-                unitVtask {
+                task {
                     try
-                        do!
-                            next
-                                { ctx with
-                                      Request = { ctx.Request with LogLevel = logLevel } }
-                                content
+                        do! next { ctx with Request = { ctx.Request with LogLevel = logLevel } } content
                     with
                     | HttpException (ctx, error) ->
                         match ctx.Request.LogLevel with
@@ -84,15 +73,14 @@ module Logging =
                 }
             |> source
 
-    /// Set the log message to use. Use in the pipleline somewhere before the `log` handler.
+    /// Set the log message to use. Use in the pipeline somewhere before the `log` handler.
     let withLogMessage<'TSource> (msg: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         fun next ->
             fun ctx ->
                 next
                     { ctx with
-                          Request =
-                              { ctx.Request with
-                                    Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } }
+                        Request =
+                            { ctx.Request with Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } }
 
             |> source
 
@@ -101,7 +89,7 @@ module Logging =
     let log (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         fun next ->
             fun ctx content ->
-                unitVtask {
+                task {
                     match ctx.Request.LogLevel with
                     | LogLevel.None -> ()
                     | logLevel -> log' logLevel ctx content

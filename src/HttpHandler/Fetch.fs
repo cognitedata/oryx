@@ -10,7 +10,7 @@ open System.Net.Http
 open System.Net.Http.Headers
 open System.Web
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 
 [<AutoOpen>]
 module Fetch =
@@ -67,7 +67,7 @@ module Fetch =
     let fetch<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<HttpContent> =
         fun next ->
             fun ctx _ ->
-                unitVtask {
+                task {
                     let timer = Stopwatch()
                     let client = ctx.Request.HttpClient()
                     let cancellationToken = ctx.Request.CancellationToken
@@ -98,10 +98,10 @@ module Fetch =
                             next
                                 { Request = { ctx.Request with Items = items }
                                   Response =
-                                      { StatusCode = response.StatusCode
-                                        IsSuccessStatusCode = response.IsSuccessStatusCode
-                                        ReasonPhrase = response.ReasonPhrase
-                                        Headers = headers } }
+                                    { StatusCode = response.StatusCode
+                                      IsSuccessStatusCode = response.IsSuccessStatusCode
+                                      ReasonPhrase = response.ReasonPhrase
+                                      Headers = headers } }
                                 response.Content
 
 

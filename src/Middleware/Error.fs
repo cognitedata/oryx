@@ -5,7 +5,7 @@ namespace Oryx.Middleware
 
 open System
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 open Oryx
 
 module Error =
@@ -17,8 +17,9 @@ module Error =
         : HandlerAsync<'TContext, 'TResult> =
         fun next ->
             fun ctx content ->
-                unitVtask {
-                    let handlerNext: HandlerAsync<'TContext, 'TSource> = fun next -> unitVtask { do! next ctx content }
+                task {
+                    let handlerNext: HandlerAsync<'TContext, 'TSource> =
+                        fun next -> task { do! next ctx content }
 
                     try
                         do! next |> handlerToCatch handlerNext
@@ -43,34 +44,26 @@ module Error =
             let exns: ResizeArray<exn> = ResizeArray()
 
             fun ctx content ->
-                unitVtask {
+                task {
                     let mutable found = false
-                    let handlerNext: HandlerAsync<'TContext, 'TSource> = fun next -> unitVtask { do! next ctx content }
 
-                    /// Process handlers until `NoError` or `Panic`.
-                    let rec chooser
-                        (handlers: (HandlerAsync<'TContext, 'TSource> -> HandlerAsync<'TContext, 'TResult>) list)
-                        =
-                        unitVtask {
-                            match handlers with
-                            | handler :: xs ->
-                                try
-                                    // Use handler
-                                    do! next |> handler handlerNext
-                                    found <- true
-                                with
-                                | error ->
-                                    match error with
-                                    | :? PanicException -> raise error
-                                    | :? SkipException -> ()
-                                    | _ -> exns.Add(error)
+                    let handlerNext: HandlerAsync<'TContext, 'TSource> =
+                        fun next -> task { do! next ctx content }
 
-                                    do! chooser xs
-                            | [] -> ()
-                        }
-
-                    do! chooser handlers
-
+                    /// Process handlers until `NoError` or `Panic`. Task is not tail recursive so cannot use a
+                    /// recursive function here.
+                    for handler in handlers do
+                        if not found then
+                            try
+                                do! next |> handler handlerNext
+                                found <- true
+                            with
+                            | error ->
+                                match error with
+                                | :? PanicException -> raise error
+                                | :? SkipException -> ()
+                                | _ -> exns.Add(error)
+                        
                     match found, exns.Count with
                     | true, _ -> ()
                     | false, 0 -> raise (SkipException("No choice was given."))

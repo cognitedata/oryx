@@ -71,7 +71,7 @@ let panic msg source : HttpHandler<'TSource> = panic (TestException(code = 400, 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
 let badRequestHandler<'TSource> (response: 'TSource) (ctx: HttpContext) (error: exn) : HttpHandler<'TSource> =
     fun next ->
-        unitVtask {
+        task {
             match error with
             | :? TestException as ex ->
                 match enum<HttpStatusCode> ex.code with

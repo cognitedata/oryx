@@ -5,7 +5,7 @@ open System.Net.Http
 open System.Threading
 open System.Threading.Tasks
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 open Oryx
 open Oryx.Middleware
 
@@ -31,7 +31,8 @@ module HttpHandler =
         Core.singleton<HttpContext, 'TSource> HttpContext.defaultContext
 
     /// Map the content of the HTTP handler.
-    let map<'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
+    let map<'TSource, 'TResult> =
+        Core.map<HttpContext, 'TSource, 'TResult>
     /// Update (map) the context.
     let update<'TSource> (update: HttpContext -> HttpContext) source : HttpHandler<'TSource> =
         Core.update<HttpContext, 'TSource> update source
@@ -40,19 +41,11 @@ module HttpHandler =
 
     /// Add HTTP header to context.
     let withHeader (header: string * string) =
-        update
-            (fun ctx ->
-                { ctx with
-                      Request =
-                          { ctx.Request with
-                                Headers = ctx.Request.Headers.Add header } })
+        update (fun ctx -> { ctx with Request = { ctx.Request with Headers = ctx.Request.Headers.Add header } })
 
     /// Replace all headers in the context.
     let withHeaders (headers: Map<string, string>) =
-        update
-            (fun ctx ->
-                { ctx with
-                      Request = { ctx.Request with Headers = headers } })
+        update (fun ctx -> { ctx with Request = { ctx.Request with Headers = headers } })
 
     /// Helper for setting Bearer token as Authorization header.
     let withBearerToken (token: string) =
@@ -61,55 +54,28 @@ module HttpHandler =
 
     /// Set the HTTP client to use for the requests.
     let withHttpClient<'TSource> (client: HttpClient) source : HttpHandler<'TSource> =
-        update
-            (fun ctx ->
-                { ctx with
-                      Request =
-                          { ctx.Request with
-                                HttpClient = (fun () -> client) } })
-            source
+        update (fun ctx -> { ctx with Request = { ctx.Request with HttpClient = (fun () -> client) } }) source
 
     /// Set the HTTP client factory to use for the requests.
     let withHttpClientFactory (factory: unit -> HttpClient) =
-        update
-            (fun ctx ->
-                { ctx with
-                      Request =
-                          { ctx.Request with
-                                HttpClient = factory } })
+        update (fun ctx -> { ctx with Request = { ctx.Request with HttpClient = factory } })
 
     /// Set the URL builder to use.
     let withUrlBuilder (builder: HttpRequest -> string) =
-        update
-            (fun ctx ->
-                { ctx with
-                      Request =
-                          { ctx.Request with
-                                UrlBuilder = builder } })
+        update (fun ctx -> { ctx with Request = { ctx.Request with UrlBuilder = builder } })
 
     /// Set a cancellation token to use for the requests.
     let withCancellationToken (token: CancellationToken) =
-        update
-            (fun ctx ->
-                { ctx with
-                      Request =
-                          { ctx.Request with
-                                CancellationToken = token } })
+        update (fun ctx -> { ctx with Request = { ctx.Request with CancellationToken = token } })
     /// Set the metrics (IMetrics) to use.
     let withMetrics (metrics: IMetrics) =
-        update
-            (fun ctx ->
-                { ctx with
-                      Request = { ctx.Request with Metrics = metrics } })
+        update (fun ctx -> { ctx with Request = { ctx.Request with Metrics = metrics } })
 
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
     let withQuery (query: seq<struct (string * string)>) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         fun next ->
-            fun ctx ->
-                next
-                    { ctx with
-                          Request = { ctx.Request with Query = query } }
+            fun ctx -> next { ctx with Request = { ctx.Request with Query = query } }
 
             |> source
 
@@ -126,10 +92,12 @@ module HttpHandler =
         Core.concurrent<HttpContext, 'TSource, 'TResult> HttpContext.merge
 
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
-    let catch<'TSource, 'TResult> = Error.catch<HttpContext, 'TSource, 'TResult>
+    let catch<'TSource, 'TResult> =
+        Error.catch<HttpContext, 'TSource, 'TResult>
 
     /// Choose from a list of handlers to use. The first handler that succeeds will be used.
-    let choose<'TSource, 'TResult> = Error.choose<HttpContext, 'TSource, 'TResult>
+    let choose<'TSource, 'TResult> =
+        Error.choose<HttpContext, 'TSource, 'TResult>
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
     let fail<'TSource, 'TResult> error source = Error.fail<HttpContext, 'TSource, 'TResult> error source
@@ -143,15 +111,17 @@ module HttpHandler =
     let validate<'TSource> = Core.validate<HttpContext, 'TSource>
 
     /// Handler that skips (ignores) the content and outputs unit.
-    let ignoreContent<'TSource> = Core.ignoreContent<HttpContext, 'TSource>
+    let ignoreContent<'TSource> =
+        Core.ignoreContent<HttpContext, 'TSource>
 
-    let replace<'TSource, 'TResult> = Core.replace<HttpContext, 'TSource, 'TResult>
+    let replace<'TSource, 'TResult> =
+        Core.replace<HttpContext, 'TSource, 'TResult>
 
     /// Parse response stream to a user specified type synchronously.
     let parse<'TResult> (parser: Stream -> 'TResult) (source: HttpHandler<HttpContent>) : HttpHandler<'TResult> =
         fun next ->
             fun ctx (content: HttpContent) ->
-                unitVtask {
+                task {
                     let! stream = content.ReadAsStreamAsync()
 
                     try
@@ -171,7 +141,7 @@ module HttpHandler =
         : HttpHandler<'TResult> =
         fun next ->
             fun ctx (content: HttpContent) ->
-                unitVtask {
+                task {
                     let! stream = content.ReadAsStreamAsync()
 
                     try
@@ -187,22 +157,14 @@ module HttpHandler =
     /// HTTP handler for setting the expected response type.
     let withResponseType<'TSource> (respType: ResponseType) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         fun next ->
-            fun ctx ->
-                next
-                    { ctx with
-                          Request =
-                              { ctx.Request with
-                                    ResponseType = respType } }
+            fun ctx -> next { ctx with Request = { ctx.Request with ResponseType = respType } }
             |> source
 
     /// HTTP handler for setting the method to be used for requests using this context. You will normally want to use
     /// the `GET`, `POST`, `PUT`, `DELETE`, or `OPTIONS` HTTP handlers instead of this one.
     let withMethod<'TSource> (method: HttpMethod) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         fun next ->
-            fun ctx ->
-                next
-                    { ctx with
-                          Request = { ctx.Request with Method = method } }
+            fun ctx -> next { ctx with Request = { ctx.Request with Method = method } }
 
             |> source
 
@@ -215,10 +177,10 @@ module HttpHandler =
             fun ctx ->
                 next
                     { ctx with
-                          Request =
-                              { ctx.Request with
-                                    Method = HttpMethod.Get
-                                    ContentBuilder = None } }
+                        Request =
+                            { ctx.Request with
+                                Method = HttpMethod.Get
+                                ContentBuilder = None } }
             |> source
 
     /// HTTP POST request.
@@ -238,7 +200,7 @@ module HttpHandler =
         : HttpHandler<'TSource> =
         fun next ->
             fun ctx content ->
-                unitVtask {
+                task {
                     let! result =
                         task {
                             try
@@ -253,10 +215,7 @@ module HttpHandler =
 
                         return!
                             next
-                                { ctx with
-                                      Request =
-                                          { ctx.Request with
-                                                Headers = ctx.Request.Headers.Add(name, value) } }
+                                { ctx with Request = { ctx.Request with Headers = ctx.Request.Headers.Add(name, value) } }
                                 content
 
                     | Error err -> raise err
@@ -276,12 +235,7 @@ module HttpHandler =
         (source: HttpHandler<'TSource>)
         : HttpHandler<'TSource> =
         fun next ->
-            fun ctx ->
-                next
-                    { ctx with
-                          Request =
-                              { ctx.Request with
-                                    CompletionMode = completionMode } }
+            fun ctx -> next { ctx with Request = { ctx.Request with CompletionMode = completionMode } }
             |> source
 
     /// HTTP handler for adding content builder to context. These
@@ -289,12 +243,7 @@ module HttpHandler =
     /// this context.
     let withContent<'TSource> (builder: unit -> HttpContent) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         fun next ->
-            fun ctx ->
-                next
-                    { ctx with
-                          Request =
-                              { ctx.Request with
-                                    ContentBuilder = Some builder } }
+            fun ctx -> next { ctx with Request = { ctx.Request with ContentBuilder = Some builder } }
 
             |> source
 
@@ -305,7 +254,7 @@ module HttpHandler =
         : HttpHandler<HttpContent> =
         fun next ->
             fun ctx content ->
-                unitVtask {
+                task {
                     let response = ctx.Response
 
                     match response.IsSuccessStatusCode with
@@ -319,7 +268,8 @@ module HttpHandler =
             |> source
 
     /// Starts a pipeline using an empty request with the default context.
-    let httpRequest: HttpHandler<unit> = Core.empty<HttpContext> HttpContext.defaultContext
+    let httpRequest: HttpHandler<unit> =
+        Core.empty<HttpContext> HttpContext.defaultContext
 
     /// Caches the last content value and context.
     let cache<'TSource> = Core.cache<HttpContext, 'TSource>

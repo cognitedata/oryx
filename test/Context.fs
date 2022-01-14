@@ -52,8 +52,6 @@ let ``Adding two headers to a context creates a context that contains both heade
     }
     |> fun x -> x.Result
 
-
-
 [<Property>]
 let ``Adding a bearer token to a context creates a context with that token`` token =
     task {

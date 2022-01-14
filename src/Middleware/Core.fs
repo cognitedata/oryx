@@ -5,19 +5,19 @@ namespace Oryx.Middleware
 
 open System.Threading.Tasks
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 open FsToolkit.ErrorHandling
 open Oryx
 
 
-type NextAsync<'TContext, 'TSource> = 'TContext -> 'TSource -> ValueTask
+type NextAsync<'TContext, 'TSource> = 'TContext -> 'TSource -> Task<unit>
 
 /// Middleware handler. Use the `Use` method to chain additional middleware handlers after this one.
-type HandlerAsync<'TContext, 'TSource> = NextAsync<'TContext, 'TSource> -> ValueTask
+type HandlerAsync<'TContext, 'TSource> = NextAsync<'TContext, 'TSource> -> Task<unit>
 
 module Core =
     /// A next continuation for observing the final result.
-    let finish (tcs: TaskCompletionSource<'TResult>) = fun _ response -> unitVtask { tcs.SetResult response }
+    let finish (tcs: TaskCompletionSource<'TResult>) = fun _ response -> task { tcs.SetResult response }
 
     /// Run the HTTP handler in the given context. Returns content and throws exception if any error occured.
     let runUnsafeAsync<'TContext, 'TResult> (handler: HandlerAsync<'TContext, 'TResult>) : Task<'TResult> =
@@ -40,7 +40,7 @@ module Core =
 
     /// Produce the given content.
     let singleton<'TContext, 'TSource> (ctx: 'TContext) (content: 'TSource) : HandlerAsync<'TContext, 'TSource> =
-        fun next -> unitVtask { do! next ctx content }
+        fun next -> task { do! next ctx content }
 
     /// Map the content of the middleware.
     let map<'TContext, 'TSource, 'TResult>
@@ -58,10 +58,10 @@ module Core =
         : HandlerAsync<'TContext, 'TResult> =
         fun next ->
             fun _ value ->
-                unitVtask {
+                task {
                     let handler = fn value
                     return! handler next
-                }
+                }  
             |> source
 
     let concurrent<'TContext, 'TSource, 'TResult>
@@ -69,16 +69,14 @@ module Core =
         (handlers: seq<HandlerAsync<'TContext, 'TResult>>)
         : HandlerAsync<'TContext, 'TResult list> =
         fun next ->
-            unitVtask {
-                let res: Result<'TContext * 'TResult, 'TContext * exn> array = Array.zeroCreate (Seq.length handlers)
+            task {
+                let res: Result<'TContext * 'TResult, 'TContext * exn> array =
+                    Array.zeroCreate (Seq.length handlers)
 
-                let obv n ctx content = unitVtask { res.[n] <- Ok(ctx, content) }
-
-                do!
-                    handlers
-                    |> Seq.mapi (fun n handler -> handler(obv n).AsTask())
-                    |> Task.WhenAll
-
+                let obv n ctx content = task { res.[n] <- Ok(ctx, content) }
+                let tasks = handlers |> Seq.mapi (fun n handler -> handler(obv n))
+                do! Task.WhenAll(tasks) :> Task
+                  
                 let result = res |> List.ofSeq |> List.sequenceResultM
 
                 match result with
@@ -95,10 +93,11 @@ module Core =
         (handlers: seq<HandlerAsync<'TContext, 'TResult>>)
         : HandlerAsync<'TContext, 'TResult list> =
         fun next ->
-            unitVtask {
-                let res = ResizeArray<Result<'TContext * 'TResult, 'TContext * exn>>()
+            task {
+                let res =
+                    ResizeArray<Result<'TContext * 'TResult, 'TContext * exn>>()
 
-                let obv ctx content = unitVtask { Ok(ctx, content) |> res.Add }
+                let obv ctx content = task { Ok(ctx, content) |> res.Add }
 
                 for handler in handlers do
                     do! handler obv
@@ -111,7 +110,7 @@ module Core =
                     let bs = merge results
                     return! next bs contents
                 | Error (_, err) -> raise err
-            }
+            } 
 
     /// Chunks a sequence of Middlewares into a combination of sequential and concurrent batches.
     let chunk<'TContext, 'TSource, 'TNext, 'TResult>
@@ -139,21 +138,21 @@ module Core =
         let mutable cache: ('TContext * 'TSource) option = None
 
         fun next ->
-            unitVtask {
+            task {
                 match cache with
                 | Some (ctx, content) -> return! next ctx content
                 | _ ->
                     return!
                         fun ctx content ->
-                            unitVtask {
+                            task {
                                 cache <- Some(ctx, content)
                                 return! next ctx content
-                            }
+                            } 
                         |> source
             }
 
     /// Never produces a result.
-    let never _ = unitVtask { () }
+    let never _ = task { () }
 
     /// Completes the current request.
     let empty<'TContext> (ctx: 'TContext) : HandlerAsync<'TContext, unit> = fun next -> next ctx ()
@@ -165,7 +164,7 @@ module Core =
         : HandlerAsync<'TContext, 'TSource> =
         fun next ->
             fun ctx value ->
-                unitVtask {
+                task {
                     if predicate value then
                         return! next ctx value
                 }
