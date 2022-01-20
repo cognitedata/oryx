@@ -61,7 +61,7 @@ module Core =
                 task {
                     let handler = fn value
                     return! handler next
-                }  
+                }
             |> source
 
     let concurrent<'TContext, 'TSource, 'TResult>
@@ -74,9 +74,13 @@ module Core =
                     Array.zeroCreate (Seq.length handlers)
 
                 let obv n ctx content = task { res.[n] <- Ok(ctx, content) }
-                let tasks = handlers |> Seq.mapi (fun n handler -> handler(obv n))
+
+                let tasks =
+                    handlers
+                    |> Seq.mapi (fun n handler -> handler (obv n))
+
                 do! Task.WhenAll(tasks) :> Task
-                  
+
                 let result = res |> List.ofSeq |> List.sequenceResultM
 
                 match result with
@@ -110,7 +114,7 @@ module Core =
                     let bs = merge results
                     return! next bs contents
                 | Error (_, err) -> raise err
-            } 
+            }
 
     /// Chunks a sequence of Middlewares into a combination of sequential and concurrent batches.
     let chunk<'TContext, 'TSource, 'TNext, 'TResult>
@@ -147,7 +151,7 @@ module Core =
                             task {
                                 cache <- Some(ctx, content)
                                 return! next ctx content
-                            } 
+                            }
                         |> source
             }
 

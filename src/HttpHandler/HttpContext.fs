@@ -188,11 +188,11 @@ module HttpContext =
                 Map.empty
 
         { Request =
-              ctxs
-              |> Seq.map (fun ctx -> ctx.Request)
-              |> Seq.head
+            ctxs
+            |> Seq.map (fun ctx -> ctx.Request)
+            |> Seq.head
           Response =
-              { Headers = headers
-                StatusCode = statusCode
-                IsSuccessStatusCode = true
-                ReasonPhrase = reasonPhrase } }
+            { Headers = headers
+              StatusCode = statusCode
+              IsSuccessStatusCode = true
+              ReasonPhrase = reasonPhrase } }

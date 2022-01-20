@@ -63,7 +63,7 @@ module Error =
                                 | :? PanicException -> raise error
                                 | :? SkipException -> ()
                                 | _ -> exns.Add(error)
-                        
+
                     match found, exns.Count with
                     | true, _ -> ()
                     | false, 0 -> raise (SkipException("No choice was given."))
