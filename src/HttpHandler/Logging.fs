@@ -83,7 +83,7 @@ module Logging =
     let withLogFormat (format: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         source
         |> update (fun ctx -> { ctx with Request = { ctx.Request with LogFormat = format } })
-  
+
     /// Logger handler with message. Should be composed in pipeline after both the `fetch` handler, and the `withError`
     /// in order to log both requests, responses and errors.
     let log (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
