@@ -33,9 +33,11 @@ module HttpHandler =
     /// Map the content of the HTTP handler.
     let map<'TSource, 'TResult> =
         Core.map<HttpContext, 'TSource, 'TResult>
+        
     /// Update (map) the context.
     let update<'TSource> (update: HttpContext -> HttpContext) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         Core.update<HttpContext, 'TSource> update source
+        
     /// Bind the content.
     let bind<'TSource, 'TResult> fn source = Core.bind<HttpContext, 'TSource, 'TResult> fn source
 

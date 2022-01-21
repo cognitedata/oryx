@@ -52,9 +52,8 @@ module Logging =
     /// Set the logger (ILogger) to use. Usually you would use `HttpContext.withLogger` instead to set the logger for
     /// all requests.
     let withLogger (logger: ILogger) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun next ->
-            fun ctx -> next { ctx with Request = { ctx.Request with Logger = Some logger } }
-            |> source
+        source
+        |> update (fun ctx -> { ctx with Request = { ctx.Request with Logger = Some logger } })
 
     /// Set the log level to use (default is LogLevel.None).
     let withLogLevel (logLevel: LogLevel) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
@@ -75,21 +74,16 @@ module Logging =
 
     /// Set the log message to use. Use in the pipeline somewhere before the `log` handler.
     let withLogMessage<'TSource> (msg: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun next ->
-            fun ctx ->
-                next
-                    { ctx with
-                        Request =
-                            { ctx.Request with Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } }
-
-            |> source
+        source
+        |> update (fun ctx ->
+            { ctx with
+                Request = { ctx.Request with Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } })
 
     /// Set the log format to use.
     let withLogFormat (format: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun next ->
-            fun ctx -> next { ctx with Request = { ctx.Request with LogFormat = format } }
-            |> source
-
+        source
+        |> update (fun ctx -> { ctx with Request = { ctx.Request with LogFormat = format } })
+  
     /// Logger handler with message. Should be composed in pipeline after both the `fetch` handler, and the `withError`
     /// in order to log both requests, responses and errors.
     let log (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
