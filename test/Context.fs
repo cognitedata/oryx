@@ -14,10 +14,9 @@ let ``Adding a header to a context creates a context that contains that header``
             httpRequest
             |> withHeader header
             |> ask
-            |> map
-                (fun ctx ->
-                    ctx.Request.Headers.TryGetValue(fst header)
-                    |> (fun (found, value) -> found && value = snd header))
+            |> map (fun ctx ->
+                ctx.Request.Headers.TryGetValue(fst header)
+                |> (fun (found, value) -> found && value = snd header))
 
         let! result = ctx |> runUnsafeAsync
         return result
@@ -32,20 +31,19 @@ let ``Adding two headers to a context creates a context that contains both heade
             |> withHeader h1
             |> withHeader h2
             |> ask
-            |> map
-                (fun ctx ->
-                    let p2 =
-                        ctx.Request.Headers.TryGetValue(fst h2)
-                        |> (fun (found, value) -> found && value = snd h2)
+            |> map (fun ctx ->
+                let p2 =
+                    ctx.Request.Headers.TryGetValue(fst h2)
+                    |> (fun (found, value) -> found && value = snd h2)
 
-                    let p1 =
-                        if (fst h1 = fst h2) then
-                            true
-                        else
-                            ctx.Request.Headers.TryGetValue(fst h1)
-                            |> (fun (found, value) -> found && value = snd h1)
+                let p1 =
+                    if (fst h1 = fst h2) then
+                        true
+                    else
+                        ctx.Request.Headers.TryGetValue(fst h1)
+                        |> (fun (found, value) -> found && value = snd h1)
 
-                    p1 && p2)
+                p1 && p2)
 
         let! result = ctx |> runUnsafeAsync
         return result
@@ -59,10 +57,9 @@ let ``Adding a bearer token to a context creates a context with that token`` tok
             httpRequest
             |> withBearerToken token
             |> ask
-            |> map
-                (fun ctx ->
-                    ctx.Request.Headers.TryGetValue "Authorization"
-                    |> (fun (found, value) -> found && value = (sprintf "Bearer %s" token)))
+            |> map (fun ctx ->
+                ctx.Request.Headers.TryGetValue "Authorization"
+                |> (fun (found, value) -> found && value = (sprintf "Bearer %s" token)))
 
         let! result = ctx |> runUnsafeAsync
         return result

@@ -20,7 +20,9 @@ type JsonPushStreamContent (content: JsonValue) =
 
     override this.SerializeToStreamAsync(stream: Stream, context: TransportContext) : Task =
         task {
-            use sw = new StreamWriter(stream, UTF8Encoding(false), 1024, true)
+            use sw =
+                new StreamWriter(stream, UTF8Encoding(false), 1024, true)
+
             use jtw = new JsonTextWriter(sw, Formatting = Formatting.None)
             do! content.WriteToAsync(jtw)
             do! jtw.FlushAsync()

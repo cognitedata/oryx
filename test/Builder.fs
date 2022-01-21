@@ -94,7 +94,7 @@ let ``Iterate handlers is Ok`` () =
             http {
                 let! h =
                     http {
-                        for _ in 1 .. 10 do
+                        for _ in 1..10 do
                             yield 42
                     }
 

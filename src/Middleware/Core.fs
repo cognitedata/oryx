@@ -198,11 +198,17 @@ module Core =
             |> source
 
     /// Update (asks) the context.
-    let update<'TContext, 'TSource> (update: 'TContext -> 'TContext) (source: HandlerAsync<'TContext, 'TSource>) : HandlerAsync<'TContext, 'TSource> =
+    let update<'TContext, 'TSource>
+        (update: 'TContext -> 'TContext)
+        (source: HandlerAsync<'TContext, 'TSource>)
+        : HandlerAsync<'TContext, 'TSource> =
         fun next ->
             fun ctx -> next (update ctx)
             |> source
 
     /// Replaces the value with a constant.
-    let replace<'TContext, 'TSource, 'TResult> (value: 'TResult) (source: HandlerAsync<'TContext, 'TSource>) : HandlerAsync<'TContext, 'TResult> =
+    let replace<'TContext, 'TSource, 'TResult>
+        (value: 'TResult)
+        (source: HandlerAsync<'TContext, 'TSource>)
+        : HandlerAsync<'TContext, 'TResult> =
         map (fun _ -> value) source

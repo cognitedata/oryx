@@ -25,15 +25,14 @@ let ``Get with return expression is Ok`` () =
         let json = """42"""
 
         let stub =
-            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
-                (fun request token ->
-                    (task {
-                        retries <- retries + 1
-                        let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-                        responseMessage.Content <- new StringContent(json)
-                        responseMessage.Headers.Add("x-request-id", "123")
-                        return responseMessage
-                     }))
+            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> (fun request token ->
+                (task {
+                    retries <- retries + 1
+                    let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+                    responseMessage.Content <- new StringContent(json)
+                    responseMessage.Headers.Add("x-request-id", "123")
+                    return responseMessage
+                }))
 
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
@@ -70,15 +69,14 @@ let ``Post url encoded with return expression is Ok`` () =
         let mutable urlencoded = ""
 
         let stub =
-            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
-                (fun request token ->
-                    task {
-                        let! content = request.Content.ReadAsStringAsync()
-                        urlencoded <- content
-                        let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-                        responseMessage.Content <- new StringContent(json)
-                        return responseMessage
-                    })
+            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> (fun request token ->
+                task {
+                    let! content = request.Content.ReadAsStringAsync()
+                    urlencoded <- content
+                    let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+                    responseMessage.Content <- new StringContent(json)
+                    return responseMessage
+                })
 
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
@@ -114,13 +112,12 @@ let ``Get with logging is OK`` () =
         let logger = new TestLogger<string>()
 
         let stub =
-            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
-                (fun request token ->
-                    (task {
-                        let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-                        responseMessage.Content <- new PushStreamContent("42")
-                        return responseMessage
-                     }))
+            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> (fun request token ->
+                (task {
+                    let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+                    responseMessage.Content <- new PushStreamContent("42")
+                    return responseMessage
+                }))
 
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
@@ -162,14 +159,13 @@ let ``Post with logging is OK`` () =
         let msg = "custom message"
 
         let stub =
-            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
-                (fun request token ->
-                    (task {
-                        retries <- retries + 1
-                        let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-                        responseMessage.Content <- new PushStreamContent("""{ "pong": 42 }""")
-                        return responseMessage
-                     }))
+            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> (fun request token ->
+                (task {
+                    retries <- retries + 1
+                    let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+                    responseMessage.Content <- new PushStreamContent("""{ "pong": 42 }""")
+                    return responseMessage
+                }))
 
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
         let content () = new StringableContent(json) :> HttpContent
@@ -208,13 +204,12 @@ let ``Multiple post with logging is OK`` () =
         let json x = sprintf """{ "ping": %d }""" x
 
         let stub =
-            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
-                (fun request token ->
-                    (task {
-                        let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-                        responseMessage.Content <- new PushStreamContent("42")
-                        return responseMessage
-                     }))
+            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> (fun request token ->
+                (task {
+                    let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+                    responseMessage.Content <- new PushStreamContent("42")
+                    return responseMessage
+                }))
 
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
         let content x () = new StringableContent(json x) :> HttpContent
@@ -259,14 +254,13 @@ let ``Post with disabled logging does not log`` () =
         let msg = "custom message"
 
         let stub =
-            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
-                (fun request token ->
-                    (task {
-                        retries <- retries + 1
-                        let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
-                        responseMessage.Content <- new PushStreamContent(json)
-                        return responseMessage
-                     }))
+            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> (fun request token ->
+                (task {
+                    retries <- retries + 1
+                    let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
+                    responseMessage.Content <- new PushStreamContent(json)
+                    return responseMessage
+                }))
 
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
         let content () = new StringableContent(json) :> HttpContent
@@ -304,13 +298,14 @@ let ``Fetch with internal error will log error`` () =
         let logger = new TestLogger<string>()
 
         let stub =
-            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>
-                (fun request token ->
-                    (task {
-                        let responseMessage = new HttpResponseMessage(HttpStatusCode.InternalServerError)
-                        responseMessage.Content <- new StringableContent(json)
-                        return responseMessage
-                     }))
+            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> (fun request token ->
+                (task {
+                    let responseMessage =
+                        new HttpResponseMessage(HttpStatusCode.InternalServerError)
+
+                    responseMessage.Content <- new StringableContent(json)
+                    return responseMessage
+                }))
 
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
@@ -325,7 +320,8 @@ let ``Fetch with internal error will log error`` () =
 
         // Act
         let request =
-            let content = fun () -> new PushStreamContent("testing") :> HttpContent
+            let content =
+                fun () -> new PushStreamContent("testing") :> HttpContent
 
             http {
                 let! result = ctx |> post content
