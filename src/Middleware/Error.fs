@@ -69,7 +69,6 @@ module Error =
                     | false, 0 -> raise (SkipException("No choice was given."))
                     | false, 1 -> raise exns.[0]
                     | false, _ -> raise (AggregateException(exns))
-
                 }
 
             |> source

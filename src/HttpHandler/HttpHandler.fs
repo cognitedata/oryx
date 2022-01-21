@@ -34,42 +34,50 @@ module HttpHandler =
     let map<'TSource, 'TResult> =
         Core.map<HttpContext, 'TSource, 'TResult>
     /// Update (map) the context.
-    let update<'TSource> (update: HttpContext -> HttpContext) source : HttpHandler<'TSource> =
+    let update<'TSource> (update: HttpContext -> HttpContext) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         Core.update<HttpContext, 'TSource> update source
     /// Bind the content.
     let bind<'TSource, 'TResult> fn source = Core.bind<HttpContext, 'TSource, 'TResult> fn source
 
     /// Add HTTP header to context.
-    let withHeader (header: string * string) =
-        update (fun ctx -> { ctx with Request = { ctx.Request with Headers = ctx.Request.Headers.Add header } })
+    let withHeader (header: string * string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        source
+        |> update (fun ctx -> { ctx with Request = { ctx.Request with Headers = ctx.Request.Headers.Add header } })
 
     /// Replace all headers in the context.
-    let withHeaders (headers: Map<string, string>) =
-        update (fun ctx -> { ctx with Request = { ctx.Request with Headers = headers } })
+    let withHeaders (headers: Map<string, string>) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        source
+        |> update (fun ctx -> { ctx with Request = { ctx.Request with Headers = headers } })
 
     /// Helper for setting Bearer token as Authorization header.
-    let withBearerToken (token: string) =
+    let withBearerToken (token: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         let header = ("Authorization", sprintf "Bearer %s" token)
-        withHeader header
+        source |> withHeader header
 
     /// Set the HTTP client to use for the requests.
-    let withHttpClient<'TSource> (client: HttpClient) source : HttpHandler<'TSource> =
-        update (fun ctx -> { ctx with Request = { ctx.Request with HttpClient = (fun () -> client) } }) source
+    let withHttpClient<'TSource> (client: HttpClient) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        source
+        |> update (fun ctx -> { ctx with Request = { ctx.Request with HttpClient = (fun () -> client) } })
 
     /// Set the HTTP client factory to use for the requests.
-    let withHttpClientFactory (factory: unit -> HttpClient) =
-        update (fun ctx -> { ctx with Request = { ctx.Request with HttpClient = factory } })
+    let withHttpClientFactory (factory: unit -> HttpClient) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        source
+        |> update (fun ctx -> { ctx with Request = { ctx.Request with HttpClient = factory } })
 
     /// Set the URL builder to use.
-    let withUrlBuilder (builder: HttpRequest -> string) =
-        update (fun ctx -> { ctx with Request = { ctx.Request with UrlBuilder = builder } })
+    let withUrlBuilder (builder: HttpRequest -> string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        source
+        |> update (fun ctx -> { ctx with Request = { ctx.Request with UrlBuilder = builder } })
 
     /// Set a cancellation token to use for the requests.
-    let withCancellationToken (token: CancellationToken) =
-        update (fun ctx -> { ctx with Request = { ctx.Request with CancellationToken = token } })
+    let withCancellationToken (token: CancellationToken) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        source
+        |> update (fun ctx -> { ctx with Request = { ctx.Request with CancellationToken = token } })
+
     /// Set the metrics (IMetrics) to use.
-    let withMetrics (metrics: IMetrics) =
-        update (fun ctx -> { ctx with Request = { ctx.Request with Metrics = metrics } })
+    let withMetrics (metrics: IMetrics) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        source
+        |> update (fun ctx -> { ctx with Request = { ctx.Request with Metrics = metrics } })
 
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
@@ -111,8 +119,9 @@ module HttpHandler =
     let validate<'TSource> = Core.validate<HttpContext, 'TSource>
 
     /// Handler that skips (ignores) the content and outputs unit.
-    let ignoreContent<'TSource> =
-        Core.ignoreContent<HttpContext, 'TSource>
+    let ignoreContent<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<unit> =
+        source
+        |> Core.ignoreContent<HttpContext, 'TSource>
 
     let replace<'TSource, 'TResult> =
         Core.replace<HttpContext, 'TSource, 'TResult>

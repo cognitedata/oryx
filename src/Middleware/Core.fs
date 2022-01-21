@@ -188,7 +188,8 @@ module Core =
             |> source
 
     /// Retrieves the content.
-    let await<'TContext, 'TSource> () = map<'TContext, 'TSource, 'TSource> id
+    let await<'TContext, 'TSource> () (source: HandlerAsync<'TContext, 'TSource>) : HandlerAsync<'TContext, 'TSource> =
+        source |> map<'TContext, 'TSource, 'TSource> id
 
     /// Returns the current environment.
     let ask<'TContext, 'TSource> (source: HandlerAsync<'TContext, 'TSource>) : HandlerAsync<'TContext, 'TContext> =
@@ -197,11 +198,11 @@ module Core =
             |> source
 
     /// Update (asks) the context.
-    let update<'TContext, 'TSource> (update: 'TContext -> 'TContext) (source: HandlerAsync<'TContext, 'TSource>) =
+    let update<'TContext, 'TSource> (update: 'TContext -> 'TContext) (source: HandlerAsync<'TContext, 'TSource>) : HandlerAsync<'TContext, 'TSource> =
         fun next ->
             fun ctx -> next (update ctx)
             |> source
 
     /// Replaces the value with a constant.
-    let replace<'TContext, 'TSource, 'TResult> (value: 'TResult) (source: HandlerAsync<'TContext, 'TSource>) =
+    let replace<'TContext, 'TSource, 'TResult> (value: 'TResult) (source: HandlerAsync<'TContext, 'TSource>) : HandlerAsync<'TContext, 'TResult> =
         map (fun _ -> value) source

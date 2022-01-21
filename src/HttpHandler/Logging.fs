@@ -53,7 +53,7 @@ module Logging =
     /// all requests.
     let withLogger (logger: ILogger) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         fun next ->
-            fun ctx content -> next { ctx with Request = { ctx.Request with Logger = Some logger } } content
+            fun ctx -> next { ctx with Request = { ctx.Request with Logger = Some logger } }
             |> source
 
     /// Set the log level to use (default is LogLevel.None).
@@ -82,6 +82,12 @@ module Logging =
                         Request =
                             { ctx.Request with Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } }
 
+            |> source
+
+    /// Set the log format to use.
+    let withLogFormat (format: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
+        fun next ->
+            fun ctx -> next { ctx with Request = { ctx.Request with LogFormat = format } }
             |> source
 
     /// Logger handler with message. Should be composed in pipeline after both the `fetch` handler, and the `withError`
