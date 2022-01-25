@@ -14,6 +14,6 @@ module ResponseReader =
     /// <param name="source">The upstream source handler.</param>
     /// <returns>Decoded context.</returns>
     let json<'TResult> (options: JsonSerializerOptions) (source: HttpHandler<HttpContent>) : HttpHandler<'TResult> =
-        let parser stream = (JsonSerializer.DeserializeAsync<'TResult>(stream, options))
+        let parser stream = (JsonSerializer.DeserializeAsync<'TResult>(stream, options)).AsTask()
 
         parseAsync parser source

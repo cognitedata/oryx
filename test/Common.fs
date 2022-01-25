@@ -11,7 +11,7 @@ open System.Text.Json
 open System.Threading
 open System.Threading.Tasks
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 
 open Oryx
 open Oryx.SystemTextJson.ResponseReader
@@ -73,8 +73,8 @@ let badRequestHandler<'TSource> (response: 'TSource) (ctx: HttpContext) (error: 
     fun next ->
         task {
             match error with
-            | :? TestException as ex ->
-                match enum<HttpStatusCode> ex.code with
+            | TestException(code, message) ->
+                match enum<HttpStatusCode> code with
                 | HttpStatusCode.BadRequest -> return! next ctx response
                 | _ -> raise (HttpException(ctx, error))
             | _ -> raise (HttpException(ctx, error))

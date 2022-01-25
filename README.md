@@ -28,6 +28,7 @@ Install-Package Oryx
 ```
 
 Using .NET CLI:
+
 ```sh
 dotnet add package Oryx
 ```
@@ -40,7 +41,7 @@ Or [directly in Visual Studio](https://docs.microsoft.com/en-us/nuget/quickstart
 open System.Net.Http
 open System.Text.Json
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 
 open Oryx
 open Oryx.SystemTextJson.ResponseReader
@@ -94,18 +95,19 @@ type Context = {
 The `HttpContext` is constructed using a series of asynchronous HTTP handlers.
 
 ```fs
-type HttpNext<'TSource> = HttpContext -> 'TSource -> ValueTask
+type HttpNext<'TSource> = HttpContext -> 'TSource -> Task
 
-type HttpHandler<'TSource> = HttpNext<'TSource> -> ValueTask
+type HttpHandler<'TSource> = HttpNext<'TSource> -> Task
 ```
 
 The relationship can be seen as:
+
 ```fs
 do! handler next
 ```
 
 An HTTP handler (`HttpHandler`) is a middleware that uses or subscribes `handler next` the given HTTP next handler
-(`HttpNext<'TResult>`), and return a `ValueTask` of nothing.
+(`HttpNext<'TResult>`), and return a `Task` of unit.
 
 Each `HttpHandler` usually transforms the `HttpRequest`, `HttpResponse` or the `content` before passing it down the
 pipeline by invoking the next `HttpNext` continuation. It may also signal an error by raising an exception to fail the processing of the pipeline.
@@ -164,7 +166,6 @@ are like lego bricks and may be composed into more complex HTTP handlers. The HT
 - `withUrlBuilder` - Use the given URL builder for the request.
 - `withUrlBuilder` - Adds the URL builder to use. An URL builder constructs the URL for the `Request` part of the
   context.
-
 
 In addition there are several extension for decoding JSON and Protobuf responses:
 
@@ -516,21 +517,22 @@ let urlBuilder (request: HttpRequest) : string =
     let items = request.Items
     ...
 ```
+
 ## What is new in Oryx v5
 
 Oryx v5 continues to simplify the HTTP handlers by reducing the number of
-generic parameters so you only need to specify the type the handler is producing (not what it's consuming). 
+generic parameters so you only need to specify the type the handler is producing (not what it's consuming).
 The handlers have also been reduced to plain functions.
 
 ```fs
-type HttpNext<'TSource> = HttpContext -> 'TSource -> ValueTask
+type HttpNext<'TSource> = HttpContext -> 'TSource -> Task
 
-type HttpHandler<'TSource> = HttpNext<'TSource> -> ValueTask
+type HttpHandler<'TSource> = HttpNext<'TSource> -> Task
 ```
 
 The great advantage is that you can now use normal functional composition (`>>`) instead of Kleisli composition (`>=>`).
-This also enables normal pipelining using the pipe (`|>`) operator which will also give you better type hinting and 
-debugging in  most IDEs.
+This also enables normal pipelining using the pipe (`|>`) operator which will also give you better type hinting and
+debugging in most IDEs.
 
 ```fs
 use client = new HttpClient()
@@ -724,11 +726,11 @@ same. There are however some notable changes:
 - `Context` have been renamed to `HttpContext`.
 - `HttpHandler` have been renamed `HttpHandler`. This is because `HttpHandler` is now an interface.
 - The `retry` operator has been deprecated for now. Use [Polly](https://github.com/App-vNext/Polly) instead.
-- The `catch` operator needs to run __after__ the error producing operator e.g `fetch` (not before). This is because
+- The `catch` operator needs to run **after** the error producing operator e.g `fetch` (not before). This is because
   Oryx v3 pushes results "down" instead of returning them "up" the chain of operators. The good thing with this change
   is that a handler can now continue processing the rest of the pipeline after catching an error. This was not possible
   in v2 / v1 where the `catch` operator had to abort processing and produce a result.
-- The log operator needs to be placed __after__ the handler you want it to log. E.g to log JSON decoded data you need to
+- The log operator needs to be placed **after** the handler you want it to log. E.g to log JSON decoded data you need to
   place it after `json`.
 - Http handlers take 2 generic types instead of 4. E.g `fetch<'TSource, 'TNext, 'TResult, 'TError>` now becomes
   `fetch<'TSource, 'TNext>` and the last two types can simply be removed from your code.

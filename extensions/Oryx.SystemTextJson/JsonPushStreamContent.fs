@@ -6,7 +6,7 @@ open System.Net
 open System.Net.Http.Headers
 open System.Threading.Tasks
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 
 open System.Text.Json
 

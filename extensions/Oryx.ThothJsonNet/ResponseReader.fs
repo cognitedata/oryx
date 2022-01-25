@@ -4,7 +4,7 @@ open System.IO
 open System.Net.Http
 open System.Threading.Tasks
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 open Thoth.Json.Net
 
 open Oryx
@@ -20,8 +20,8 @@ module ResponseReader =
     /// <param name="source">The upstream source handler.</param>
     /// <returns>Decoded context.</returns>
     let json<'TResult> (decoder: Decoder<'TResult>) (source: HttpHandler<HttpContent>) : HttpHandler<'TResult> =
-        let parser (stream: Stream) : ValueTask<'TResult> =
-            vtask {
+        let parser (stream: Stream) : Task<'TResult> =
+            task {
                 let! ret = decodeStreamAsync decoder stream
 
                 match ret with

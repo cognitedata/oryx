@@ -7,7 +7,7 @@ open System.Net.Http.Headers
 open System.Text
 open System.Threading.Tasks
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 
 open Newtonsoft.Json
 open Newtonsoft.Json.Linq

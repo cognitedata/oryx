@@ -1,6 +1,6 @@
 open System.Net.Http
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 open Oryx
 open Oryx.ThothJsonNet.ResponseReader
 open Thoth.Json.Net

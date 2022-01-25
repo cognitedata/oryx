@@ -8,7 +8,7 @@ open System.Threading.Tasks
 
 open Microsoft.Extensions.Logging
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 open Swensen.Unquote
 open Xunit
 

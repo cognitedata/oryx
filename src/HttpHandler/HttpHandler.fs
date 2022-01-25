@@ -147,7 +147,7 @@ module HttpHandler =
 
     /// Parse response stream to a user specified type asynchronously.
     let parseAsync<'TResult>
-        (parser: Stream -> ValueTask<'TResult>)
+        (parser: Stream -> Task<'TResult>)
         (source: HttpHandler<HttpContent>)
         : HttpHandler<'TResult> =
         fun next ->
