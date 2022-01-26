@@ -45,7 +45,7 @@ let ``Get with return expression is Ok`` () =
         // Act
         let request =
             http {
-                let! result = ctx |> get ()
+                let! result = ctx |> get
                 return result + 1
             }
 
@@ -134,7 +134,7 @@ let ``Get with logging is OK`` () =
         // Act
         let request =
             http {
-                let! result = ctx |> get ()
+                let! result = ctx |> get
                 return result + 2
             }
 

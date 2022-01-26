@@ -11,6 +11,7 @@ open System.Net.Http.Headers
 open System.Web
 
 open FSharp.Control.TaskBuilder
+open Oryx.Middleware
 
 [<AutoOpen>]
 module Fetch =
@@ -65,7 +66,7 @@ module Fetch =
     /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{RequestContent}` and `{Elapsed}`
     /// to the log format.
     let fetch<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<HttpContent> =
-        fun next ->
+        fun onSuccess onError onCancel  ->
             fun ctx _ ->
                 task {
                     let timer = Stopwatch()
@@ -95,7 +96,7 @@ module Fetch =
                             |> Map.ofSeq
 
                         let! result =
-                            next
+                            onSuccess
                                 { Request = { ctx.Request with Items = items }
                                   Response =
                                     { StatusCode = response.StatusCode
@@ -108,6 +109,6 @@ module Fetch =
                         response.Dispose()
                         return result
                     with
-                    | ex when not (ex :? HttpException) -> raise (HttpException(ctx, ex))
+                    | ex when not (ex :? HttpException) -> return! onError ctx (HttpException(ctx, ex))
                 }
-            |> source
+            |> Core.swapArgs source onError onCancel

@@ -56,12 +56,13 @@ let query term = [
     struct ("search", term)
 ]
 
-let request term =
-    GET
-    >> withUrl Url
-    >> withQuery (query term)
-    >> fetch
-    >> json options
+let request term source =
+    source 
+    |> GET
+    |> withUrl Url
+    |> withQuery (query term)
+    |> fetch
+    |> json options
 
 let asyncMain argv = task {
     use client = new HttpClient ()

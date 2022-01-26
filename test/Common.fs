@@ -70,44 +70,41 @@ let panic msg source : HttpHandler<'TSource> = panic (TestException(code = 400, 
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
 let badRequestHandler<'TSource> (response: 'TSource) (ctx: HttpContext) (error: exn) : HttpHandler<'TSource> =
-    fun next ->
+    fun onSuccess _ _  ->
         task {
             match error with
             | TestException(code, message) ->
                 match enum<HttpStatusCode> code with
-                | HttpStatusCode.BadRequest -> return! next ctx response
+                | HttpStatusCode.BadRequest -> return! onSuccess ctx response
                 | _ -> raise (HttpException(ctx, error))
             | _ -> raise (HttpException(ctx, error))
         }
-
-let shouldRetry (error: exn) : bool =
-    match error with
-    | :? TestException -> true
-    | _ -> false
 
 let errorHandler (response: HttpResponse) (_: HttpContent) =
     task { return TestException(code = int response.StatusCode, message = "Got error") }
 
 let options = JsonSerializerOptions()
 
-let get () =
-    GET
-    >> withUrl "http://test.org"
-    >> withQuery [ struct ("debug", "true") ]
-    >> fetch<'TSource>
-    >> withError errorHandler
-    >> json options
-    >> log
+let get source =
+    source
+    |> GET
+    |> withUrl "http://test.org"
+    |> withQuery [ struct ("debug", "true") ]
+    |> fetch<'TSource>
+    |> withError errorHandler
+    |> json options
+    |> log
 
-let post content =
-    POST
-    >> withResponseType ResponseType.JsonValue
-    >> withContent content
-    >> withCompletion HttpCompletionOption.ResponseHeadersRead
-    >> fetch
-    >> withError errorHandler
-    >> json options
-    >> log
+let post content source =
+    source
+    |> POST
+    |> withResponseType ResponseType.JsonValue
+    |> withContent content
+    |> withCompletion HttpCompletionOption.ResponseHeadersRead
+    |> fetch
+    |> withError errorHandler
+    |> json options
+    |> log
 
 //let retryCount = 5
 //let retry next ctx = retry shouldRetry 500<ms> retryCount next ctx
