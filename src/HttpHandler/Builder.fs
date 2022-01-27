@@ -3,7 +3,7 @@
 
 namespace Oryx
 
-open Oryx.Middleware
+open Oryx.Pipeline
 
 type RequestBuilder() =
     member _.Zero() : HttpHandler<unit> = httpRequest

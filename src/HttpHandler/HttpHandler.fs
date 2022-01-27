@@ -7,7 +7,7 @@ open System.Threading.Tasks
 
 open FSharp.Control.TaskBuilder
 open Oryx
-open Oryx.Middleware
+open Oryx.Pipeline
 
 type HttpHandler<'TResult> = Pipeline<HttpContext, 'TResult>
 

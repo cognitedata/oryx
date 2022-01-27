@@ -168,7 +168,9 @@ let ``Post with logging is OK`` () =
                 }))
 
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
-        let content () = new StringableContent(json) :> HttpContent
+
+        let content () =
+            new StringableContent(json) :> HttpContent
 
         let ctx =
             httpRequest
@@ -212,7 +214,9 @@ let ``Multiple post with logging is OK`` () =
                 }))
 
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
-        let content x () = new StringableContent(json x) :> HttpContent
+
+        let content x () =
+            new StringableContent(json x) :> HttpContent
 
 
         let ctx =
@@ -263,7 +267,9 @@ let ``Post with disabled logging does not log`` () =
                 }))
 
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
-        let content () = new StringableContent(json) :> HttpContent
+
+        let content () =
+            new StringableContent(json) :> HttpContent
 
         let ctx =
             httpRequest
@@ -300,8 +306,7 @@ let ``Fetch with internal error will log error`` () =
         let stub =
             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> (fun request token ->
                 (task {
-                    let responseMessage =
-                        new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                    let responseMessage = new HttpResponseMessage(HttpStatusCode.InternalServerError)
 
                     responseMessage.Content <- new StringableContent(json)
                     return responseMessage
@@ -320,8 +325,7 @@ let ``Fetch with internal error will log error`` () =
 
         // Act
         let request =
-            let content =
-                fun () -> new PushStreamContent("testing") :> HttpContent
+            let content = fun () -> new PushStreamContent("testing") :> HttpContent
 
             http {
                 let! result = ctx |> post content

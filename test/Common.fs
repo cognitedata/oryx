@@ -17,12 +17,12 @@ open Oryx
 open Oryx.SystemTextJson.ResponseReader
 open Microsoft.Extensions.Logging
 
-type StringableContent (content: string) =
-    inherit StringContent (content)
+type StringableContent(content: string) =
+    inherit StringContent(content)
     override this.ToString() = content
 
-type PushStreamContent (content: string) =
-    inherit HttpContent ()
+type PushStreamContent(content: string) =
+    inherit HttpContent()
     let _content = content
     let mutable _disposed = false
     do base.Headers.ContentType <- MediaTypeHeaderValue "application/json"
@@ -49,8 +49,8 @@ type PushStreamContent (content: string) =
         base.Dispose(disposing)
         _disposed <- true
 
-type HttpMessageHandlerStub (OnNextAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
-    inherit HttpMessageHandler ()
+type HttpMessageHandlerStub(OnNextAsync: Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>) =
+    inherit HttpMessageHandler()
 
     override self.SendAsync
         (
@@ -64,16 +64,21 @@ let add (a: int) (b: int) = singleton (a + b)
 exception TestException of code: int * message: string with
     override this.ToString() = this.message
 
-let error msg source : HttpHandler<'TSource> = fail (TestException(code = 400, message = msg)) source
-let ofError msg : HttpHandler<'TSource> = ofError (TestException(code = 400, message = msg))
-let panic msg source : HttpHandler<'TSource> = panic (TestException(code = 400, message = msg)) source
+let error msg source : HttpHandler<'TSource> =
+    fail (TestException(code = 400, message = msg)) source
+
+let ofError msg : HttpHandler<'TSource> =
+    ofError (TestException(code = 400, message = msg))
+
+let panic msg source : HttpHandler<'TSource> =
+    panic (TestException(code = 400, message = msg)) source
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
 let badRequestHandler<'TSource> (response: 'TSource) (ctx: HttpContext) (error: exn) : HttpHandler<'TSource> =
-    fun onSuccess _ _  ->
+    fun onSuccess _ _ ->
         task {
             match error with
-            | TestException(code, message) ->
+            | TestException (code, message) ->
                 match enum<HttpStatusCode> code with
                 | HttpStatusCode.BadRequest -> return! onSuccess ctx response
                 | _ -> raise (HttpException(ctx, error))
@@ -109,7 +114,7 @@ let post content source =
 //let retryCount = 5
 //let retry next ctx = retry shouldRetry 500<ms> retryCount next ctx
 
-type TestLogger<'a> () =
+type TestLogger<'a>() =
     member val Output: string = String.Empty with get, set
     member val LoggerLevel: LogLevel = LogLevel.Information with get, set
 
@@ -135,7 +140,7 @@ type TestLogger<'a> () =
         member this.IsEnabled(_: LogLevel) : bool = true
         member this.BeginScope<'TState>(_: 'TState) : IDisposable = this :> IDisposable
 
-type TestMetrics () =
+type TestMetrics() =
     member val Fetches = 0L with get, set
     member val Errors = 0L with get, set
     member val Retries = 0L with get, set

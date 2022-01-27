@@ -1,7 +1,7 @@
 // Copyright 2020 Cognite AS
 // SPDX-License-Identifier: Apache-2.0
 
-namespace Oryx.Middleware
+namespace Oryx.Pipeline
 
 open System.Threading.Tasks
 
@@ -104,7 +104,7 @@ module Core =
                 | Error (_, err) -> raise err
             }
 
-    /// Run list middlewares sequentially.
+    /// Run list pipelines sequentially.
     let sequential<'TContext, 'TSource, 'TResult>
         (merge: 'TContext list -> 'TContext)
         (handlers: seq<Pipeline<'TContext, 'TResult>>)
