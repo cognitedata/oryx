@@ -57,7 +57,7 @@ let query term = [
 ]
 
 let request term source =
-    source 
+    source
     |> GET
     |> withUrl Url
     |> withQuery (query term)
@@ -93,25 +93,29 @@ type Context = {
 }
 ```
 
-The `HttpContext` is constructed using a series of asynchronous HTTP handlers.
+The `HttpContext` is constructed using a pipeline of asynchronous HTTP handlers.
 
 ```fs
-type HttpNext<'TSource> = HttpContext -> 'TSource -> Task
+type OnSuccessAsync<'TContext, 'TSource> = 'TContext -> 'TSource -> Task<unit>
+type OnErrorAsync<'TContext> = 'TContext -> exn -> Task<unit>
+type OnCancelAsync<'TContext> = 'TContext -> Task<unit>
 
-type HttpHandler<'TSource> = HttpNext<'TSource> -> Task
+type Pipeline<'TContext, 'TSource> =
+    OnSuccessAsync<'TContext, 'TSource> -> OnErrorAsync<'TContext> -> OnCancelAsync<'TContext> -> Task<unit>
 ```
 
 The relationship can be seen as:
 
 ```fs
-do! handler next
+do! handler onSuccess onError onCancel
 ```
 
-An HTTP handler (`HttpHandler`) is a middleware that uses or subscribes `handler next` the given HTTP next handler
-(`HttpNext<'TResult>`), and return a `Task` of unit.
+An HTTP handler (`HttpHandler`) is a pipeline that uses or subscribes `handler onSuccess onError onCancel` the given
+HTTP next handler (`HttpNext<'TResult>`), and return a `Task` of unit.
 
 Each `HttpHandler` usually transforms the `HttpRequest`, `HttpResponse` or the `content` before passing it down the
-pipeline by invoking the next `HttpNext` continuation. It may also signal an error by raising an exception to fail the processing of the pipeline.
+pipeline by invoking the next `onSuccess` continuation. It may also signal an error by invoking `onError` with an
+exception to fail the processing of the pipeline.
 
 The easiest way to get your head around the Oryx `HttpHandler` is to think of it as a functional web request processing
 pipeline. Each handler has the `HttpContext` and `content` at its disposal and can decide whether it wants to fail the
@@ -521,19 +525,20 @@ let urlBuilder (request: HttpRequest) : string =
 
 ## What is new in Oryx v5
 
-Oryx v5 continues to simplify the HTTP handlers by reducing the number of
-generic parameters so you only need to specify the type the handler is producing (not what it's consuming).
-The handlers have also been reduced to plain functions.
+Oryx v5 continues to simplify the HTTP handlers by reducing the number of generic parameters so you only need to specify
+the type the handler is producing (not what it's consuming). The handlers have also been reduced to plain functions.
 
 ```fs
-type HttpNext<'TSource> = HttpContext -> 'TSource -> Task
+type OnSuccessAsync<HttContext, 'TSource> = 'TContext -> 'TSource -> Task<unit>
+type OnErrorAsync<'TContext> = 'TContext -> exn -> Task<unit>
+type OnCancelAsync<'TContext> = 'TContext -> Task<unit>
 
-type HttpHandler<'TSource> = HttpNext<'TSource> -> Task
+type HttpHandler<'TSource> =
+    OnSuccessAsync<HttContext, 'TSource> -> OnErrorAsync<HttContext> -> OnCancelAsync<HttContext> -> Task<unit>
 ```
 
-The great advantage is that you can now use normal functional composition (`>>`) instead of Kleisli composition (`>=>`).
-This also enables normal pipelining using the pipe (`|>`) operator which will also give you better type hinting and
-debugging in most IDEs.
+The great advantage is that you can now use the normal pipe operator (`|>`) instead of Kleisli composition (`>=>`).
+which will give you better type hinting and debugging in most IDEs.
 
 ```fs
 use client = new HttpClient()
