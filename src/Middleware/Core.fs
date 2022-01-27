@@ -16,16 +16,15 @@ type OnCancelAsync<'TContext> = 'TContext -> Task<unit>
 type Pipeline<'TContext, 'TSource> =
     OnSuccessAsync<'TContext, 'TSource> -> OnErrorAsync<'TContext> -> OnCancelAsync<'TContext> -> Task<unit>
 
-    
+
 module Core =
     /// Swap first with last arg so we can pipe onSuccess
-    let swapArgs fn =
-        fun a b c -> fn c a b
+    let swapArgs fn = fun a b c -> fn c a b
 
     /// A next continuation for observing the final result.
     let finish<'TContext, 'TResult>
         (tcs: TaskCompletionSource<'TResult>)
-        :  OnSuccessAsync<'TContext, 'TResult> * OnErrorAsync<'TContext> * OnCancelAsync<'TContext> =
+        : OnSuccessAsync<'TContext, 'TResult> * OnErrorAsync<'TContext> * OnCancelAsync<'TContext> =
         let onSuccess _ response = task { tcs.SetResult response }
         let onError _ (error: exn) = task { tcs.SetException error }
         let onCancel _ = task { tcs.SetCanceled() }
@@ -53,7 +52,7 @@ module Core =
 
     /// Produce the given content.
     let singleton<'TContext, 'TSource> (ctx: 'TContext) (content: 'TSource) : Pipeline<'TContext, 'TSource> =
-        fun onSuccess onError onCancel  -> task { do! onSuccess ctx content }
+        fun onSuccess onError onCancel -> task { do! onSuccess ctx content }
 
     /// Map the content of the middleware.
     let map<'TContext, 'TSource, 'TResult>
@@ -70,7 +69,7 @@ module Core =
         (fn: 'TSource -> Pipeline<'TContext, 'TResult>)
         (source: Pipeline<'TContext, 'TSource>)
         : Pipeline<'TContext, 'TResult> =
-        fun onSuccess onError onCancel  ->
+        fun onSuccess onError onCancel ->
             fun _ value ->
                 task {
                     let handler = fn value
@@ -82,19 +81,20 @@ module Core =
         (merge: 'TContext list -> 'TContext)
         (handlers: seq<Pipeline<'TContext, 'TResult>>)
         : Pipeline<'TContext, 'TResult list> =
-        fun onSuccess onError onCancel  ->
+        fun onSuccess onError onCancel ->
             task {
-                let res: Result<'TContext * 'TResult, 'TContext * exn> array = Array.zeroCreate (Seq.length handlers)
+                let res: Result<'TContext * 'TResult, 'TContext * exn> array =
+                    Array.zeroCreate (Seq.length handlers)
+
                 let obv n ctx content = task { res.[n] <- Ok(ctx, content) }
 
                 let tasks =
                     handlers
-                    |> Seq.mapi (fun n handler -> handler (obv n) onError onCancel )
+                    |> Seq.mapi (fun n handler -> handler (obv n) onError onCancel)
 
                 let! _ = Task.WhenAll(tasks)
 
-                let result =
-                    res |> List.ofSeq |> List.sequenceResultM
+                let result = res |> List.ofSeq |> List.sequenceResultM
 
                 match result with
                 | Ok results ->
@@ -109,18 +109,16 @@ module Core =
         (merge: 'TContext list -> 'TContext)
         (handlers: seq<Pipeline<'TContext, 'TResult>>)
         : Pipeline<'TContext, 'TResult list> =
-        fun onSuccess onError onCancel  ->
+        fun onSuccess onError onCancel ->
             task {
-                let res =
-                    ResizeArray<Result<'TContext * 'TResult, 'TContext * exn>>()
+                let res = ResizeArray<Result<'TContext * 'TResult, 'TContext * exn>>()
 
                 let obv ctx content = task { Ok(ctx, content) |> res.Add }
 
                 for handler in handlers do
                     do! handler obv onError onCancel
 
-                let result =
-                    res |> List.ofSeq |> List.sequenceResultM
+                let result = res |> List.ofSeq |> List.sequenceResultM
 
                 match result with
                 | Ok results ->
@@ -155,7 +153,7 @@ module Core =
     let cache<'TContext, 'TSource> (source: Pipeline<'TContext, 'TSource>) : Pipeline<'TContext, 'TSource> =
         let mutable cache: ('TContext * 'TSource) option = None
 
-        fun onSuccess onError onCancel  ->
+        fun onSuccess onError onCancel ->
             task {
                 match cache with
                 | Some (ctx, content) -> return! onSuccess ctx content
@@ -173,15 +171,14 @@ module Core =
     let never _ = task { () }
 
     /// Completes the current request.
-    let empty<'TContext> (ctx: 'TContext) : Pipeline<'TContext, unit> =
-        fun onSuccess _ _ -> onSuccess ctx ()
+    let empty<'TContext> (ctx: 'TContext) : Pipeline<'TContext, unit> = fun onSuccess _ _ -> onSuccess ctx ()
 
     /// Filter content using a predicate function.
     let filter<'TContext, 'TSource>
         (predicate: 'TSource -> bool)
         (source: Pipeline<'TContext, 'TSource>)
         : Pipeline<'TContext, 'TSource> =
-        fun onSuccess  ->
+        fun onSuccess ->
             fun ctx value ->
                 task {
                     if predicate value then
@@ -194,7 +191,7 @@ module Core =
         (predicate: 'TSource -> bool)
         (source: Pipeline<'TContext, 'TSource>)
         : Pipeline<'TContext, 'TSource> =
-        fun onSuccess onError onCancel  ->
+        fun onSuccess onError onCancel ->
             fun ctx value ->
                 if predicate value then
                     onSuccess ctx value
@@ -208,7 +205,7 @@ module Core =
 
     /// Returns the current environment.
     let ask<'TContext, 'TSource> (source: Pipeline<'TContext, 'TSource>) : Pipeline<'TContext, 'TContext> =
-        fun onSuccess  ->
+        fun onSuccess ->
             fun ctx _ -> onSuccess ctx ctx
             |> source
 
@@ -217,7 +214,7 @@ module Core =
         (update: 'TContext -> 'TContext)
         (source: Pipeline<'TContext, 'TSource>)
         : Pipeline<'TContext, 'TSource> =
-        fun onSuccess  ->
+        fun onSuccess ->
             fun ctx -> onSuccess (update ctx)
             |> source
 

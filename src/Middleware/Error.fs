@@ -88,11 +88,9 @@ module Error =
                     | ChooseState.Panic, _ ->
                         // Panic is sent immediately above
                         ()
-                    | ChooseState.Error, exns when exns.Count > 1 ->
-                        return! onError ctx (AggregateException(exns))
+                    | ChooseState.Error, exns when exns.Count > 1 -> return! onError ctx (AggregateException(exns))
                     | ChooseState.Error, exns when exns.Count = 1 -> return! onError ctx exns.[0]
-                    | ChooseState.Error, _ ->
-                        return! onError ctx (SkipException "Choose: No handler matched")
+                    | ChooseState.Error, _ -> return! onError ctx (SkipException "Choose: No handler matched")
                     | ChooseState.NoError, _ -> ()
                 }
 
@@ -122,7 +120,7 @@ module Error =
         (source: Pipeline<'TContext, 'TSource>)
         : Pipeline<'TContext, 'TResult> =
         fun _ onError onCancel ->
-            fun ctx _ -> onError ctx  (PanicException(error))
+            fun ctx _ -> onError ctx (PanicException(error))
             |> Core.swapArgs source onError onCancel
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.

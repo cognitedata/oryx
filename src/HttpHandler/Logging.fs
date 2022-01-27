@@ -58,8 +58,7 @@ module Logging =
     /// Set the log level to use (default is LogLevel.None).
     let withLogLevel (logLevel: LogLevel) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         fun onSuccess ->
-            fun ctx ->
-                onSuccess { ctx with Request = { ctx.Request with LogLevel = logLevel } }  
+            fun ctx -> onSuccess { ctx with Request = { ctx.Request with LogLevel = logLevel } }
             |> source
 
     /// Set the log message to use. Use in the pipeline somewhere before the `log` handler.
@@ -77,7 +76,7 @@ module Logging =
     /// Logger handler with message. Should be composed in pipeline after both the `fetch` handler, and the `withError`
     /// in order to log both requests, responses and errors.
     let log (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun onSuccess onError onCancel  ->
+        fun onSuccess onError onCancel ->
             let onSuccess' ctx content =
                 task {
                     match ctx.Request.LogLevel with
@@ -86,7 +85,7 @@ module Logging =
 
                     return! onSuccess ctx content
                 }
-                
+
             let onError' ctx error =
                 task {
                     match error with
@@ -98,4 +97,5 @@ module Logging =
                         return! onError ctx error
                     | err -> return! onError ctx err
                 }
-            source onSuccess' onError' onCancel 
+
+            source onSuccess' onError' onCancel

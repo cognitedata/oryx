@@ -66,7 +66,7 @@ module Fetch =
     /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{RequestContent}` and `{Elapsed}`
     /// to the log format.
     let fetch<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<HttpContent> =
-        fun onSuccess onError onCancel  ->
+        fun onSuccess onError onCancel ->
             fun ctx _ ->
                 task {
                     let timer = Stopwatch()

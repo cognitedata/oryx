@@ -26,7 +26,7 @@ type IMetrics =
     abstract Counter: metric: string -> labels: IDictionary<string, string> -> increase: int64 -> unit
     abstract Gauge: metric: string -> labels: IDictionary<string, string> -> value: float -> unit
 
-type EmptyMetrics () =
+type EmptyMetrics() =
     interface IMetrics with
         member _.Counter _ _ _ = ()
         member _.Gauge _ _ _ = ()

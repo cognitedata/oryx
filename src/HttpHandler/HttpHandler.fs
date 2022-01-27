@@ -20,25 +20,27 @@ exception HttpException of (HttpContext * exn) with
 [<AutoOpen>]
 module HttpHandler =
     /// Run the HTTP handler in the given context. Returns content as result type.
-    let runAsync<'TResult> (handler: HttpHandler<'TResult>) = Core.runAsync<HttpContext, 'TResult> handler
+    let runAsync<'TResult> (handler: HttpHandler<'TResult>) =
+        Core.runAsync<HttpContext, 'TResult> handler
 
     /// Run the HTTP handler in the given context. Returns content and throws exception if any error occured.
-    let runUnsafeAsync<'TResult> (handler: HttpHandler<'TResult>) = Core.runUnsafeAsync<HttpContext, 'TResult> handler
+    let runUnsafeAsync<'TResult> (handler: HttpHandler<'TResult>) =
+        Core.runUnsafeAsync<HttpContext, 'TResult> handler
 
     /// Produce a single value using the default context.
     let singleton<'TSource> =
         Core.singleton<HttpContext, 'TSource> HttpContext.defaultContext
 
     /// Map the content of the HTTP handler.
-    let map<'TSource, 'TResult> =
-        Core.map<HttpContext, 'TSource, 'TResult>
+    let map<'TSource, 'TResult> = Core.map<HttpContext, 'TSource, 'TResult>
 
     /// Update (map) the context.
     let update<'TSource> (update: HttpContext -> HttpContext) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         Core.update<HttpContext, 'TSource> update source
 
     /// Bind the content.
-    let bind<'TSource, 'TResult> fn source = Core.bind<HttpContext, 'TSource, 'TResult> fn source
+    let bind<'TSource, 'TResult> fn source =
+        Core.bind<HttpContext, 'TSource, 'TResult> fn source
 
     /// Add HTTP header to context.
     let withHeader (header: string * string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
@@ -100,21 +102,22 @@ module HttpHandler =
         Core.concurrent<HttpContext, 'TSource, 'TResult> HttpContext.merge
 
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
-    let catch<'TSource> =
-        Error.catch<HttpContext, 'TSource>
+    let catch<'TSource> = Error.catch<HttpContext, 'TSource>
 
     /// Choose from a list of handlers to use. The first handler that succeeds will be used.
-    let choose<'TSource, 'TResult> =
-        Error.choose<HttpContext, 'TSource, 'TResult>
+    let choose<'TSource, 'TResult> = Error.choose<HttpContext, 'TSource, 'TResult>
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
-    let fail<'TSource, 'TResult> error source = Error.fail<HttpContext, 'TSource, 'TResult> error source
+    let fail<'TSource, 'TResult> error source =
+        Error.fail<HttpContext, 'TSource, 'TResult> error source
 
     /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
     /// the any error handling e.g `choose` or `catch`•.
-    let panic<'TSource, 'TResult> error source = Error.panic<HttpContext, 'TSource, 'TResult> error source
+    let panic<'TSource, 'TResult> error source =
+        Error.panic<HttpContext, 'TSource, 'TResult> error source
 
-    let ofError<'TSource> error = Error.ofError<HttpContext, 'TSource> HttpContext.defaultContext error
+    let ofError<'TSource> error =
+        Error.ofError<HttpContext, 'TSource> HttpContext.defaultContext error
     /// Validate content using a predicate function.
     let validate<'TSource> = Core.validate<HttpContext, 'TSource>
 
@@ -123,12 +126,11 @@ module HttpHandler =
         source
         |> Core.ignoreContent<HttpContext, 'TSource>
 
-    let replace<'TSource, 'TResult> =
-        Core.replace<HttpContext, 'TSource, 'TResult>
+    let replace<'TSource, 'TResult> = Core.replace<HttpContext, 'TSource, 'TResult>
 
     /// Parse response stream to a user specified type synchronously.
     let parse<'TResult> (parser: Stream -> 'TResult) (source: HttpHandler<HttpContent>) : HttpHandler<'TResult> =
-        fun onSuccess  ->
+        fun onSuccess ->
             fun ctx (content: HttpContent) ->
                 task {
                     let! stream = content.ReadAsStreamAsync()
@@ -165,14 +167,14 @@ module HttpHandler =
 
     /// HTTP handler for setting the expected response type.
     let withResponseType<'TSource> (respType: ResponseType) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun onSuccess  ->
+        fun onSuccess ->
             fun ctx -> onSuccess { ctx with Request = { ctx.Request with ResponseType = respType } }
             |> source
 
     /// HTTP handler for setting the method to be used for requests using this context. You will normally want to use
     /// the `GET`, `POST`, `PUT`, `DELETE`, or `OPTIONS` HTTP handlers instead of this one.
     let withMethod<'TSource> (method: HttpMethod) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun onSuccess  ->
+        fun onSuccess ->
             fun ctx -> onSuccess { ctx with Request = { ctx.Request with Method = method } }
             |> source
 
@@ -181,7 +183,7 @@ module HttpHandler =
 
     /// HTTP GET request. Also clears any content set in the context.
     let GET<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun onSuccess  ->
+        fun onSuccess ->
             fun ctx ->
                 onSuccess
                     { ctx with
@@ -206,7 +208,7 @@ module HttpHandler =
         (tokenProvider: CancellationToken -> Task<Result<string, exn>>)
         (source: HttpHandler<'TSource>)
         : HttpHandler<'TSource> =
-        fun onSuccess  ->
+        fun onSuccess ->
             fun ctx content ->
                 task {
                     let! result =
@@ -250,7 +252,7 @@ module HttpHandler =
     /// content will be added to the HTTP body of requests that uses
     /// this context.
     let withContent<'TSource> (builder: unit -> HttpContent) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun onSuccess  ->
+        fun onSuccess ->
             fun ctx -> onSuccess { ctx with Request = { ctx.Request with ContentBuilder = Some builder } }
             |> source
 

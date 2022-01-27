@@ -5,7 +5,7 @@ namespace Oryx
 
 open Oryx.Middleware
 
-type RequestBuilder () =
+type RequestBuilder() =
     member _.Zero() : HttpHandler<unit> = httpRequest
 
     member _.Yield(content: 'TResult) : HttpHandler<'TResult> = singleton content
