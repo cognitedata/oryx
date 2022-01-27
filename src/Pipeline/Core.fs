@@ -36,7 +36,7 @@ module Core =
         let tcs = TaskCompletionSource<'TResult>()
 
         task {
-            do! (finish tcs) |||> handler
+            do! finish tcs |||> handler
             return! tcs.Task
         }
 
