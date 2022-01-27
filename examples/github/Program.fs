@@ -1,27 +1,27 @@
 open System.Net.Http
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 open Oryx
 open Oryx.ThothJsonNet.ResponseReader
 open Thoth.Json.Net
 
 [<EntryPoint>]
-let main argv =
+let main _ =
     use client = new HttpClient()
 
-    let context =
-        HttpContext.defaultContext
-        |> HttpContext.withHttpClient client
+    let ctx = httpRequest |> withHttpClient client
 
-    let request =
-        GET
-        >=> withUrl "https://api.github.com/repos/cognitedata/oryx/releases/latest"
-        >=> fetch
-        >=> json (Decode.field "tag_name" Decode.string)
+    let request ctx =
+        ctx
+        |> GET
+        |> withUrl "https://api.github.com/repos/cognitedata/oryx/releases/latest"
+        |> fetch
+        |> json (Decode.field "tag_name" Decode.string)
 
     task {
-        let! tag = request |> runAsync context
-        printfn "%A" tag
+        let! tag = ctx |> request |> runAsync
+
+        printfn $"{tag}"
 
         return 0
     }

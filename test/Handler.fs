@@ -3,7 +3,7 @@ module Tests.Handler
 open System
 open System.Threading.Tasks
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 open Swensen.Unquote
 open Xunit
 open FsCheck.Xunit
@@ -16,12 +16,10 @@ open Tests.Common
 let ``Simple unit handler is Ok`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
+        let req = singleton 43
 
         // Act
-        let! content =
-            singleton 42 >=> singleton 43
-            |> runUnsafeAsync ctx
+        let! content = req |> runUnsafeAsync
 
         // Assert
         test <@ content = 43 @>
@@ -31,48 +29,14 @@ let ``Simple unit handler is Ok`` () =
 let ``Simple error handler is Error`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
+        let req = httpRequest |> error "failed"
 
         // Act
-        let! result = error "failed" |> runAsync ctx
+        let! result = req |> runAsync
 
         // Assert
         test <@ Result.isError result @>
 
-        match result with
-        | Ok _ -> failwith "error"
-        | Error err -> test <@ err.ToString() = "failed" @>
-    }
-
-[<Fact>]
-let ``Simple error then ok is Error`` () =
-    task {
-        // Arrange
-        let ctx = HttpContext.defaultContext
-        let req = error "failed" >=> singleton 42
-
-        // Act
-        let! result = req |> runAsync ctx
-
-        // Assert
-        test <@ Result.isError result @>
-
-        match result with
-        | Ok _ -> failwith "error"
-        | Error err -> test <@ err.ToString() = "failed" @>
-    }
-
-[<Fact>]
-let ``Simple ok then error is Error`` () =
-    task {
-        // Arrange
-        let ctx = HttpContext.defaultContext
-        let req = singleton 42 >=> error "failed"
-
-        // Act
-        let! result = req |> runAsync ctx
-
-        // Assert
         match result with
         | Ok _ -> failwith "error"
         | Error err -> test <@ err.ToString() = "failed" @>
@@ -82,16 +46,15 @@ let ``Simple ok then error is Error`` () =
 let ``Catching ok is Ok`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
         let errorHandler = badRequestHandler 420
 
         let req =
             singleton 42
-            >=> map (fun a -> a * 10)
-            >=> catch errorHandler
+            |> map (fun a -> a * 10)
+            |> catch errorHandler
 
         // Act
-        let! content = req |> runUnsafeAsync ctx
+        let! content = req |> runUnsafeAsync
 
         // Assert
         test <@ content = 420 @>
@@ -101,16 +64,15 @@ let ``Catching ok is Ok`` () =
 let ``Catching errors is Ok`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
         let errorHandler = badRequestHandler 420
 
         let req =
             singleton 42
-            >=> error "failed"
-            >=> catch errorHandler
+            |> error "failed"
+            |> catch errorHandler
 
         // Act
-        let! content = req |> runUnsafeAsync ctx
+        let! content = req |> runUnsafeAsync
 
         // Assert
         test <@ content = 420 @>
@@ -120,16 +82,15 @@ let ``Catching errors is Ok`` () =
 let ``Catching panic is not possible`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
         let errorHandler = badRequestHandler 420
 
         let req =
             singleton 42
-            >=> panic "panic!"
-            >=> catch errorHandler
+            |> catch errorHandler
+            |> panic "panic!"
 
         // Act
-        let! result = req |> runAsync ctx
+        let! result = req |> runAsync
 
         // Assert
         match result with
@@ -141,34 +102,38 @@ let ``Catching panic is not possible`` () =
 let ``Not catching errors is Error`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
         let errorHandler = badRequestHandler 420
 
-        let req =
-            singleton 42
-            >=> catch errorHandler
-            >=> error "failed"
+        let handleError source =
+            source
+            |> error "first!"
+            |> catch errorHandler
+            |> error "second!"
+
+        let req = singleton 42 |> handleError
 
         // Act
-        let! result = req |> runAsync ctx
+        let! result = req |> runAsync
 
         // Assert
         match result with
         | Ok _ -> failwith "error"
-        | Error err -> test <@ err.ToString() = "failed" @>
+        | Error err -> test <@ err.ToString() = "second!" @>
     }
 
 [<Fact>]
 let ``Sequential handlers is Ok`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-
         let req =
-            sequential [ singleton 1; singleton 2; singleton 3; singleton 4; singleton 5 ]
+            sequential [ singleton 1
+                         singleton 2
+                         singleton 3
+                         singleton 4
+                         singleton 5 ]
 
         // Act
-        let! content = req |> runUnsafeAsync ctx
+        let! content = req |> runUnsafeAsync
 
         // Assert
         test <@ content = [ 1; 2; 3; 4; 5 ] @>
@@ -178,13 +143,15 @@ let ``Sequential handlers is Ok`` () =
 let ``Sequential handlers with an Error is Error`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-
         let req =
-            sequential [ singleton 1; singleton 2; error "fail"; singleton 4; singleton 5 ]
+            sequential [ singleton 1
+                         singleton 2
+                         ofError "fail"
+                         singleton 4
+                         singleton 5 ]
 
         // Act
-        let! result = req |> runAsync ctx
+        let! result = req |> runAsync
 
         // Assert
         test <@ Result.isError result @>
@@ -198,33 +165,37 @@ let ``Sequential handlers with an Error is Error`` () =
 let ``Concurrent handlers is Ok`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-
         let req =
-            concurrent [ singleton 1; singleton 2; singleton 3; singleton 4; singleton 5 ]
+            concurrent [ singleton 1
+                         singleton 2
+                         singleton 3
+                         singleton 4
+                         singleton 5 ]
 
         // Act
-        let! result = req |> runAsync ctx
+        let! result = req |> runAsync
 
         // Assert
         test <@ Result.isOk result @>
 
         match result with
         | Ok content -> test <@ content = [ 1; 2; 3; 4; 5 ] @>
-        | Error err -> failwith "error"
+        | _ -> failwith "error"
     }
 
 [<Fact>]
 let ``Concurrent handlers with an Error is Error`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-
         let req =
-            concurrent [ singleton 1; singleton 2; error "fail"; singleton 4; singleton 5 ]
+            concurrent [ singleton 1
+                         singleton 2
+                         ofError "fail"
+                         singleton 4
+                         singleton 5 ]
 
         // Act
-        let! result = req |> runAsync ctx
+        let! result = req |> runAsync
 
         // Assert
         test <@ Result.isError result @>
@@ -238,13 +209,10 @@ let ``Concurrent handlers with an Error is Error`` () =
 let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurrency) =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-
-        let req =
-            chunk<unit, int, int> chunkSize maxConcurrency singleton [ 1; 2; 3; 4; 5 ]
+        let req = chunk<unit, int, int> chunkSize maxConcurrency singleton [ 1; 2; 3; 4; 5 ]
 
         // Act
-        let! result = req |> runUnsafeAsync ctx
+        let! result = req |> runUnsafeAsync
         test <@ Seq.toList result = [ 1; 2; 3; 4; 5 ] @>
     }
     |> fun x -> x.Result
@@ -253,12 +221,15 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
 let ``Choose handlers is Ok`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-
-        let req = choose [ error "1"; singleton 2; error "3"; singleton 4 ]
+        let req =
+            httpRequest
+            |> choose [ error "1"
+                        replace 2
+                        error "3"
+                        replace 4 ]
 
         // Act
-        let! result = req |> runUnsafeAsync ctx
+        let! result = req |> runUnsafeAsync
         test <@ result = 2 @>
     }
 
@@ -266,16 +237,19 @@ let ``Choose handlers is Ok`` () =
 let ``Choose panic is Error`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-
-        let req = choose [ error "1"; panic "2"; error "3"; singleton 4 ]
+        let req: HttpHandler<int> =
+            httpRequest
+            |> choose [ error "1"
+                        panic "2"
+                        error "3"
+                        replace 4 ]
 
         // Act
         try
-            let! result = req |> runUnsafeAsync ctx
+            let! _ = req |> runUnsafeAsync
             assert false
         with
-        | PanicException (_) -> ()
+        | :? PanicException -> ()
         | _ -> failwith "Should be panic"
     }
 
@@ -283,17 +257,20 @@ let ``Choose panic is Error`` () =
 let ``Choose panic is not skipped`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-
         let req =
-            choose [ error "1"; choose [ panic "2"; singleton 42; error "3" ]; singleton 4 ]
+            httpRequest
+            |> choose [ error "1"
+                        choose [ panic "2"
+                                 replace 42
+                                 error "3" ]
+                        replace 4 ]
 
         // Act
         try
-            let! result = req |> runUnsafeAsync ctx
+            let! _ = req |> runUnsafeAsync
             assert false
         with
-        | PanicException (_) -> ()
+        | :? PanicException -> ()
         | _ -> failwith "Should be panic"
     }
 
@@ -301,16 +278,14 @@ let ``Choose panic is not skipped`` () =
 let ``Choose empty is SkipException`` () =
     task {
         // Arrange
-        let ctx = HttpContext.defaultContext
-
-        let req = choose []
+        let req = httpRequest |> choose []
 
         // Act
         try
-            let! result = req |> runUnsafeAsync ctx
+            let! _ = req |> runUnsafeAsync
             assert false
         with
-        | SkipException (_) -> ()
+        | :? SkipException -> ()
         | _ -> failwith "Should be skip"
 
     }
@@ -344,15 +319,14 @@ let ``Request with token renewer without token gives error`` () =
         // Arrange
         let err = Exception "Unable to authenticate"
         let renewer _ = err |> Error |> Task.FromResult
-        let ctx = HttpContext.defaultContext
 
-        let req = withTokenRenewer renewer >=> singleton 42
+        let req = singleton 42 |> withTokenRenewer renewer
 
         // Act
-        let! result = req |> runAsync ctx
+        let! result = req |> runAsync
         // Assert
         match result with
-        | Ok ctx -> failwith "Request should fail"
+        | Ok _ -> failwith "Request should fail"
         | Error err -> test <@ err.ToString().Contains("Unable to authenticate") @>
     }
 
@@ -360,16 +334,14 @@ let ``Request with token renewer without token gives error`` () =
 let ``Request with token renewer throws exception gives error`` () =
     task {
         // Arrange
-        let err = Exception "Unable to authenticate"
         let renewer _ = failwith "failing" |> Task.FromResult
-        let ctx = HttpContext.defaultContext
-
-        let req = withTokenRenewer renewer >=> singleton 42
+        let req = singleton 42 |> withTokenRenewer renewer
 
         // Act
-        let! result = req |> runAsync ctx
+        let! result = req |> runAsync
+
         // Assert
         match result with
-        | Ok ctx -> failwith "Request should fail"
+        | Ok _ -> failwith "Request should fail"
         | Error err -> test <@ err.ToString().Contains("failing") @>
     }

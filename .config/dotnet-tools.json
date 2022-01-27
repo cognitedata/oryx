@@ -3,13 +3,13 @@
   "isRoot": true,
   "tools": {
     "paket": {
-      "version": "5.257.0",
+      "version": "6.2.1",
       "commands": [
         "paket"
       ]
     },
     "fantomas-tool": {
-      "version": "4.4.0",
+      "version": "4.6.0",
       "commands": [
         "fantomas"
       ]

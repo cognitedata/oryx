@@ -1,7 +1,7 @@
 open System.Net.Http
 open System.Text.Json
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 
 open Oryx
 open Oryx.ThothJsonNet.ResponseReader
@@ -13,10 +13,11 @@ type WikiSearchHit =
 
 type WikiSearchHits = WikiSearchHits of WikiSearchHit list
 
-let wikiDataItemDecoder : Decoder<WikiSearchHit> =
-    Decode.oneOf [ Decode.string |> Decode.map SearchTerm; Decode.list Decode.string |> Decode.map SearchHits ]
+let wikiDataItemDecoder: Decoder<WikiSearchHit> =
+    Decode.oneOf [ Decode.string |> Decode.map SearchTerm
+                   Decode.list Decode.string |> Decode.map SearchHits ]
 
-let wikiDataItemsDecoders : Decoder<WikiSearchHits> =
+let wikiDataItemsDecoders: Decoder<WikiSearchHits> =
     Decode.list wikiDataItemDecoder
     |> Decode.map WikiSearchHits
 
@@ -25,25 +26,32 @@ let Url = "https://en.wikipedia.org/w/api.php"
 
 let options = JsonSerializerOptions()
 
-let query term = [ struct ("action", "opensearch"); struct ("search", term) ]
+let query term =
+    [ struct ("action", "opensearch")
+      struct ("search", term) ]
 
-let request term =
-    GET
-    >=> withUrl Url
-    >=> withQuery (query term)
-    >=> fetch
-    >=> json wikiDataItemsDecoders
+let request ctx term =
+    ctx
+    |> withQuery (query term)
+    |> fetch
+    |> json wikiDataItemsDecoders
 
-let asyncMain argv =
+let asyncMain _ =
     task {
         use client = new HttpClient()
 
-        let ctx =
-            HttpContext.defaultContext
-            |> HttpContext.withHttpClient client
+        let ctx: HttpHandler<unit> =
+            httpRequest
+            |> GET
+            |> withHttpClient client
+            |> withUrl Url
+            |> cache
 
-        let! result = request "F#" |> runAsync ctx
-        printfn "Result: %A" result
+        let! result = request ctx "F#" |> runUnsafeAsync
+        printfn $"Result: {result}"
+
+        let! result = request ctx "C#" |> runUnsafeAsync
+        printfn $"Result: {result}"
     }
 
 [<EntryPoint>]

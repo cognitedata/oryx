@@ -6,7 +6,7 @@ open System
 open System.IO
 
 open Thoth.Json.Net
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
 open Newtonsoft.Json
 
 [<AutoOpen>]
@@ -15,8 +15,7 @@ module Decode =
         task {
             use tr = new StreamReader(stream) // StreamReader will dispose the stream
 
-            use jtr =
-                new JsonTextReader(tr, DateParseHandling = DateParseHandling.None)
+            use jtr = new JsonTextReader(tr, DateParseHandling = DateParseHandling.None)
 
             let! json = Newtonsoft.Json.Linq.JValue.ReadFromAsync jtr
 

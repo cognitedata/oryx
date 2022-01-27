@@ -1,7 +1,7 @@
 // Copyright 2020 Cognite AS
 // SPDX-License-Identifier: Apache-2.0
 
-namespace Oryx.PipeLine
+namespace Oryx.Pipeline
 
 open System
 
@@ -38,7 +38,7 @@ module Error =
         | Error
         | Panic
 
-    /// Choose from a list of middlewares to use. The first middleware that succeeds will be used. Handlers will be
+    /// Choose from a list of pipelines to use. The first middleware that succeeds will be used. Handlers will be
     /// tried until one does not produce any error, or a `PanicException`.
     let choose<'TContext, 'TSource, 'TResult>
         (handlers: (Pipeline<'TContext, 'TSource> -> Pipeline<'TContext, 'TResult>) list)

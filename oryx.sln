@@ -1,27 +1,32 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26124.0
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Oryx", "src\Oryx.fsproj", "{C0A7021A-55E6-4D17-838A-F343CBC644E9}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Oryx", "src\Oryx.fsproj", "{C0A7021A-55E6-4D17-838A-F343CBC644E9}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Tests", "test\Tests.fsproj", "{708710D0-07E1-4CDB-AB4C-B86E90A74426}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Tests", "test\Tests.fsproj", "{708710D0-07E1-4CDB-AB4C-B86E90A74426}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "extensions", "extensions", "{C9E10FD9-70B4-421A-BDB1-421F5901CB7C}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Oryx.Protobuf", "extensions\Oryx.Protobuf\Oryx.Protobuf.fsproj", "{EDBBC8E4-1CAF-41BA-B945-6AC59717D720}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Oryx.Protobuf", "extensions\Oryx.Protobuf\Oryx.Protobuf.fsproj", "{EDBBC8E4-1CAF-41BA-B945-6AC59717D720}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Oryx.SystemTextJson", "extensions\Oryx.SystemTextJson\Oryx.SystemTextJson.fsproj", "{7977D785-185E-4265-94B0-8A9FE393819B}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Oryx.SystemTextJson", "extensions\Oryx.SystemTextJson\Oryx.SystemTextJson.fsproj", "{7977D785-185E-4265-94B0-8A9FE393819B}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Oryx.NewtonsoftJson", "extensions\Oryx.NewtonsoftJson\Oryx.NewtonsoftJson.fsproj", "{8C47B752-4CF2-4CAA-BD24-2573DC7CC677}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Oryx.NewtonsoftJson", "extensions\Oryx.NewtonsoftJson\Oryx.NewtonsoftJson.fsproj", "{8C47B752-4CF2-4CAA-BD24-2573DC7CC677}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Oryx.ThothJsonNet", "extensions\Oryx.ThothJsonNet\Oryx.ThothJsonNet.fsproj", "{535AE660-B32C-4833-8C7B-A8DAEA8799E1}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Oryx.ThothJsonNet", "extensions\Oryx.ThothJsonNet\Oryx.ThothJsonNet.fsproj", "{535AE660-B32C-4833-8C7B-A8DAEA8799E1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{2CF7C74E-75D9-462A-BB0C-6E812C1D260A}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "WikiSearch", "examples\wikisearch\WikiSearch.fsproj", "{9D9D430F-9365-49EF-819A-3B0D6976A7B1}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "WikiSearch", "examples\wikisearch\WikiSearch.fsproj", "{9D9D430F-9365-49EF-819A-3B0D6976A7B1}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "GitHub", "examples\github\GitHub.fsproj", "{8D745526-EDBB-4880-8CA1-69DDDF4341A4}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "GitHub", "examples\github\GitHub.fsproj", "{8D745526-EDBB-4880-8CA1-69DDDF4341A4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EA0FE2F0-5AEF-425F-AEEB-4A84AB20078D}"
+	ProjectSection(SolutionItems) = preProject
+		paket.dependencies = paket.dependencies
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,9 +36,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{C0A7021A-55E6-4D17-838A-F343CBC644E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -60,18 +62,6 @@ Global
 		{708710D0-07E1-4CDB-AB4C-B86E90A74426}.Release|x64.Build.0 = Release|Any CPU
 		{708710D0-07E1-4CDB-AB4C-B86E90A74426}.Release|x86.ActiveCfg = Release|Any CPU
 		{708710D0-07E1-4CDB-AB4C-B86E90A74426}.Release|x86.Build.0 = Release|Any CPU
-		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Debug|x64.Build.0 = Debug|Any CPU
-		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Debug|x86.Build.0 = Debug|Any CPU
-		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Release|x64.ActiveCfg = Release|Any CPU
-		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Release|x64.Build.0 = Release|Any CPU
-		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Release|x86.ActiveCfg = Release|Any CPU
-		{218FB8E8-EBE7-4B37-98A4-F455151073E0}.Release|x86.Build.0 = Release|Any CPU
 		{EDBBC8E4-1CAF-41BA-B945-6AC59717D720}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{EDBBC8E4-1CAF-41BA-B945-6AC59717D720}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EDBBC8E4-1CAF-41BA-B945-6AC59717D720}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -120,18 +110,6 @@ Global
 		{535AE660-B32C-4833-8C7B-A8DAEA8799E1}.Release|x64.Build.0 = Release|Any CPU
 		{535AE660-B32C-4833-8C7B-A8DAEA8799E1}.Release|x86.ActiveCfg = Release|Any CPU
 		{535AE660-B32C-4833-8C7B-A8DAEA8799E1}.Release|x86.Build.0 = Release|Any CPU
-		{755A4763-1976-41A1-91A2-FFB772343479}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{755A4763-1976-41A1-91A2-FFB772343479}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{755A4763-1976-41A1-91A2-FFB772343479}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{755A4763-1976-41A1-91A2-FFB772343479}.Debug|x64.Build.0 = Debug|Any CPU
-		{755A4763-1976-41A1-91A2-FFB772343479}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{755A4763-1976-41A1-91A2-FFB772343479}.Debug|x86.Build.0 = Debug|Any CPU
-		{755A4763-1976-41A1-91A2-FFB772343479}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{755A4763-1976-41A1-91A2-FFB772343479}.Release|Any CPU.Build.0 = Release|Any CPU
-		{755A4763-1976-41A1-91A2-FFB772343479}.Release|x64.ActiveCfg = Release|Any CPU
-		{755A4763-1976-41A1-91A2-FFB772343479}.Release|x64.Build.0 = Release|Any CPU
-		{755A4763-1976-41A1-91A2-FFB772343479}.Release|x86.ActiveCfg = Release|Any CPU
-		{755A4763-1976-41A1-91A2-FFB772343479}.Release|x86.Build.0 = Release|Any CPU
 		{9D9D430F-9365-49EF-819A-3B0D6976A7B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9D9D430F-9365-49EF-819A-3B0D6976A7B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9D9D430F-9365-49EF-819A-3B0D6976A7B1}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -157,6 +135,9 @@ Global
 		{8D745526-EDBB-4880-8CA1-69DDDF4341A4}.Release|x86.ActiveCfg = Release|Any CPU
 		{8D745526-EDBB-4880-8CA1-69DDDF4341A4}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{EDBBC8E4-1CAF-41BA-B945-6AC59717D720} = {C9E10FD9-70B4-421A-BDB1-421F5901CB7C}
 		{7977D785-185E-4265-94B0-8A9FE393819B} = {C9E10FD9-70B4-421A-BDB1-421F5901CB7C}
@@ -164,5 +145,8 @@ Global
 		{535AE660-B32C-4833-8C7B-A8DAEA8799E1} = {C9E10FD9-70B4-421A-BDB1-421F5901CB7C}
 		{9D9D430F-9365-49EF-819A-3B0D6976A7B1} = {2CF7C74E-75D9-462A-BB0C-6E812C1D260A}
 		{8D745526-EDBB-4880-8CA1-69DDDF4341A4} = {2CF7C74E-75D9-462A-BB0C-6E812C1D260A}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3C57CF63-56CA-4DD9-AA5A-BE937EABD115}
 	EndGlobalSection
 EndGlobal

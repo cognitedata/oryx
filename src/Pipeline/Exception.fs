@@ -10,12 +10,17 @@ exception SkipException of string with
     static member Create() = SkipException String.Empty
 
 /// Wrapping an exception as a PanicException will short-circuit the
-/// handlers. A PanicException cannot be catched by `catch` and will
+/// handlers. A PanicException cannot be caught by `catch` and will
 /// not be skipped by `choose`
 exception PanicException of exn with
+    override this.ToString() =
+        match this :> exn with
+        | PanicException err -> err.ToString()
+        | _ -> failwith "This should not never happen."
+
     /// Ensures that the exception is a `PanicException`, but will not
     /// wrap a `PanicException` in another `PanicException`.
     static member Ensure(error) =
         match error with
-        | PanicException (_) -> error
+        | PanicException _ -> error
         | _ -> PanicException error

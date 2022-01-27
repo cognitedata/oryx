@@ -2,5 +2,4 @@ group Json
 
 FSharp.Core
 System.Text.Json
-Ply
 Oryx

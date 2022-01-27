@@ -10,7 +10,8 @@ open System.Net.Http
 open System.Net.Http.Headers
 open System.Web
 
-open FSharp.Control.Tasks
+open FSharp.Control.TaskBuilder
+open Oryx.Pipeline
 
 [<AutoOpen>]
 module Fetch =
@@ -19,7 +20,7 @@ module Fetch =
         static member FromTuples values =
             let pairs =
                 values
-                |> Seq.map (fun (k, v) -> new KeyValuePair<string, string>(k, v))
+                |> Seq.map (fun (k, v) -> KeyValuePair<string, string>(k, v))
 
             let content = new FormUrlEncodedContent(pairs)
             content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded"
@@ -36,7 +37,7 @@ module Fetch =
             else
                 let queryString = HttpUtility.ParseQueryString(String.Empty)
 
-                for (key, value) in query do
+                for key, value in query do
                     queryString.Add(key, value)
 
                 sprintf "%s?%s" result (queryString.ToString())
@@ -45,8 +46,8 @@ module Fetch =
 
         let acceptHeader =
             match ctx.Request.ResponseType with
-            | JsonValue -> "Accept", "application/json"
-            | Protobuf -> "Accept", "application/protobuf"
+            | ResponseType.JsonValue -> "Accept", "application/json"
+            | ResponseType.Protobuf -> "Accept", "application/protobuf"
 
         for KeyValue (header, value) in ctx.Request.Headers.Add(acceptHeader) do
             if not (client.DefaultRequestHeaders.Contains header) then
@@ -64,56 +65,50 @@ module Fetch =
 
     /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{RequestContent}` and `{Elapsed}`
     /// to the log format.
-    let fetch<'TSource> : IHttpHandler<'TSource, HttpContent> =
-        { new IHttpHandler<'TSource, HttpContent> with
-            member _.Subscribe(next) =
-                { new IHttpNext<'TSource> with
-                    member _.OnNextAsync(ctx, _) =
-                        task {
-                            let timer = Stopwatch()
-                            let client = ctx.Request.HttpClient()
-                            let cancellationToken = ctx.Request.CancellationToken
+    let fetch<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<HttpContent> =
+        fun onSuccess onError onCancel ->
+            fun ctx _ ->
+                task {
+                    let timer = Stopwatch()
+                    let client = ctx.Request.HttpClient()
+                    let cancellationToken = ctx.Request.CancellationToken
 
-                            try
-                                use request = buildRequest client ctx
-                                timer.Start()
-                                ctx.Request.Metrics.Counter Metric.FetchInc ctx.Request.Labels 1L
+                    try
+                        use request = buildRequest client ctx
+                        timer.Start()
+                        ctx.Request.Metrics.Counter Metric.FetchInc ctx.Request.Labels 1L
 
-                                let! response = client.SendAsync(request, ctx.Request.CompletionMode, cancellationToken)
-                                timer.Stop()
+                        let! response = client.SendAsync(request, ctx.Request.CompletionMode, cancellationToken)
+                        timer.Stop()
 
-                                ctx.Request.Metrics.Gauge
-                                    Metric.FetchLatencyUpdate
-                                    ctx.Request.Labels
-                                    (float timer.ElapsedMilliseconds)
+                        ctx.Request.Metrics.Gauge Metric.FetchLatencyUpdate Map.empty (float timer.ElapsedMilliseconds)
 
-                                let items =
-                                    ctx
-                                        .Request
-                                        .Items
-                                        .Add(PlaceHolder.Url, Url request.RequestUri)
-                                        .Add(PlaceHolder.Elapsed, Number timer.ElapsedMilliseconds)
+                        let items =
+                            ctx
+                                .Request
+                                .Items
+                                .Add(PlaceHolder.Url, Value.Url request.RequestUri)
+                                .Add(PlaceHolder.Elapsed, Value.Number timer.ElapsedMilliseconds)
 
-                                let headers =
-                                    response.Headers
-                                    |> Seq.map (|KeyValue|)
-                                    |> Map.ofSeq
+                        let headers =
+                            response.Headers
+                            |> Seq.map (|KeyValue|)
+                            |> Map.ofSeq
 
-                                let! result =
-                                    next.OnNextAsync(
-                                        { Request = { ctx.Request with Items = items }
-                                          Response =
-                                              { StatusCode = response.StatusCode
-                                                IsSuccessStatusCode = response.IsSuccessStatusCode
-                                                ReasonPhrase = response.ReasonPhrase
-                                                Headers = headers } },
-                                        content = response.Content
-                                    )
+                        let! result =
+                            onSuccess
+                                { Request = { ctx.Request with Items = items }
+                                  Response =
+                                    { StatusCode = response.StatusCode
+                                      IsSuccessStatusCode = response.IsSuccessStatusCode
+                                      ReasonPhrase = response.ReasonPhrase
+                                      Headers = headers } }
+                                response.Content
 
-                                response.Dispose()
-                                return result
-                            with ex -> return! next.OnErrorAsync(ctx, ex)
-                        }
 
-                    member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                    member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx) } }
+                        response.Dispose()
+                        return result
+                    with
+                    | ex when not (ex :? HttpException) -> return! onError ctx (HttpException(ctx, ex))
+                }
+            |> Core.swapArgs source onError onCancel
