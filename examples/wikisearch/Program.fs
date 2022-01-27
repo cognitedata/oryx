@@ -14,7 +14,8 @@ type WikiSearchHit =
 type WikiSearchHits = WikiSearchHits of WikiSearchHit list
 
 let wikiDataItemDecoder: Decoder<WikiSearchHit> =
-    Decode.oneOf [ Decode.string |> Decode.map SearchTerm; Decode.list Decode.string |> Decode.map SearchHits ]
+    Decode.oneOf [ Decode.string |> Decode.map SearchTerm
+                   Decode.list Decode.string |> Decode.map SearchHits ]
 
 let wikiDataItemsDecoders: Decoder<WikiSearchHits> =
     Decode.list wikiDataItemDecoder
@@ -25,7 +26,9 @@ let Url = "https://en.wikipedia.org/w/api.php"
 
 let options = JsonSerializerOptions()
 
-let query term = [ struct ("action", "opensearch"); struct ("search", term) ]
+let query term =
+    [ struct ("action", "opensearch")
+      struct ("search", term) ]
 
 let request ctx term =
     ctx

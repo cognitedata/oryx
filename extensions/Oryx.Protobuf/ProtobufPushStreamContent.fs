@@ -8,8 +8,8 @@ open System.Threading.Tasks
 
 open Google.Protobuf
 
-type ProtobufPushStreamContent (content: IMessage) =
-    inherit HttpContent ()
+type ProtobufPushStreamContent(content: IMessage) =
+    inherit HttpContent()
     let _content = content
     do base.Headers.ContentType <- MediaTypeHeaderValue "application/protobuf"
 

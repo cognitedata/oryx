@@ -17,8 +17,7 @@ module ResponseReader =
             use sr = new StreamReader(stream)
             let serializer = JsonSerializer()
 
-            use jtr =
-                new JsonTextReader(sr, DateParseHandling = DateParseHandling.None)
+            use jtr = new JsonTextReader(sr, DateParseHandling = DateParseHandling.None)
 
             serializer.Deserialize<'TResult>(jtr)
 
