@@ -100,8 +100,8 @@ module HttpHandler =
         Core.concurrent<HttpContext, 'TSource, 'TResult> HttpContext.merge
 
     /// Catch handler for catching errors and then delegating to the error handler on what to do.
-    let catch<'TSource, 'TResult> =
-        Error.catch<HttpContext, 'TSource, 'TResult>
+    let catch<'TSource> =
+        Error.catch<HttpContext, 'TSource>
 
     /// Choose from a list of handlers to use. The first handler that succeeds will be used.
     let choose<'TSource, 'TResult> =

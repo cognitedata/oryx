@@ -12,7 +12,7 @@ type RequestBuilder () =
     member _.Return(content: 'TResult) : HttpHandler<'TResult> = singleton content
     member _.ReturnFrom(req: HttpHandler<'TResult>) : HttpHandler<'TResult> = req
     member _.Delay(fn) = fn ()
-    member _.Combine(source, other) = [ source; other ] |> sequential
+    member _.Combine(source, other) = source |> Core.bind (fun _ -> other)
 
     member _.For(source: 'TSource seq, func: 'TSource -> HttpHandler<'TResult>) : HttpHandler<'TResult list> =
         source |> Seq.map func |> sequential

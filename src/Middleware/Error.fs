@@ -10,7 +10,7 @@ open Oryx
 
 module Error =
     /// Handler for catching errors and then delegating to the error handler on what to do.
-    let catch<'TContext, 'TSource, 'TResult>
+    let catch<'TContext, 'TSource>
         (errorHandler: 'TContext -> exn -> Pipeline<'TContext, 'TSource>)
         (source: Pipeline<'TContext, 'TSource>)
         : Pipeline<'TContext, 'TSource> =
@@ -37,7 +37,7 @@ module Error =
         | NoError
         | Error
         | Panic
-        
+
     /// Choose from a list of middlewares to use. The first middleware that succeeds will be used. Handlers will be
     /// tried until one does not produce any error, or a `PanicException`.
     let choose<'TContext, 'TSource, 'TResult>
@@ -50,7 +50,7 @@ module Error =
             let onSuccess' ctx content =
                 task {
                     let mutable state = ChooseState.Error
-                    
+
                     let onSuccess'' ctx content =
                         task {
                             exns.Clear() // Clear to avoid buildup of exceptions in streaming scenarios.
@@ -83,7 +83,7 @@ module Error =
                         if state = ChooseState.Error then
                             state <- ChooseState.NoError
                             do! handler handlerNext onSuccess'' onError'' onCancel
-                            
+
                     match state, exns with
                     | ChooseState.Panic, _ ->
                         // Panic is sent immediately above
@@ -95,14 +95,14 @@ module Error =
                         return! onError ctx (SkipException "Choose: No handler matched")
                     | ChooseState.NoError, _ -> ()
                 }
-                
+
             let onError' ctx error =
                 exns.Clear()
                 onError ctx error
 
             let onCancel' ctx =
                 exns.Clear()
-                onCancel ctx 
+                onCancel ctx
 
             source onSuccess' onError' onCancel'
 
@@ -113,7 +113,7 @@ module Error =
         : Pipeline<'TContext, 'TResult> =
         fun _ onError onCancel ->
             fun ctx _ -> onError ctx err
-            |> Core.swapArgs source onError onCancel 
+            |> Core.swapArgs source onError onCancel
 
     /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
     /// the any error handling e.g `choose` or `catch`•.
@@ -124,7 +124,7 @@ module Error =
         fun _ onError onCancel ->
             fun ctx _ -> onError ctx  (PanicException(error))
             |> Core.swapArgs source onError onCancel
-            
+
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
     let ofError<'TContext, 'TSource> (_: 'TContext) (err: Exception) : Pipeline<'TContext, 'TSource> =
         fun _ -> raise err

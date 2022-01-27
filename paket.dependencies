@@ -11,18 +11,16 @@ group Main
 
 group Json
     source https://www.nuget.org/api/v2
-    source C:\Users\dag\Developer\Packages
     storage: none
 
     framework: netstandard2.0
 
     nuget FSharp.Core ~> 6
     nuget System.Text.Json ~> 6
-    nuget Oryx = 5.0.0-alpha-004
+    nuget Oryx prerelease
 
 group Newtonsoft
     source https://www.nuget.org/api/v2
-    source C:\Users\dag\Developer\Packages
     storage: none
 
     framework: netstandard2.0
@@ -30,22 +28,20 @@ group Newtonsoft
     nuget FSharp.Core ~> 6
     nuget Newtonsoft.Json
     nuget Microsoft.NETCore.Platforms ~> 6
-    nuget Oryx = 5.0.0-alpha-004
+    nuget Oryx prerelease
 
 group Thoth
     source https://www.nuget.org/api/v2
-    source C:\Users\dag\Developer\Packages
     storage: none
 
     framework: netstandard2.0
 
     nuget FSharp.Core ~> 6
     nuget Thoth.Json.Net
-    nuget Oryx = 5.0.0-alpha-004
+    nuget Oryx prerelease
 
 group Google
     source https://www.nuget.org/api/v2
-    source C:\Users\dag\Developer\Packages
     storage: none
 
     framework: netstandard2.0
@@ -53,7 +49,7 @@ group Google
     nuget FSharp.Core ~> 6
     nuget Google.Protobuf ~> 3
     nuget Microsoft.NETCore.Platforms ~> 6
-    nuget Oryx = 5.0.0-alpha-004
+    nuget Oryx prerelease
 
 group Test
     source https://www.nuget.org/api/v2
@@ -71,10 +67,9 @@ group Test
 
 group Examples
     source https://www.nuget.org/api/v2
-    source C:\Users\dag\Developer\Packages
     storage: none
 
     nuget Thoth.Json.Net
-    nuget Oryx = 5.0.0-alpha-004
+    nuget Oryx prerelease
     nuget Oryx.ThothJsonNet
     nuget Newtonsoft.Json

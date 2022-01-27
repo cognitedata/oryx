@@ -63,7 +63,7 @@ let ``Catching errors is Ok`` () =
         // Arrange
         let errorHandler = badRequestHandler 420
 
-        let req = httpRequest |> error "failed" |> catch errorHandler
+        let req = singleton 42 |> error "failed" |> catch errorHandler
 
         // Act
         let! content = req |> runUnsafeAsync
@@ -78,7 +78,7 @@ let ``Catching panic is not possible`` () =
         // Arrange
         let errorHandler = badRequestHandler 420
 
-        let req = httpRequest |> panic "panic!" |> catch errorHandler
+        let req = singleton 42 |> catch errorHandler |> panic "panic!"
 
         // Act
         let! result = req |> runAsync
