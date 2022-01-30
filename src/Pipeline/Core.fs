@@ -25,11 +25,11 @@ module Core =
     let finish<'TContext, 'TResult>
         (tcs: TaskCompletionSource<'TResult>)
         : OnSuccessAsync<'TContext, 'TResult> * OnErrorAsync<'TContext> * OnCancelAsync<'TContext> =
-        let onSuccess _ response = task { tcs.SetResult response }
-        let onError _ (error: exn) = task { tcs.SetException error }
-        let onCancel _ = task { tcs.SetCanceled() }
+        let success _ response = task { tcs.SetResult response }
+        let error _ (err: exn) = task { tcs.SetException err }
+        let cancel _ = task { tcs.SetCanceled() }
 
-        (onSuccess, onError, onCancel)
+        (success, error, cancel)
 
     /// Run the HTTP handler in the given context. Returns content and throws exception if any error occured.
     let runUnsafeAsync<'TContext, 'TResult> (handler: Pipeline<'TContext, 'TResult>) : Task<'TResult> =
@@ -52,7 +52,7 @@ module Core =
 
     /// Produce the given content.
     let singleton<'TContext, 'TSource> (ctx: 'TContext) (content: 'TSource) : Pipeline<'TContext, 'TSource> =
-        fun onSuccess onError onCancel -> task { do! onSuccess ctx content }
+        fun success _ _ -> task { do! success ctx content }
 
     /// Map the content of the middleware.
     let map<'TContext, 'TSource, 'TResult>

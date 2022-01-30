@@ -52,7 +52,7 @@ module Error =
         (source: Pipeline<'TContext, 'TSource>)
         : Pipeline<'TContext, 'TSource> =
         fun success error cancel ->
-            let onSuccess' ctx content =
+            let success' ctx content =
                 task {
                     try
                         return! success ctx content
@@ -60,14 +60,14 @@ module Error =
                     | err when not (err :? PanicException) -> return! (errorHandler ctx err) success error cancel
                 }
 
-            let onError' ctx err =
+            let error' ctx err =
                 task {
                     match err with
                     | PanicException err -> return! error ctx err
                     | _ -> do! (errorHandler ctx err) success error cancel
                 }
 
-            source onSuccess' onError' cancel
+            source success' error' cancel
 
     [<RequireQualifiedAccess>]
     type ChooseState =
