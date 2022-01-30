@@ -9,6 +9,43 @@ open FSharp.Control.TaskBuilder
 open Oryx
 
 module Error =
+    /// Handler for protecting the pipeline from exceptions and protocol violations.
+    let protect<'TContext, 'TSource> (source : Pipeline<'TContext, 'TSource>) : Pipeline<'TContext, 'TSource> =
+        fun success error cancel ->
+            let mutable stopped = false
+
+            let success' ctx content =
+                task {
+                    match stopped with
+                    | false ->
+                        try
+                            return! success ctx content
+                        with err ->
+                            stopped <- true
+                            return! error ctx err
+                    | _ -> ()
+                }
+
+            let error' ctx err =
+                task {
+                    match stopped with
+                    | false ->
+                        stopped <- true
+                        return! error ctx err
+                    | _ -> ()
+                }
+
+            let cancel' ctx =
+                task {
+                    match stopped with
+                    | false ->
+                        stopped <- true
+                        return! cancel ctx
+                    | _ -> ()
+                }
+            
+            source success' error' cancel'
+            
     /// Handler for catching errors and then delegating to the error handler on what to do.
     let catch<'TContext, 'TSource>
         (errorHandler: 'TContext -> exn -> Pipeline<'TContext, 'TSource>)
