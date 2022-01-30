@@ -10,7 +10,7 @@ open Oryx
 
 module Error =
     /// Handler for protecting the pipeline from exceptions and protocol violations.
-    let protect<'TContext, 'TSource> (source : Pipeline<'TContext, 'TSource>) : Pipeline<'TContext, 'TSource> =
+    let protect<'TContext, 'TSource> (source: Pipeline<'TContext, 'TSource>) : Pipeline<'TContext, 'TSource> =
         fun success error cancel ->
             let mutable stopped = false
 
@@ -20,7 +20,8 @@ module Error =
                     | false ->
                         try
                             return! success ctx content
-                        with err ->
+                        with
+                        | err ->
                             stopped <- true
                             return! error ctx err
                     | _ -> ()
@@ -43,9 +44,9 @@ module Error =
                         return! cancel ctx
                     | _ -> ()
                 }
-            
+
             source success' error' cancel'
-            
+
     /// Handler for catching errors and then delegating to the error handler on what to do.
     let catch<'TContext, 'TSource>
         (errorHandler: 'TContext -> exn -> Pipeline<'TContext, 'TSource>)
