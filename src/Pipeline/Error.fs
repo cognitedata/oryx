@@ -14,23 +14,23 @@ module Error =
         (errorHandler: 'TContext -> exn -> Pipeline<'TContext, 'TSource>)
         (source: Pipeline<'TContext, 'TSource>)
         : Pipeline<'TContext, 'TSource> =
-        fun onSuccess onError onCancel ->
+        fun success error cancel ->
             let onSuccess' ctx content =
                 task {
                     try
-                        return! onSuccess ctx content
+                        return! success ctx content
                     with
-                    | err when not (err :? PanicException) -> return! (errorHandler ctx err) onSuccess onError onCancel
+                    | err when not (err :? PanicException) -> return! (errorHandler ctx err) success error cancel
                 }
 
             let onError' ctx err =
                 task {
                     match err with
-                    | PanicException error -> return! onError ctx error
-                    | _ -> do! (errorHandler ctx err) onSuccess onError onCancel
+                    | PanicException err -> return! error ctx err
+                    | _ -> do! (errorHandler ctx err) success error cancel
                 }
 
-            source onSuccess' onError' onCancel
+            source onSuccess' onError' cancel
 
     [<RequireQualifiedAccess>]
     type ChooseState =
@@ -44,27 +44,27 @@ module Error =
         (handlers: (Pipeline<'TContext, 'TSource> -> Pipeline<'TContext, 'TResult>) list)
         (source: Pipeline<'TContext, 'TSource>)
         : Pipeline<'TContext, 'TResult> =
-        fun onSuccess onError onCancel ->
+        fun success error cancel ->
             let exns: ResizeArray<exn> = ResizeArray()
 
-            let onSuccess' ctx content =
+            let success' ctx content =
                 task {
                     let mutable state = ChooseState.Error
 
-                    let onSuccess'' ctx content =
+                    let success'' ctx content =
                         task {
                             exns.Clear() // Clear to avoid buildup of exceptions in streaming scenarios.
 
                             if state = ChooseState.NoError then
-                                return! onSuccess ctx content
+                                return! success ctx content
                         }
 
-                    let onError'' _ error =
+                    let error'' _ err =
                         task {
-                            match error, state with
+                            match err, state with
                             | PanicException _, st when st <> ChooseState.Panic ->
                                 state <- ChooseState.Panic
-                                return! onError ctx error
+                                return! error ctx err
                             | SkipException _, st when st = ChooseState.NoError ->
                                 // Flag error, but do not record skips.
                                 state <- ChooseState.Error
@@ -73,7 +73,7 @@ module Error =
                                 ()
                             | _, _ ->
                                 state <- ChooseState.Error
-                                exns.Add(error)
+                                exns.Add(err)
                         }
 
                     let handlerNext: Pipeline<'TContext, 'TSource> =
@@ -82,46 +82,46 @@ module Error =
                     for handler in handlers do
                         if state = ChooseState.Error then
                             state <- ChooseState.NoError
-                            do! handler handlerNext onSuccess'' onError'' onCancel
+                            do! handler handlerNext success'' error'' cancel
 
                     match state, exns with
                     | ChooseState.Panic, _ ->
                         // Panic is sent immediately above
                         ()
-                    | ChooseState.Error, exns when exns.Count > 1 -> return! onError ctx (AggregateException(exns))
-                    | ChooseState.Error, exns when exns.Count = 1 -> return! onError ctx exns.[0]
-                    | ChooseState.Error, _ -> return! onError ctx (SkipException "Choose: No handler matched")
+                    | ChooseState.Error, exns when exns.Count > 1 -> return! error ctx (AggregateException(exns))
+                    | ChooseState.Error, exns when exns.Count = 1 -> return! error ctx exns.[0]
+                    | ChooseState.Error, _ -> return! error ctx (SkipException "Choose: No handler matched")
                     | ChooseState.NoError, _ -> ()
                 }
 
-            let onError' ctx error =
+            let error' ctx err =
                 exns.Clear()
-                onError ctx error
+                error ctx err
 
-            let onCancel' ctx =
+            let cancel' ctx =
                 exns.Clear()
-                onCancel ctx
+                cancel ctx
 
-            source onSuccess' onError' onCancel'
+            source success' error' cancel'
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
     let fail<'TContext, 'TSource, 'TResult>
         (err: Exception)
         (source: Pipeline<'TContext, 'TSource>)
         : Pipeline<'TContext, 'TResult> =
-        fun _ onError onCancel ->
-            fun ctx _ -> onError ctx err
-            |> Core.swapArgs source onError onCancel
+        fun _ error cancel ->
+            fun ctx _ -> error ctx err
+            |> Core.swapArgs source error cancel
 
     /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
     /// the any error handling e.g `choose` or `catch`•.
     let panic<'TContext, 'TSource, 'TResult>
-        (error: Exception)
+        (err: Exception)
         (source: Pipeline<'TContext, 'TSource>)
         : Pipeline<'TContext, 'TResult> =
-        fun _ onError onCancel ->
-            fun ctx _ -> onError ctx (PanicException(error))
-            |> Core.swapArgs source onError onCancel
+        fun _ error cancel ->
+            fun ctx _ -> error ctx (PanicException(err))
+            |> Core.swapArgs source error cancel
 
     /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
     let ofError<'TContext, 'TSource> (_: 'TContext) (err: Exception) : Pipeline<'TContext, 'TSource> =

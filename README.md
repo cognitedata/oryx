@@ -7,7 +7,7 @@
 Oryx is a high-performance .NET cross-platform functional HTTP request handler library for writing HTTP clients and
 orchestrating web requests in F#.
 
-> A middleware SDK for writing HTTP web clients and orchestrating web requests.
+> An SDK for writing HTTP web clients and orchestrating web requests.
 
 This library enables you to write Web and REST clients and SDKs for various APIs and is currently used by the [.NET SDK
 for Cognite Data Fusion (CDF)](https://github.com/cognitedata/cognite-sdk-dotnet).
@@ -56,21 +56,18 @@ let query term = [
     struct ("search", term)
 ]
 
-let request term source =
-    source
-    |> GET
-    |> withUrl Url
-    |> withQuery (query term)
-    |> fetch
-    |> json options
-
 let asyncMain argv = task {
     use client = new HttpClient ()
-    let ctx =
+    let request term =
         httpRequest
+        |> GET
+        |> withUrl Url
+        |> withQuery (query term)
+        |> fetch
+        |> json options
         |> withHttpClient client
 
-    let! result = ctx |> request "F#" |> runAsync
+    let! result = request "F#" |> runAsync
     printfn "Result: %A" result
 }
 
@@ -107,19 +104,19 @@ type Pipeline<'TContext, 'TSource> =
 The relationship can be seen as:
 
 ```fs
-do! handler onSuccess onError onCancel
+do! handler success error cancel
 ```
 
-An HTTP handler (`HttpHandler`) is a pipeline that uses or subscribes `handler onSuccess onError onCancel` the given
-HTTP next handler (`HttpNext<'TResult>`), and return a `Task` of unit.
+An HTTP handler (`HttpHandler`) is a pipeline that uses or subscribes `handler success error cancel` the given
+continuations `success`, `error` and `cancel`, and return a `Task` of unit.
 
 Each `HttpHandler` usually transforms the `HttpRequest`, `HttpResponse` or the `content` before passing it down the
-pipeline by invoking the next `onSuccess` continuation. It may also signal an error by invoking `onError` with an
+pipeline by invoking the next `success` continuation. It may also signal an error by invoking `error` with an
 exception to fail the processing of the pipeline.
 
 The easiest way to get your head around the Oryx `HttpHandler` is to think of it as a functional web request processing
 pipeline. Each handler has the `HttpContext` and `content` at its disposal and can decide whether it wants to fail the
-request, or continue the request by calling the "next" handler.
+request calling `error`, or continue the request by calling the `success` handler.
 
 ## HTTP Handlers
 
@@ -193,26 +190,27 @@ The HTTP verbs are convenience functions using the `withMethod` under the hood:
 
 The real magic of Oryx is composition. The fact that everything is an `HttpHandler` makes it easy to compose HTTP
 handlers together. You can think of them as Lego bricks that you can fit together. Two or more `HttpHandler` functions
-may be composed together using functional composition, i.e using the `>>` operator. This enables you to compose your
+may be composed together using the pipelining, i.e using the `|>` operator. This enables you to compose your
 web requests and decode the response, e.g as we do when listing Assets in the [Cognite Data Fusion
 SDK](https://github.com/cognitedata/cognite-sdk-dotnet/blob/master/Oryx.Cognite/src/Handler.fs):
 
 ```fs
-    let list (query: AssetQuery) : HttpHandler<unit, ItemsWithCursor<AssetReadDto>> =
+    let list (query: AssetQuery) (source: HttpHandler<unit>) : HttpHandler<ItemsWithCursor<AssetReadDto>> =
         let url = Url +/ "list"
 
-        POST
-        >> withVersion V10
-        >> withResource url
-        >> withContent (() -> new JsonPushStreamContent<AssetQuery>(query, jsonOptions))
-        >> fetch
-        >> withError decodeError
-        >> json jsonOptions
+        source
+        |> POST
+        |> withVersion V10
+        |> withResource url
+        |> withContent (() -> new JsonPushStreamContent<AssetQuery>(query, jsonOptions))
+        |> fetch
+        |> withError decodeError
+        |> json jsonOptions
 ```
 
 The function `list` is now also an `HttpHandler` and may be composed with other handlers to create complex chains
-for doing multiple sequential or concurrent to a web service. And you can do this without having to worry about error
-handling.
+for doing multiple sequential or concurrent requests to a web service. And you can do this without having to worry
+about error handling.
 
 ## Retrying Requests
 
@@ -225,18 +223,24 @@ A `sequential` operator for running a list of HTTP handlers in sequence.
 
 ```fs
 val sequential:
-   handlers: seq<HttpHandler<'TSource,'TResult>> ->
-   next    : HttpNext<list<'TResult>>
-          -> HttpNext<'TSource>
+   merge   : (list<HttpContext> -> HttpContext) ->
+   handlers: seq<HttpHandler<'TResult>> ->
+   success : OnSuccessAsync<HttpContext,list<'TResult>> ->
+   error   : OnErrorAsync<HttpContext> ->
+   cancel  : OnCancelAsync<HttpContext>
+          -> Task<unit>
 ```
 
 And a `concurrent` operator that runs a list of HTTP handlers in parallel.
 
 ```fs
 val concurrent:
-   handlers: seq<HttpHandler<'TSource,'TResult>> ->
-   next    : HttpNext<list<'TResult>>
-          -> HttpNext<'TSource>
+   merge   : (list<HttpContext> -> HttpContext) ->
+   handlers: seq<HttpHandler<'TResult>> ->
+   success : OnSuccessAsync<HttpContext,list<'TResult>> ->
+   error   : OnErrorAsync<HttpContext> ->
+   cancel  : OnCancelAsync<HttpContext>
+          -> Task<unit>
 ```
 
 You can also combine sequential and concurrent requests by chunking the request. The `chunk` handler uses `chunkSize`
@@ -246,12 +250,12 @@ multiple requests.
 
 ```fs
 val chunk:
-   chunkSize     : int         ->
-   maxConcurrency: int         ->
-   handler       : seq<'TNext> -> HttpHandler<'TSource,seq<'TResult>> ->
+   merge         : (list<'TContext> -> 'TContext) ->
+   chunkSize     : int ->
+   maxConcurrency: int ->
+   handler       : (seq<'TNext> -> OnSuccessAsync<HttpContext,seq<'TResult>> -> OnErrorAsync<HttpContext> -> OnCancelAsync<HttpContext> -> Task<unit>) ->
    items         : seq<'TNext>
-                -> HttpHandler<'TSource,seq<'TResult>>
-
+                -> HttpHandler<seq<'TResult>>
 ```
 
 Note that chunk will fail if one of the inner requests fails so for e.g a writing scenario you most likely want to
@@ -266,8 +270,11 @@ is given full access the the `HttpResponse` and the `HttpContent` and may produc
 ```fs
 val withError:
    errorHandler: (HttpResponse -> HttpContent -> Task<exn>) ->
-   source      : HttpHandler<HttpContent>
-              -> HttpHandler<HttpContent>
+   source      : HttpHandler<HttpContent> ->
+   success     : OnSuccessAsync<HttpContext,HttpContent> ->
+   error       : OnErrorAsync<HttpContext> ->
+   cancel      : OnCancelAsync<HttpContext>
+              -> Task<unit>
 ```
 
 It's also possible to catch errors using the `catch` handler _before_ e.g `fetch`. The function takes an `errorHandler`
@@ -279,9 +286,12 @@ bypass a `catch` operator.
 
 ```fs
 val catch:
-  errorhandler: (exn -> HttpHandler<'TSource>  ->
-  source: HttpHandler<'TSource>
-              -> HttpHandler<HttpContent>
+   errorHandler: ('TContext -> exn -> OnSuccessAsync<HttpContext,'TSource> -> OnErrorAsync<HttpContext> -> OnCancelAsync<HttpContext> -> Threading.Tasks.Task<unit>) ->
+   source      : HttpHandler<'TSource> ->
+   success     : OnSuccessAsync<HttpContext,'TSource> ->
+   error       : OnErrorAsync<HttpContext> ->
+   cancel      : OnCancelAsync<HttpContext>
+              -> Task<unit>
 ```
 
 A `choose` operator takes a list of HTTP handlers and tries each of them until one of them succeeds. The `choose`
@@ -292,9 +302,12 @@ you need break out of `choose` and force an exception without skipping to the ne
 
 ```fs
 val choose:
-    handlers: seq<HttpHandler<'TSource> -> HttpHandler<'TResult>> ->
-    source: HttpHandler<'TSource>
-           -> HttpHandler<'TResult>
+   handlers: list<(HttpHandler<'TSource> -> OnSuccessAsync<HttpContext,'TResult> -> OnErrorAsync<HttpContext> -> OnCancelAsync<HttpContext> -> Threading.Tasks.Task<unit>)> ->
+   source  : HttpHandler<'TSource> ->
+   success : OnSuccessAsync<HttpContext,'TResult> ->
+   error   : OnErrorAsync<HttpContext> ->
+   cancel  : OnCancelAsync<HttpContext>
+          -> Task<unit>
 ```
 
 ## JSON and Protobuf Content Handling
@@ -392,8 +405,7 @@ To run a handler you can use the `runAsync` function.
 
 ```fs
 val runAsync:
-   ctx    : HttpContext ->
-   handler: HttpHandler<unit,'TResult>
+   handler: HttpHandler<'TResult>
          -> Task<Result<'TResult,exn>>
 ```
 
@@ -401,7 +413,6 @@ or the unsafe version that may throw exceptions:
 
 ```fs
 val runUnsafeAsync:
-   ctx    : HttpContext ->
    handler: HttpHandler<unit,'TResult>
          -> Task<'TResult>
 ```
@@ -494,33 +505,18 @@ Custom HTTP handlers may e.g populate the context, make asynchronous web request
 handlers are functions that takes an `HttpHandler'TSource>`, and returns an `HttpHandler<'TSource>`. Example:
 
 ```fs
-let withResource (resource: string): HttpHandler<'TSource> =
-    { new HttpHandler<'TSource, 'TResult> with
-        member _.Subscribe(next) =
-            { new IHttpNext<'TSource> with
-                member _.OnNextAsync(ctx, content) =
-                    next.OnNextAsync(
-                        { ctx with
-                            Request =
-                                { ctx.Request with
-                                    Items = ctx.Request.Items.Add("resource", String resource)
-                                }
-                        },
-                        content = content
-                    )
-
-                member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
-                member _.OnCompletedAsync(ctx) = next.OnCompletedAsync(ctx)
-            } }
-```
-
-The handlers above will add custom values to the context that may be used by the supplied URL builder. Note that
-anything added to the `Items` map is also available as place-holders in the logging format string.
-
-```fs
-let urlBuilder (request: HttpRequest) : string =
-    let items = request.Items
-    ...
+let withResource (resource: string) (source: HttpHandler<'TSource): HttpHandler<'TSource> =
+    fun success ->  // NOTE: `error` and `cancel` are curried
+        fun ctx content -> =
+            success
+                { ctx with
+                    Request =
+                        { ctx.Request with
+                            Items = ctx.Request.Items.Add("resource", String resource)
+                        }
+                }
+                content = content
+        |> source
 ```
 
 ## What is new in Oryx v5
