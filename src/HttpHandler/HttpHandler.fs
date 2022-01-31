@@ -85,8 +85,8 @@ module HttpHandler =
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
     let withQuery (query: seq<struct (string * string)>) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun next ->
-            fun ctx -> next { ctx with Request = { ctx.Request with Query = query } }
+        fun success ->
+            fun ctx -> success { ctx with Request = { ctx.Request with Query = query } }
             |> source
 
     /// Chunks a sequence of HTTP handlers into sequential and concurrent batches.
@@ -130,14 +130,14 @@ module HttpHandler =
 
     /// Parse response stream to a user specified type synchronously.
     let parse<'TResult> (parser: Stream -> 'TResult) (source: HttpHandler<HttpContent>) : HttpHandler<'TResult> =
-        fun onSuccess ->
+        fun success ->
             fun ctx (content: HttpContent) ->
                 task {
                     let! stream = content.ReadAsStreamAsync()
 
                     try
                         let item = parser stream
-                        return! onSuccess ctx item
+                        return! success ctx item
                     with
                     | ex ->
                         ctx.Request.Metrics.Counter Metric.DecodeErrorInc ctx.Request.Labels 1L
@@ -150,14 +150,14 @@ module HttpHandler =
         (parser: Stream -> Task<'TResult>)
         (source: HttpHandler<HttpContent>)
         : HttpHandler<'TResult> =
-        fun onSuccess ->
+        fun success ->
             fun ctx (content: HttpContent) ->
                 task {
                     let! stream = content.ReadAsStreamAsync()
 
                     try
                         let! item = parser stream
-                        return! onSuccess ctx item
+                        return! success ctx item
                     with
                     | ex ->
                         ctx.Request.Metrics.Counter Metric.DecodeErrorInc ctx.Request.Labels 1L
@@ -167,15 +167,15 @@ module HttpHandler =
 
     /// HTTP handler for setting the expected response type.
     let withResponseType<'TSource> (respType: ResponseType) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun onSuccess ->
-            fun ctx -> onSuccess { ctx with Request = { ctx.Request with ResponseType = respType } }
+        fun success ->
+            fun ctx -> success { ctx with Request = { ctx.Request with ResponseType = respType } }
             |> source
 
     /// HTTP handler for setting the method to be used for requests using this context. You will normally want to use
     /// the `GET`, `POST`, `PUT`, `DELETE`, or `OPTIONS` HTTP handlers instead of this one.
     let withMethod<'TSource> (method: HttpMethod) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun onSuccess ->
-            fun ctx -> onSuccess { ctx with Request = { ctx.Request with Method = method } }
+        fun success ->
+            fun ctx -> success { ctx with Request = { ctx.Request with Method = method } }
             |> source
 
     // A basic way to set the request URL. Use custom builders for more advanced usage.
@@ -183,9 +183,9 @@ module HttpHandler =
 
     /// HTTP GET request. Also clears any content set in the context.
     let GET<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun onSuccess ->
+        fun success ->
             fun ctx ->
-                onSuccess
+                success
                     { ctx with
                         Request =
                             { ctx.Request with
@@ -208,7 +208,7 @@ module HttpHandler =
         (tokenProvider: CancellationToken -> Task<Result<string, exn>>)
         (source: HttpHandler<'TSource>)
         : HttpHandler<'TSource> =
-        fun onSuccess ->
+        fun success ->
             fun ctx content ->
                 task {
                     let! result =
@@ -224,7 +224,7 @@ module HttpHandler =
                         let name, value = ("Authorization", sprintf "Bearer %s" token)
 
                         return!
-                            onSuccess
+                            success
                                 { ctx with Request = { ctx.Request with Headers = ctx.Request.Headers.Add(name, value) } }
                                 content
 
@@ -252,8 +252,8 @@ module HttpHandler =
     /// content will be added to the HTTP body of requests that uses
     /// this context.
     let withContent<'TSource> (builder: unit -> HttpContent) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun onSuccess ->
-            fun ctx -> onSuccess { ctx with Request = { ctx.Request with ContentBuilder = Some builder } }
+        fun success ->
+            fun ctx -> success { ctx with Request = { ctx.Request with ContentBuilder = Some builder } }
             |> source
 
     /// Error handler for decoding fetch responses into an user defined error type. Will ignore successful responses.
@@ -261,20 +261,20 @@ module HttpHandler =
         (errorHandler: HttpResponse -> HttpContent -> Task<exn>)
         (source: HttpHandler<HttpContent>)
         : HttpHandler<HttpContent> =
-        fun onSuccess onError onCancel ->
+        fun success error cancel ->
             fun ctx content ->
                 task {
                     let response = ctx.Response
 
                     match response.IsSuccessStatusCode with
-                    | true -> return! onSuccess ctx content
+                    | true -> return! success ctx content
                     | false ->
                         ctx.Request.Metrics.Counter Metric.FetchErrorInc ctx.Request.Labels 1L
 
                         let! err = errorHandler response content
-                        return! onError ctx (HttpException(ctx, err))
+                        return! error ctx (HttpException(ctx, err))
                 }
-            |> Core.swapArgs source onError onCancel
+            |> Core.swapArgs source error cancel
 
     /// Starts a pipeline using an empty request with the default context.
     let httpRequest: HttpHandler<unit> =

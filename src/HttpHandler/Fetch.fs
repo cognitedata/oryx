@@ -66,7 +66,7 @@ module Fetch =
     /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{RequestContent}` and `{Elapsed}`
     /// to the log format.
     let fetch<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<HttpContent> =
-        fun onSuccess onError onCancel ->
+        fun success error cancel ->
             fun ctx _ ->
                 task {
                     let timer = Stopwatch()
@@ -96,7 +96,7 @@ module Fetch =
                             |> Map.ofSeq
 
                         let! result =
-                            onSuccess
+                            success
                                 { Request = { ctx.Request with Items = items }
                                   Response =
                                     { StatusCode = response.StatusCode
@@ -109,6 +109,6 @@ module Fetch =
                         response.Dispose()
                         return result
                     with
-                    | ex when not (ex :? HttpException) -> return! onError ctx (HttpException(ctx, ex))
+                    | ex when not (ex :? HttpException) -> return! error ctx (HttpException(ctx, ex))
                 }
-            |> Core.swapArgs source onError onCancel
+            |> Core.swapArgs source error cancel

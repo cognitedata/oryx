@@ -74,15 +74,15 @@ let panic msg source : HttpHandler<'TSource> =
     panic (TestException(code = 400, message = msg)) source
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
-let badRequestHandler<'TSource> (response: 'TSource) (ctx: HttpContext) (error: exn) : HttpHandler<'TSource> =
-    fun onSuccess _ _ ->
+let badRequestHandler<'TSource> (response: 'TSource) (ctx: HttpContext) (err: exn) : HttpHandler<'TSource> =
+    fun success _ _ ->
         task {
-            match error with
-            | TestException (code, message) ->
+            match err with
+            | TestException (code, _) ->
                 match enum<HttpStatusCode> code with
-                | HttpStatusCode.BadRequest -> return! onSuccess ctx response
-                | _ -> raise (HttpException(ctx, error))
-            | _ -> raise (HttpException(ctx, error))
+                | HttpStatusCode.BadRequest -> return! success ctx response
+                | _ -> raise (HttpException(ctx, err))
+            | _ -> raise (HttpException(ctx, err))
         }
 
 let errorHandler (response: HttpResponse) (_: HttpContent) =
