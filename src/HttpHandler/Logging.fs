@@ -9,6 +9,8 @@ open System.Text.RegularExpressions
 open Microsoft.Extensions.Logging
 open FSharp.Control.TaskBuilder
 
+open Oryx.Pipeline
+
 [<AutoOpen>]
 module Logging =
     // Pre-compiled
@@ -57,18 +59,21 @@ module Logging =
 
     /// Set the log level to use (default is LogLevel.None).
     let withLogLevel (logLevel: LogLevel) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun success ->
-            fun ctx -> success { ctx with Request = { ctx.Request with LogLevel = logLevel } }
-            |> source
+        let mapper ctx =
+            { ctx with Request = { ctx.Request with LogLevel = logLevel } }
+
+        update mapper source
 
     /// Set the log message to use. Use in the pipeline somewhere before the `log` handler.
     let withLogMessage<'TSource> (msg: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        source
-        |> update (fun ctx ->
+        let mapper ctx =
             { ctx with
-                Request = { ctx.Request with Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } })
+                Request = { ctx.Request with Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } }
 
-    /// Set the log format to use.
+        update mapper source
+
+
+    // Set the log format to use.
     let withLogFormat (format: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         source
         |> update (fun ctx -> { ctx with Request = { ctx.Request with LogFormat = format } })
@@ -76,26 +81,28 @@ module Logging =
     /// Logger handler with message. Should be composed in pipeline after both the `fetch` handler, and the `withError`
     /// in order to log both requests, responses and errors.
     let log (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
-        fun success onError cancel ->
-            let success' ctx content =
-                task {
-                    match ctx.Request.LogLevel with
-                    | LogLevel.None -> ()
-                    | logLevel -> log' logLevel ctx content
-
-                    return! success ctx content
-                }
-
-            let error' ctx error =
-                task {
-                    match error with
-                    | HttpException (ctx, error) ->
+        fun next ->
+            { new IHttpNext<'TSource> with
+                member _.OnSuccessAsync(ctx, content) =
+                    task {
                         match ctx.Request.LogLevel with
                         | LogLevel.None -> ()
-                        | _ -> log' LogLevel.Error ctx (Some error)
+                        | logLevel -> log' logLevel ctx content
 
-                        return! onError ctx error
-                    | err -> return! onError ctx err
-                }
+                        return! next.OnSuccessAsync(ctx, content)
+                    }
 
-            source success' error' cancel
+                member _.OnErrorAsync(ctx, error) =
+                    task {
+                        match error with
+                        | HttpException (ctx, error) ->
+                            match ctx.Request.LogLevel with
+                            | LogLevel.None -> ()
+                            | _ -> log' LogLevel.Error ctx (Some error)
+
+                            return! next.OnErrorAsync(ctx, error)
+                        | err -> return! next.OnErrorAsync(ctx, err)
+                    }
+
+                member _.OnCancelAsync(ctx) = next.OnCancelAsync(ctx) }
+            |> source

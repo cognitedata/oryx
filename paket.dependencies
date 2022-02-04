@@ -61,7 +61,7 @@ group Test
     nuget xunit ~> 2
     nuget xunit.runner.visualstudio ~> 2
     nuget Serilog.Sinks.XUnit
-    nuget Microsoft.NET.Test.Sdk ~> 16
+    nuget Microsoft.NET.Test.Sdk ~> 17
     nuget FsCheck.Xunit
     nuget Thoth.Json.Net
 

@@ -14,6 +14,7 @@ open System.Threading.Tasks
 open FSharp.Control.TaskBuilder
 
 open Oryx
+open Oryx.Pipeline
 open Oryx.SystemTextJson.ResponseReader
 open Microsoft.Extensions.Logging
 
@@ -75,12 +76,12 @@ let panic msg source : HttpHandler<'TSource> =
 
 /// A bad request handler to use with the `catch` handler. It takes a response to return as Ok.
 let badRequestHandler<'TSource> (response: 'TSource) (ctx: HttpContext) (err: exn) : HttpHandler<'TSource> =
-    fun success _ _ ->
+    fun next ->
         task {
             match err with
             | TestException (code, _) ->
                 match enum<HttpStatusCode> code with
-                | HttpStatusCode.BadRequest -> return! success ctx response
+                | HttpStatusCode.BadRequest -> return! next.OnSuccessAsync(ctx, response)
                 | _ -> raise (HttpException(ctx, err))
             | _ -> raise (HttpException(ctx, err))
         }
