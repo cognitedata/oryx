@@ -2,7 +2,7 @@ STORAGE: NONE
 RESTRICTION: == netstandard2.0
 NUGET
   remote: https://www.nuget.org/api/v2
-    FSharp.Core (6.0.1)
+    FSharp.Core (6.0.3)
     FsToolkit.ErrorHandling (2.13)
       FSharp.Core (>= 4.7.2)
     Microsoft.Bcl.AsyncInterfaces (6.0)
@@ -49,7 +49,7 @@ STORAGE: NONE
 NUGET
   remote: https://www.nuget.org/api/v2
     Fable.Core (3.6.1) - restriction: && (< net46) (>= netstandard2.0)
-    FSharp.Core (6.0.1) - restriction: || (>= net46) (>= netstandard2.0)
+    FSharp.Core (6.0.3) - restriction: || (>= net46) (>= netstandard2.0)
     FsToolkit.ErrorHandling (2.13) - restriction: >= netstandard2.0
       FSharp.Core (>= 4.7.2) - restriction: >= netstandard2.0
     Microsoft.Bcl.AsyncInterfaces (6.0) - restriction: || (&& (>= net461) (>= netstandard2.0)) (&& (>= netstandard2.0) (< netstandard2.1))
@@ -142,7 +142,7 @@ NUGET
       System.Runtime.Serialization.Formatters (>= 4.3) - restriction: && (< net20) (>= netstandard1.3) (< netstandard2.0)
       System.Runtime.Serialization.Primitives (>= 4.3) - restriction: || (&& (< net20) (>= netstandard1.0) (< netstandard1.3)) (&& (< net20) (>= netstandard1.3) (< netstandard2.0))
       System.Xml.XmlDocument (>= 4.3) - restriction: && (< net20) (>= netstandard1.3) (< netstandard2.0)
-    Oryx (5.0.0-alpha-002)
+    Oryx (5.0.0-alpha-005)
       FSharp.Core (>= 6.0.1) - restriction: >= netstandard2.0
       FsToolkit.ErrorHandling (>= 2.13) - restriction: >= netstandard2.0
       Microsoft.Extensions.Logging (>= 5.0) - restriction: >= netstandard2.0
@@ -690,10 +690,10 @@ STORAGE: NONE
 RESTRICTION: == netstandard2.0
 NUGET
   remote: https://www.nuget.org/api/v2
-    FSharp.Core (6.0.1)
+    FSharp.Core (6.0.3)
     FsToolkit.ErrorHandling (2.13)
       FSharp.Core (>= 4.7.2)
-    Google.Protobuf (3.19.3)
+    Google.Protobuf (3.19.4)
       System.Memory (>= 4.5.3)
       System.Runtime.CompilerServices.Unsafe (>= 4.5.2)
     Microsoft.Bcl.AsyncInterfaces (6.0)
@@ -724,7 +724,7 @@ NUGET
       System.Memory (>= 4.5.4)
       System.Runtime.CompilerServices.Unsafe (>= 6.0)
     Microsoft.NETCore.Platforms (6.0.1)
-    Oryx (5.0.0-alpha-002)
+    Oryx (5.0.0-alpha-005)
       FSharp.Core (>= 6.0.1)
       FsToolkit.ErrorHandling (>= 2.13)
       Microsoft.Extensions.Logging (>= 5.0)
@@ -747,7 +747,7 @@ STORAGE: NONE
 RESTRICTION: == netstandard2.0
 NUGET
   remote: https://www.nuget.org/api/v2
-    FSharp.Core (6.0.1)
+    FSharp.Core (6.0.3)
     FsToolkit.ErrorHandling (2.13)
       FSharp.Core (>= 4.7.2)
     Microsoft.Bcl.AsyncInterfaces (6.0)
@@ -777,7 +777,7 @@ NUGET
     Microsoft.Extensions.Primitives (6.0)
       System.Memory (>= 4.5.4)
       System.Runtime.CompilerServices.Unsafe (>= 6.0)
-    Oryx (5.0.0-alpha-002)
+    Oryx (5.0.0-alpha-005)
       FSharp.Core (>= 6.0.1)
       FsToolkit.ErrorHandling (>= 2.13)
       Microsoft.Extensions.Logging (>= 5.0)
@@ -812,7 +812,7 @@ STORAGE: NONE
 RESTRICTION: == netstandard2.0
 NUGET
   remote: https://www.nuget.org/api/v2
-    FSharp.Core (6.0.1)
+    FSharp.Core (6.0.3)
     FsToolkit.ErrorHandling (2.13)
       FSharp.Core (>= 4.7.2)
     Microsoft.Bcl.AsyncInterfaces (6.0)
@@ -844,7 +844,7 @@ NUGET
       System.Runtime.CompilerServices.Unsafe (>= 6.0)
     Microsoft.NETCore.Platforms (6.0.1)
     Newtonsoft.Json (13.0.1)
-    Oryx (5.0.0-alpha-002)
+    Oryx (5.0.0-alpha-005)
       FSharp.Core (>= 6.0.1)
       FsToolkit.ErrorHandling (>= 2.13)
       Microsoft.Extensions.Logging (>= 5.0)
@@ -866,7 +866,7 @@ GROUP Test
 STORAGE: NONE
 NUGET
   remote: https://www.nuget.org/api/v2
-    coverlet.msbuild (3.1)
+    coverlet.msbuild (3.1.2)
     Fable.Core (3.6.1) - restriction: && (< net46) (>= netstandard2.0)
     FsCheck (2.16.4)
       FSharp.Core (>= 4.0.0.1) - restriction: && (< net452) (>= netstandard1.0) (< netstandard1.6)
@@ -874,11 +874,11 @@ NUGET
     FsCheck.Xunit (2.16.4)
       FsCheck (2.16.4)
       xunit.extensibility.execution (>= 2.2 < 3.0)
-    FSharp.Core (6.0.1)
+    FSharp.Core (6.0.3)
     Microsoft.CodeCoverage (17.0) - restriction: || (>= net45) (>= netcoreapp1.0)
-    Microsoft.NET.Test.Sdk (16.11)
-      Microsoft.CodeCoverage (>= 16.11) - restriction: || (>= net45) (>= netcoreapp1.0)
-      Microsoft.TestPlatform.TestHost (>= 16.11) - restriction: >= netcoreapp1.0
+    Microsoft.NET.Test.Sdk (17.0)
+      Microsoft.CodeCoverage (>= 17.0) - restriction: || (>= net45) (>= netcoreapp1.0)
+      Microsoft.TestPlatform.TestHost (>= 17.0) - restriction: >= netcoreapp1.0
       Newtonsoft.Json (>= 9.0.1) - restriction: >= uap10.0
       System.ComponentModel.Primitives (>= 4.1) - restriction: >= uap10.0
       System.ComponentModel.TypeConverter (>= 4.1) - restriction: >= uap10.0
@@ -1503,7 +1503,7 @@ RESTRICTION: == netstandard2.0
 NUGET
   remote: https://www.nuget.org/api/v2
     Fable.Core (3.6.1)
-    FSharp.Core (6.0.1)
+    FSharp.Core (6.0.3)
     FsToolkit.ErrorHandling (2.13)
       FSharp.Core (>= 4.7.2)
     Microsoft.Bcl.AsyncInterfaces (6.0)
@@ -1534,7 +1534,7 @@ NUGET
       System.Memory (>= 4.5.4)
       System.Runtime.CompilerServices.Unsafe (>= 6.0)
     Newtonsoft.Json (13.0.1)
-    Oryx (5.0.0-alpha-002)
+    Oryx (5.0.0-alpha-005)
       FSharp.Core (>= 6.0.1)
       FsToolkit.ErrorHandling (>= 2.13)
       Microsoft.Extensions.Logging (>= 5.0)
