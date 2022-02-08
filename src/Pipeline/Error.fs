@@ -177,12 +177,3 @@ module Error =
                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                 member _.OnCancelAsync(ctx) = next.OnCancelAsync(ctx) }
             |> source
-
-    /// Error handler for forcing error. Use with e.g `req` computational expression if you need to "return" an error.
-    let ofError<'TContext, 'TSource> (_: 'TContext) (err: Exception) : Pipeline<'TContext, 'TSource> =
-        fun _ -> raise err
-
-    /// Error handler for forcing a panic error. Use with e.g `req` computational expression if you need break out of
-    /// the any error handling e.g `choose` or `catch`•.
-    let ofPanic<'TContext, 'TSource> (_: 'TContext) (error: Exception) : Pipeline<'TContext, 'TSource> =
-        fun _ -> raise (PanicException(error))

@@ -93,12 +93,13 @@ type Context = {
 The `HttpContext` is constructed using a pipeline of asynchronous HTTP handlers.
 
 ```fs
-type OnSuccessAsync<'TContext, 'TSource> = 'TContext -> 'TSource -> Task<unit>
-type OnErrorAsync<'TContext> = 'TContext -> exn -> Task<unit>
-type OnCancelAsync<'TContext> = 'TContext -> Task<unit>
+type IHttpNext<'TSource> =
+    abstract member OnSuccessAsync: ctx: HttpContext * content: 'TSource -> Task<unit>
+    abstract member OnErrorAsync: ctx: HttpContext * error: exn -> Task<unit>
+    abstract member OnCancelAsync: ctx: HttpContext -> Task<unit>
 
-type Pipeline<'TContext, 'TSource> =
-    OnSuccessAsync<'TContext, 'TSource> -> OnErrorAsync<'TContext> -> OnCancelAsync<'TContext> -> Task<unit>
+
+type HttpHandler<'TSource> = IHttpNext<'TSource> -> Task<unit>
 ```
 
 The relationship can be seen as:
@@ -223,24 +224,16 @@ A `sequential` operator for running a list of HTTP handlers in sequence.
 
 ```fs
 val sequential:
-   merge   : (list<HttpContext> -> HttpContext) ->
-   handlers: seq<HttpHandler<'TResult>> ->
-   success : OnSuccessAsync<HttpContext,list<'TResult>> ->
-   error   : OnErrorAsync<HttpContext> ->
-   cancel  : OnCancelAsync<HttpContext>
-          -> Task<unit>
+    handlers     : seq<HttpHandler<'TResult>>
+                -> HttpHandler<list<'TResult>>
 ```
 
 And a `concurrent` operator that runs a list of HTTP handlers in parallel.
 
 ```fs
 val concurrent:
-   merge   : (list<HttpContext> -> HttpContext) ->
-   handlers: seq<HttpHandler<'TResult>> ->
-   success : OnSuccessAsync<HttpContext,list<'TResult>> ->
-   error   : OnErrorAsync<HttpContext> ->
-   cancel  : OnCancelAsync<HttpContext>
-          -> Task<unit>
+    handlers     : seq<HttpHandler<'TResult>>
+                -> HttpHandler<list<'TResult>>
 ```
 
 You can also combine sequential and concurrent requests by chunking the request. The `chunk` handler uses `chunkSize`
@@ -250,11 +243,10 @@ multiple requests.
 
 ```fs
 val chunk:
-   merge         : (list<'TContext> -> 'TContext) ->
    chunkSize     : int ->
    maxConcurrency: int ->
-   handler       : (seq<'TNext> -> OnSuccessAsync<HttpContext,seq<'TResult>> -> OnErrorAsync<HttpContext> -> OnCancelAsync<HttpContext> -> Task<unit>) ->
-   items         : seq<'TNext>
+   handler       : (seq<'TSource> -> HttpHandler<seq<'TResult>>) ->
+   items         : seq<'TSource>
                 -> HttpHandler<seq<'TResult>>
 ```
 
@@ -269,12 +261,10 @@ is given full access the the `HttpResponse` and the `HttpContent` and may produc
 
 ```fs
 val withError:
-   errorHandler: (HttpResponse -> HttpContent -> Task<exn>) ->
-   source      : HttpHandler<HttpContent> ->
-   success     : OnSuccessAsync<HttpContext,HttpContent> ->
-   error       : OnErrorAsync<HttpContext> ->
-   cancel      : OnCancelAsync<HttpContext>
-              -> Task<unit>
+   errorHandler  : (HttpResponse -> HttpContent -> Task<exn>) ->
+   source        : HttpHandler<HttpContent> ->
+   next          : IAsyncNext<HttpContext,HttpContent>
+                -> Task<unit>
 ```
 
 It's also possible to catch errors using the `catch` handler _before_ e.g `fetch`. The function takes an `errorHandler`
@@ -286,12 +276,10 @@ bypass a `catch` operator.
 
 ```fs
 val catch:
-   errorHandler: ('TContext -> exn -> OnSuccessAsync<HttpContext,'TSource> -> OnErrorAsync<HttpContext> -> OnCancelAsync<HttpContext> -> Threading.Tasks.Task<unit>) ->
-   source      : HttpHandler<'TSource> ->
-   success     : OnSuccessAsync<HttpContext,'TSource> ->
-   error       : OnErrorAsync<HttpContext> ->
-   cancel      : OnCancelAsync<HttpContext>
-              -> Task<unit>
+   errorHandler  : (HttpContext -> exn -> HttpHandler<'TSource>) ->
+   source        : HttpHandler<'TSource> ->
+                -> HttpHandler<'TSource> ->
+
 ```
 
 A `choose` operator takes a list of HTTP handlers and tries each of them until one of them succeeds. The `choose`
@@ -302,12 +290,10 @@ you need break out of `choose` and force an exception without skipping to the ne
 
 ```fs
 val choose:
-   handlers: list<(HttpHandler<'TSource> -> OnSuccessAsync<HttpContext,'TResult> -> OnErrorAsync<HttpContext> -> OnCancelAsync<HttpContext> -> Threading.Tasks.Task<unit>)> ->
-   source  : HttpHandler<'TSource> ->
-   success : OnSuccessAsync<HttpContext,'TResult> ->
-   error   : OnErrorAsync<HttpContext> ->
-   cancel  : OnCancelAsync<HttpContext>
-          -> Task<unit>
+   Handlers    : list<(HttpHandler<'TSource> ->HttpHandler<'TResult>)> ->
+   source      : HttpHandler<'TSource>
+              -> HttpHandler<'TResult>
+
 ```
 
 ## JSON and Protobuf Content Handling
@@ -506,31 +492,50 @@ handlers are functions that takes an `HttpHandler'TSource>`, and returns an `Htt
 
 ```fs
 let withResource (resource: string) (source: HttpHandler<'TSource): HttpHandler<'TSource> =
-    fun success ->  // NOTE: `error` and `cancel` are curried
-        fun ctx content -> =
-            success
-                { ctx with
-                    Request =
-                        { ctx.Request with
-                            Items = ctx.Request.Items.Add("resource", String resource)
-                        }
+    source
+    |> update (fun ctx ->
+        { ctx with
+            Request =
+                { ctx.Request with Items = ctx.Request.Items.Add(PlaceHolder.Resource, Value.String resource) } })
+```
+
+```fs
+/// Parse response stream to a user specified type synchronously.
+let parse<'TResult> (parser: Stream -> 'TResult) (source: HttpHandler<HttpContent>) : HttpHandler<'TResult> =
+    fun next ->
+        { new IHttpNext<HttpContent> with
+            member _.OnSuccessAsync(ctx, content: HttpContent) =
+                task {
+                    let! stream = content.ReadAsStreamAsync()
+
+                    try
+                        let item = parser stream
+                        return! next.OnSuccessAsync(ctx, item)
+                    with
+                    | ex ->
+                        ctx.Request.Metrics.Counter Metric.DecodeErrorInc ctx.Request.Labels 1L
+                        raise ex
                 }
-                content = content
+
+            member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
+            member _.OnCancelAsync(ctx) = next.OnCancelAsync(ctx) }
         |> source
+
 ```
 
 ## What is new in Oryx v5
 
 Oryx v5 continues to simplify the HTTP handlers by reducing the number of generic parameters so you only need to specify
-the type the handler is producing (not what it's consuming). The handlers have also been reduced to plain functions.
+the type the handler is producing (not what it's consuming). The `HttpHandler` have also been reduced to plain functions.
 
 ```fs
-type OnSuccessAsync<HttContext, 'TSource> = 'TContext -> 'TSource -> Task<unit>
-type OnErrorAsync<'TContext> = 'TContext -> exn -> Task<unit>
-type OnCancelAsync<'TContext> = 'TContext -> Task<unit>
+type IHttpNext<'TSource> =
+    abstract member OnSuccessAsync: ctx: HttpContext * content: 'TSource -> Task<unit>
+    abstract member OnErrorAsync: ctx: HttpContext * error: exn -> Task<unit>
+    abstract member OnCancelAsync: ctx: HttpContext -> Task<unit>
 
-type HttpHandler<'TSource> =
-    OnSuccessAsync<HttContext, 'TSource> -> OnErrorAsync<HttContext> -> OnCancelAsync<HttContext> -> Task<unit>
+
+type HttpHandler<'TSource> = IHttpNext<'TSource> -> Task<unit>
 ```
 
 The great advantage is that you can now use the normal pipe operator (`|>`) instead of Kleisli composition (`>=>`).

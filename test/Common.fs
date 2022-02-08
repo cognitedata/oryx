@@ -69,7 +69,8 @@ let error msg source : HttpHandler<'TSource> =
     fail (TestException(code = 400, message = msg)) source
 
 let ofError msg : HttpHandler<'TSource> =
-    ofError (TestException(code = 400, message = msg))
+    httpRequest
+    |> fail (TestException(code = 400, message = msg))
 
 let panic msg source : HttpHandler<'TSource> =
     panic (TestException(code = 400, message = msg)) source
