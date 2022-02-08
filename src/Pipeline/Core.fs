@@ -149,12 +149,12 @@ module Core =
             }
 
     /// Chunks a sequence of Middlewares into a combination of sequential and concurrent batches.
-    let chunk<'TContext, 'TSource, 'TNext, 'TResult>
+    let chunk<'TContext, 'TSource, 'TResult>
         (merge: 'TContext list -> 'TContext)
         (chunkSize: int)
         (maxConcurrency: int)
-        (handler: seq<'TNext> -> Pipeline<'TContext, seq<'TResult>>)
-        (items: seq<'TNext>)
+        (handler: seq<'TSource> -> Pipeline<'TContext, seq<'TResult>>)
+        (items: seq<'TSource>)
         : Pipeline<'TContext, seq<'TResult>> =
         items
         |> Seq.chunkBySize chunkSize

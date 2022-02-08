@@ -97,8 +97,8 @@ module HttpHandler =
             |> source
 
     /// Chunks a sequence of HTTP handlers into sequential and concurrent batches.
-    let chunk<'TSource, 'TNext, 'TResult> =
-        Core.chunk<HttpContext, 'TSource, 'TNext, 'TResult> HttpContext.merge
+    let chunk<'TSource, 'TResult> =
+        Core.chunk<HttpContext, 'TSource, 'TResult> HttpContext.merge
 
     /// Run list of HTTP handlers sequentially.
     let sequential<'TSource, 'TResult> =
@@ -123,8 +123,6 @@ module HttpHandler =
     let panic<'TSource, 'TResult> error source =
         Error.panic<HttpContext, 'TSource, 'TResult> error source
 
-    let ofError<'TSource> error =
-        Error.ofError<HttpContext, 'TSource> HttpContext.defaultContext error
     /// Validate content using a predicate function.
     let validate<'TSource> = Core.validate<HttpContext, 'TSource>
 

@@ -209,7 +209,7 @@ let ``Concurrent handlers with an Error is Error`` () =
 let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurrency) =
     task {
         // Arrange
-        let req = chunk<unit, int, int> chunkSize maxConcurrency singleton [ 1; 2; 3; 4; 5 ]
+        let req = chunk<int, int> chunkSize maxConcurrency singleton [ 1; 2; 3; 4; 5 ]
 
         // Act
         let! result = req |> runUnsafeAsync
