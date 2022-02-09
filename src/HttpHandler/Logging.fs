@@ -9,8 +9,6 @@ open System.Text.RegularExpressions
 open Microsoft.Extensions.Logging
 open FSharp.Control.TaskBuilder
 
-open Oryx.Pipeline
-
 [<AutoOpen>]
 module Logging =
     // Pre-compiled
@@ -71,7 +69,6 @@ module Logging =
                 Request = { ctx.Request with Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } }
 
         update mapper source
-
 
     // Set the log format to use.
     let withLogFormat (format: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
