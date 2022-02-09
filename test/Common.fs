@@ -14,7 +14,6 @@ open System.Threading.Tasks
 open FSharp.Control.TaskBuilder
 
 open Oryx
-open Oryx.Pipeline
 open Oryx.SystemTextJson.ResponseReader
 open Microsoft.Extensions.Logging
 
