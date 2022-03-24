@@ -61,12 +61,12 @@ let asyncMain argv = task {
     let request term =
         httpRequest
         |> GET
+        |> withHttpClient client
         |> withUrl Url
         |> withQuery (query term)
         |> fetch
         |> json options
-        |> withHttpClient client
-
+        
     let! result = request "F#" |> runAsync
     printfn "Result: %A" result
 }
