@@ -145,7 +145,7 @@ module HttpHandler =
                             return! next.OnSuccessAsync(ctx, item)
                         with ex ->
                             ctx.Request.Metrics.Counter Metric.DecodeErrorInc ctx.Request.Labels 1L
-                            raise ex
+                            return! next.OnErrorAsync(ctx, ex)
                     }
 
                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
@@ -168,7 +168,7 @@ module HttpHandler =
                             return! next.OnSuccessAsync(ctx, item)
                         with ex ->
                             ctx.Request.Metrics.Counter Metric.DecodeErrorInc ctx.Request.Labels 1L
-                            raise ex
+                            return! next.OnErrorAsync(ctx, ex)
                     }
 
                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
