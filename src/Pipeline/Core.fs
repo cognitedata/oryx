@@ -43,8 +43,8 @@ module Core =
             try
                 let! value = runUnsafeAsync handler
                 return Ok value
-            with
-            | error -> return Error error
+            with error ->
+                return Error error
         }
 
     /// Produce the given content.
@@ -63,8 +63,8 @@ module Core =
                 member _.OnSuccessAsync(ctx, content) =
                     try
                         next.OnSuccessAsync(ctx, mapper content)
-                    with
-                    | error -> next.OnErrorAsync(ctx, error)
+                    with error ->
+                        next.OnErrorAsync(ctx, error)
 
                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
                 member _.OnCancelAsync(ctx) = next.OnCancelAsync(ctx) }
@@ -104,9 +104,7 @@ module Core =
                         member _.OnErrorAsync(ctx, err) = task { res.[n] <- Error(ctx, err) }
                         member _.OnCancelAsync(ctx) = next.OnCancelAsync(ctx) }
 
-                let tasks =
-                    handlers
-                    |> Seq.mapi (fun n handler -> handler (obv n))
+                let tasks = handlers |> Seq.mapi (fun n handler -> handler (obv n))
 
                 let! _ = Task.WhenAll(tasks)
 

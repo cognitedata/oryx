@@ -4,10 +4,11 @@ open System
 
 type HttpError =
     {
-      /// The current context, useful for e.g logging
-      Context: HttpContext
-      /// Exception if any
-      Exception: Exception option }
+        /// The current context, useful for e.g logging
+        Context: HttpContext
+        /// Exception if any
+        Exception: Exception option
+    }
 
 
 exception HttpException of HttpError

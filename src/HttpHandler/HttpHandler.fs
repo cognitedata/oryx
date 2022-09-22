@@ -128,8 +128,7 @@ module HttpHandler =
 
     /// Handler that skips (ignores) the content and outputs unit.
     let ignoreContent<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<unit> =
-        source
-        |> Core.ignoreContent<HttpContext, 'TSource>
+        source |> Core.ignoreContent<HttpContext, 'TSource>
 
     let replace<'TSource, 'TResult> = Core.replace<HttpContext, 'TSource, 'TResult>
 
@@ -144,8 +143,7 @@ module HttpHandler =
                         try
                             let item = parser stream
                             return! next.OnSuccessAsync(ctx, item)
-                        with
-                        | ex ->
+                        with ex ->
                             ctx.Request.Metrics.Counter Metric.DecodeErrorInc ctx.Request.Labels 1L
                             raise ex
                     }
@@ -168,8 +166,7 @@ module HttpHandler =
                         try
                             let! item = parser stream
                             return! next.OnSuccessAsync(ctx, item)
-                        with
-                        | ex ->
+                        with ex ->
                             ctx.Request.Metrics.Counter Metric.DecodeErrorInc ctx.Request.Labels 1L
                             raise ex
                     }
@@ -236,8 +233,8 @@ module HttpHandler =
                             task {
                                 try
                                     return! tokenProvider ctx.Request.CancellationToken
-                                with
-                                | ex -> return Error ex
+                                with ex ->
+                                    return Error ex
                             }
 
                         match result with
