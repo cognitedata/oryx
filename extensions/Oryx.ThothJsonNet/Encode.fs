@@ -29,9 +29,7 @@ module Encode =
 
     /// Encode a string/string Map.
     let inline propertyBag (values: Map<string, string>) =
-        values
-        |> Map.map (fun _ value -> Encode.string value)
-        |> Encode.dict
+        values |> Map.map (fun _ value -> Encode.string value) |> Encode.dict
 
     /// Encode optional property.
     let optionalProperty<'T> (name: string) (encoder: 'T -> JsonValue) (value: 'T option) =
