@@ -18,9 +18,7 @@ module Fetch =
     type FormUrlEncodedContent with
 
         static member FromTuples values =
-            let pairs =
-                values
-                |> Seq.map (fun (k, v) -> KeyValuePair<string, string>(k, v))
+            let pairs = values |> Seq.map (fun (k, v) -> KeyValuePair<string, string>(k, v))
 
             let content = new FormUrlEncodedContent(pairs)
             content.Headers.ContentType <- MediaTypeHeaderValue "application/x-www-form-urlencoded"
@@ -53,9 +51,7 @@ module Fetch =
             if not (client.DefaultRequestHeaders.Contains header) then
                 request.Headers.Add(header, value)
 
-        let content =
-            ctx.Request.ContentBuilder
-            |> Option.map (fun builder -> builder ())
+        let content = ctx.Request.ContentBuilder |> Option.map (fun builder -> builder ())
 
         match content with
         | Some content -> request.Content <- content
@@ -94,10 +90,7 @@ module Fetch =
                                     .Add(PlaceHolder.Url, Value.Url request.RequestUri)
                                     .Add(PlaceHolder.Elapsed, Value.Number timer.ElapsedMilliseconds)
 
-                            let headers =
-                                response.Headers
-                                |> Seq.map (|KeyValue|)
-                                |> Map.ofSeq
+                            let headers = response.Headers |> Seq.map (|KeyValue|) |> Map.ofSeq
 
                             let! result =
                                 next.OnSuccessAsync(
@@ -113,8 +106,8 @@ module Fetch =
 
                             response.Dispose()
                             return result
-                        with
-                        | ex when not (ex :? HttpException) -> return! next.OnErrorAsync(ctx, HttpException(ctx, ex))
+                        with ex when not (ex :? HttpException) ->
+                            return! next.OnErrorAsync(ctx, HttpException(ctx, ex))
                     }
 
                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)

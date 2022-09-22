@@ -75,9 +75,7 @@ let ``Multiple handlers in builder is Ok`` () =
 let ``Get value 2 is Ok`` () =
     task {
         // Arrange
-        let request =
-            http { yield 42 }
-            |> HttpHandler.bind (fun a -> http { return a + 1 })
+        let request = http { yield 42 } |> HttpHandler.bind (fun a -> http { return a + 1 })
 
         // Act
         let! result = request |> runUnsafeAsync
