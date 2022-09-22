@@ -5,8 +5,8 @@ group Main
     framework: netstandard2.0
 
     nuget FSharp.Core ~> 6
-    nuget Microsoft.Extensions.Logging ~> 5
-    nuget Microsoft.Extensions.DependencyInjection ~> 5
+    nuget Microsoft.Extensions.Logging ~> 6
+    nuget Microsoft.Extensions.DependencyInjection ~> 6
     nuget FsToolkit.ErrorHandling ~> 2
 
 group Json
