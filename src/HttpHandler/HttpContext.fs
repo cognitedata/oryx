@@ -61,49 +61,51 @@ type UrlBuilder = HttpRequest -> string
 
 and HttpRequest =
     {
-      /// HTTP client to use for sending the request.
-      HttpClient: unit -> HttpClient
-      /// HTTP method to be used.
-      Method: HttpMethod
-      /// Getter for content to be sent as body of the request. We use a getter so content may be re-created for
-      /// retries.
-      ContentBuilder: (unit -> HttpContent) option
-      /// Query parameters
-      Query: seq<struct (string * string)>
-      /// Response type. JSON or Protobuf
-      ResponseType: ResponseType
-      /// Map of headers to be sent
-      Headers: Map<string, string>
-      /// A function that builds the request URL based on the collected extra info.
-      UrlBuilder: UrlBuilder
-      /// Optional CancellationToken for cancelling the request.
-      CancellationToken: CancellationToken
-      /// Optional Logger for logging requests.
-      Logger: ILogger option
-      /// The LogLevel to log at
-      LogLevel: LogLevel
-      /// Logging format string
-      LogFormat: string
-      /// Optional Metrics for recording metrics.
-      Metrics: IMetrics
-      /// Optional Labels to label the request
-      Labels: Generic.IDictionary<string, string>
-      /// Extra state used to e.g build the URL. Clients are free to utilize this property for adding extra
-      /// information to the context.
-      Items: Map<string, Value>
-      /// The given `HttpCompletionOption` to use for the request.
-      CompletionMode: HttpCompletionOption }
+        /// HTTP client to use for sending the request.
+        HttpClient: unit -> HttpClient
+        /// HTTP method to be used.
+        Method: HttpMethod
+        /// Getter for content to be sent as body of the request. We use a getter so content may be re-created for
+        /// retries.
+        ContentBuilder: (unit -> HttpContent) option
+        /// Query parameters
+        Query: seq<struct (string * string)>
+        /// Response type. JSON or Protobuf
+        ResponseType: ResponseType
+        /// Map of headers to be sent
+        Headers: Map<string, string>
+        /// A function that builds the request URL based on the collected extra info.
+        UrlBuilder: UrlBuilder
+        /// Optional CancellationToken for cancelling the request.
+        CancellationToken: CancellationToken
+        /// Optional Logger for logging requests.
+        Logger: ILogger option
+        /// The LogLevel to log at
+        LogLevel: LogLevel
+        /// Logging format string
+        LogFormat: string
+        /// Optional Metrics for recording metrics.
+        Metrics: IMetrics
+        /// Optional Labels to label the request
+        Labels: Generic.IDictionary<string, string>
+        /// Extra state used to e.g build the URL. Clients are free to utilize this property for adding extra
+        /// information to the context.
+        Items: Map<string, Value>
+        /// The given `HttpCompletionOption` to use for the request.
+        CompletionMode: HttpCompletionOption
+    }
 
 type HttpResponse =
     {
-      /// Map of received headers
-      Headers: Map<string, seq<string>>
-      /// Http status code
-      StatusCode: HttpStatusCode
-      /// True if response is successful
-      IsSuccessStatusCode: bool
-      /// Reason phrase which typically is sent by servers together with the status code
-      ReasonPhrase: string }
+        /// Map of received headers
+        Headers: Map<string, seq<string>>
+        /// Http status code
+        StatusCode: HttpStatusCode
+        /// True if response is successful
+        IsSuccessStatusCode: bool
+        /// Reason phrase which typically is sent by servers together with the status code
+        ReasonPhrase: string
+    }
 
 type HttpContext =
     { Request: HttpRequest
@@ -158,10 +160,7 @@ module HttpContext =
             | _ -> ctxs
 
         // Use the max status code.
-        let statusCode =
-            ctxs
-            |> List.map (fun ctx -> ctx.Response.StatusCode)
-            |> List.max
+        let statusCode = ctxs |> List.map (fun ctx -> ctx.Response.StatusCode) |> List.max
 
         // Concat the reason phrases (if they are different)
         let reasonPhrase =
@@ -187,10 +186,7 @@ module HttpContext =
                 (fun state hdr -> merge state hdr (fun _ (a, b) -> if a = b then a else Seq.append a b))
                 Map.empty
 
-        { Request =
-            ctxs
-            |> Seq.map (fun ctx -> ctx.Request)
-            |> Seq.head
+        { Request = ctxs |> Seq.map (fun ctx -> ctx.Request) |> Seq.head
           Response =
             { Headers = headers
               StatusCode = statusCode

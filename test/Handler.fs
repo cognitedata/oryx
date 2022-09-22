@@ -48,10 +48,7 @@ let ``Catching ok is Ok`` () =
         // Arrange
         let errorHandler = badRequestHandler 420
 
-        let req =
-            singleton 42
-            |> map (fun a -> a * 10)
-            |> catch errorHandler
+        let req = singleton 42 |> map (fun a -> a * 10) |> catch errorHandler
 
         // Act
         let! content = req |> runUnsafeAsync
@@ -66,10 +63,7 @@ let ``Catching errors is Ok`` () =
         // Arrange
         let errorHandler = badRequestHandler 420
 
-        let req =
-            singleton 42
-            |> error "failed"
-            |> catch errorHandler
+        let req = singleton 42 |> error "failed" |> catch errorHandler
 
         // Act
         let! content = req |> runUnsafeAsync
@@ -84,10 +78,7 @@ let ``Catching panic is not possible`` () =
         // Arrange
         let errorHandler = badRequestHandler 420
 
-        let req =
-            singleton 42
-            |> catch errorHandler
-            |> panic "panic!"
+        let req = singleton 42 |> catch errorHandler |> panic "panic!"
 
         // Act
         let! result = req |> runAsync
@@ -105,10 +96,7 @@ let ``Not catching errors is Error`` () =
         let errorHandler = badRequestHandler 420
 
         let handleError source =
-            source
-            |> error "first!"
-            |> catch errorHandler
-            |> error "second!"
+            source |> error "first!" |> catch errorHandler |> error "second!"
 
         let req = singleton 42 |> handleError
 
@@ -126,11 +114,7 @@ let ``Sequential handlers is Ok`` () =
     task {
         // Arrange
         let req =
-            sequential [ singleton 1
-                         singleton 2
-                         singleton 3
-                         singleton 4
-                         singleton 5 ]
+            sequential [ singleton 1; singleton 2; singleton 3; singleton 4; singleton 5 ]
 
         // Act
         let! content = req |> runUnsafeAsync
@@ -144,11 +128,7 @@ let ``Sequential handlers with an Error is Error`` () =
     task {
         // Arrange
         let req =
-            sequential [ singleton 1
-                         singleton 2
-                         ofError "fail"
-                         singleton 4
-                         singleton 5 ]
+            sequential [ singleton 1; singleton 2; ofError "fail"; singleton 4; singleton 5 ]
 
         // Act
         let! result = req |> runAsync
@@ -166,11 +146,7 @@ let ``Concurrent handlers is Ok`` () =
     task {
         // Arrange
         let req =
-            concurrent [ singleton 1
-                         singleton 2
-                         singleton 3
-                         singleton 4
-                         singleton 5 ]
+            concurrent [ singleton 1; singleton 2; singleton 3; singleton 4; singleton 5 ]
 
         // Act
         let! result = req |> runAsync
@@ -188,11 +164,7 @@ let ``Concurrent handlers with an Error is Error`` () =
     task {
         // Arrange
         let req =
-            concurrent [ singleton 1
-                         singleton 2
-                         ofError "fail"
-                         singleton 4
-                         singleton 5 ]
+            concurrent [ singleton 1; singleton 2; ofError "fail"; singleton 4; singleton 5 ]
 
         // Act
         let! result = req |> runAsync
@@ -221,12 +193,7 @@ let ``Chunked handlers is Ok`` (PositiveInt chunkSize) (PositiveInt maxConcurren
 let ``Choose handlers is Ok`` () =
     task {
         // Arrange
-        let req =
-            httpRequest
-            |> choose [ error "1"
-                        replace 2
-                        error "3"
-                        replace 4 ]
+        let req = httpRequest |> choose [ error "1"; replace 2; error "3"; replace 4 ]
 
         // Act
         let! result = req |> runUnsafeAsync
@@ -238,11 +205,7 @@ let ``Choose panic is Error`` () =
     task {
         // Arrange
         let req: HttpHandler<int> =
-            httpRequest
-            |> choose [ error "1"
-                        panic "2"
-                        error "3"
-                        replace 4 ]
+            httpRequest |> choose [ error "1"; panic "2"; error "3"; replace 4 ]
 
         // Act
         try
@@ -259,11 +222,7 @@ let ``Choose panic is not skipped`` () =
         // Arrange
         let req =
             httpRequest
-            |> choose [ error "1"
-                        choose [ panic "2"
-                                 replace 42
-                                 error "3" ]
-                        replace 4 ]
+            |> choose [ error "1"; choose [ panic "2"; replace 42; error "3" ]; replace 4 ]
 
         // Act
         try

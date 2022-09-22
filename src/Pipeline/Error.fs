@@ -21,8 +21,7 @@ module Error =
                         | false ->
                             try
                                 return! next.OnSuccessAsync(ctx, content)
-                            with
-                            | err ->
+                            with err ->
                                 stopped <- true
                                 return! next.OnErrorAsync(ctx, err)
                         | _ -> ()
@@ -58,8 +57,8 @@ module Error =
                     task {
                         try
                             return! next.OnSuccessAsync(ctx, content)
-                        with
-                        | err -> return! next.OnErrorAsync(ctx, err)
+                        with err ->
+                            return! next.OnErrorAsync(ctx, err)
                     }
 
                 member _.OnErrorAsync(ctx, err) =
