@@ -106,10 +106,10 @@ module Error =
                                 member _.OnErrorAsync(_, error) =
                                     task {
                                         match error, state with
-                                        | PanicException (_), st when st <> ChooseState.Panic ->
+                                        | PanicException(_), st when st <> ChooseState.Panic ->
                                             state <- ChooseState.Panic
                                             return! next.OnErrorAsync(ctx, error)
-                                        | SkipException (_), st when st = ChooseState.NoError ->
+                                        | SkipException(_), st when st = ChooseState.NoError ->
                                             // Flag error, but do not record skips.
                                             state <- ChooseState.Error
                                         | _, ChooseState.Panic ->

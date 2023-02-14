@@ -78,7 +78,7 @@ let badRequestHandler<'TSource> (response: 'TSource) (ctx: HttpContext) (err: ex
     fun next ->
         task {
             match err with
-            | TestException (code, _) ->
+            | TestException(code, _) ->
                 match enum<HttpStatusCode> code with
                 | HttpStatusCode.BadRequest -> return! next.OnSuccessAsync(ctx, response)
                 | _ -> raise (HttpException(ctx, err))

@@ -15,7 +15,7 @@ type HttpHandler<'TResult> = Pipeline<HttpContext, 'TResult>
 exception HttpException of (HttpContext * exn) with
     override this.ToString() =
         match this :> exn with
-        | HttpException (_, err) -> err.ToString()
+        | HttpException(_, err) -> err.ToString()
         | _ -> failwith "This should not never happen."
 
 [<AutoOpen>]
@@ -46,12 +46,18 @@ module HttpHandler =
     /// Add HTTP header to context.
     let withHeader (header: string * string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         source
-        |> update (fun ctx -> { ctx with Request = { ctx.Request with Headers = ctx.Request.Headers.Add header } })
+        |> update (fun ctx ->
+            { ctx with
+                Request =
+                    { ctx.Request with
+                        Headers = ctx.Request.Headers.Add header } })
 
     /// Replace all headers in the context.
     let withHeaders (headers: Map<string, string>) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         source
-        |> update (fun ctx -> { ctx with Request = { ctx.Request with Headers = headers } })
+        |> update (fun ctx ->
+            { ctx with
+                Request = { ctx.Request with Headers = headers } })
 
     /// Helper for setting Bearer token as Authorization header.
     let withBearerToken (token: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
@@ -61,27 +67,45 @@ module HttpHandler =
     /// Set the HTTP client to use for the requests.
     let withHttpClient<'TSource> (client: HttpClient) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         source
-        |> update (fun ctx -> { ctx with Request = { ctx.Request with HttpClient = (fun () -> client) } })
+        |> update (fun ctx ->
+            { ctx with
+                Request =
+                    { ctx.Request with
+                        HttpClient = (fun () -> client) } })
 
     /// Set the HTTP client factory to use for the requests.
     let withHttpClientFactory (factory: unit -> HttpClient) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         source
-        |> update (fun ctx -> { ctx with Request = { ctx.Request with HttpClient = factory } })
+        |> update (fun ctx ->
+            { ctx with
+                Request =
+                    { ctx.Request with
+                        HttpClient = factory } })
 
     /// Set the URL builder to use.
     let withUrlBuilder (builder: HttpRequest -> string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         source
-        |> update (fun ctx -> { ctx with Request = { ctx.Request with UrlBuilder = builder } })
+        |> update (fun ctx ->
+            { ctx with
+                Request =
+                    { ctx.Request with
+                        UrlBuilder = builder } })
 
     /// Set a cancellation token to use for the requests.
     let withCancellationToken (token: CancellationToken) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         source
-        |> update (fun ctx -> { ctx with Request = { ctx.Request with CancellationToken = token } })
+        |> update (fun ctx ->
+            { ctx with
+                Request =
+                    { ctx.Request with
+                        CancellationToken = token } })
 
     /// Set the metrics (IMetrics) to use.
     let withMetrics (metrics: IMetrics) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         source
-        |> update (fun ctx -> { ctx with Request = { ctx.Request with Metrics = metrics } })
+        |> update (fun ctx ->
+            { ctx with
+                Request = { ctx.Request with Metrics = metrics } })
 
     /// Add query parameters to context. These parameters will be added
     /// to the query string of requests that uses this context.
@@ -89,7 +113,10 @@ module HttpHandler =
         fun next ->
             { new IHttpNext<'TSource> with
                 member _.OnSuccessAsync(ctx, content) =
-                    let ctx' = { ctx with Request = { ctx.Request with Query = query } }
+                    let ctx' =
+                        { ctx with
+                            Request = { ctx.Request with Query = query } }
+
                     next.OnSuccessAsync(ctx', content)
 
                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
@@ -180,7 +207,12 @@ module HttpHandler =
         fun next ->
             { new IHttpNext<'TSource> with
                 member _.OnSuccessAsync(ctx, content) =
-                    let ctx' = { ctx with Request = { ctx.Request with ResponseType = respType } }
+                    let ctx' =
+                        { ctx with
+                            Request =
+                                { ctx.Request with
+                                    ResponseType = respType } }
+
                     next.OnSuccessAsync(ctx', content)
 
                 member _.OnErrorAsync(ctx, exn) = next.OnErrorAsync(ctx, exn)
@@ -191,7 +223,8 @@ module HttpHandler =
     /// the `GET`, `POST`, `PUT`, `DELETE`, or `OPTIONS` HTTP handlers instead of this one.
     let withMethod<'TSource> (method: HttpMethod) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         let mapper ctx =
-            { ctx with Request = { ctx.Request with Method = method } }
+            { ctx with
+                Request = { ctx.Request with Method = method } }
 
         update mapper source
 
@@ -244,7 +277,9 @@ module HttpHandler =
                             return!
                                 next.OnSuccessAsync(
                                     { ctx with
-                                        Request = { ctx.Request with Headers = ctx.Request.Headers.Add(name, value) } },
+                                        Request =
+                                            { ctx.Request with
+                                                Headers = ctx.Request.Headers.Add(name, value) } },
                                     content
                                 )
 
@@ -269,7 +304,10 @@ module HttpHandler =
         : HttpHandler<'TSource> =
 
         let mapper ctx =
-            { ctx with Request = { ctx.Request with CompletionMode = completionMode } }
+            { ctx with
+                Request =
+                    { ctx.Request with
+                        CompletionMode = completionMode } }
 
         update mapper source
 
@@ -278,7 +316,10 @@ module HttpHandler =
     /// this context.
     let withContent<'TSource> (builder: unit -> HttpContent) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         let mapper ctx =
-            { ctx with Request = { ctx.Request with ContentBuilder = Some builder } }
+            { ctx with
+                Request =
+                    { ctx.Request with
+                        ContentBuilder = Some builder } }
 
         update mapper source
 
