@@ -114,7 +114,9 @@ type HttpContext =
 [<RequireQualifiedAccess>]
 module HttpContext =
     let private fileVersion =
-        Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+        Assembly
+            .GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             .InformationalVersion
 
     let defaultLogFormat =

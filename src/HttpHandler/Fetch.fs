@@ -47,7 +47,7 @@ module Fetch =
             | ResponseType.JsonValue -> "Accept", "application/json"
             | ResponseType.Protobuf -> "Accept", "application/protobuf"
 
-        for KeyValue (header, value) in ctx.Request.Headers.Add(acceptHeader) do
+        for KeyValue(header, value) in ctx.Request.Headers.Add(acceptHeader) do
             if not (client.DefaultRequestHeaders.Contains header) then
                 request.Headers.Add(header, value)
 
@@ -84,9 +84,7 @@ module Fetch =
                                 (float timer.ElapsedMilliseconds)
 
                             let items =
-                                ctx
-                                    .Request
-                                    .Items
+                                ctx.Request.Items
                                     .Add(PlaceHolder.Url, Value.Url request.RequestUri)
                                     .Add(PlaceHolder.Elapsed, Value.Number timer.ElapsedMilliseconds)
 

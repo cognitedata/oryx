@@ -53,12 +53,17 @@ module Logging =
     /// all requests.
     let withLogger (logger: ILogger) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         source
-        |> update (fun ctx -> { ctx with Request = { ctx.Request with Logger = Some logger } })
+        |> update (fun ctx ->
+            { ctx with
+                Request =
+                    { ctx.Request with
+                        Logger = Some logger } })
 
     /// Set the log level to use (default is LogLevel.None).
     let withLogLevel (logLevel: LogLevel) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         let mapper ctx =
-            { ctx with Request = { ctx.Request with LogLevel = logLevel } }
+            { ctx with
+                Request = { ctx.Request with LogLevel = logLevel } }
 
         update mapper source
 
@@ -66,14 +71,18 @@ module Logging =
     let withLogMessage<'TSource> (msg: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         let mapper ctx =
             { ctx with
-                Request = { ctx.Request with Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } }
+                Request =
+                    { ctx.Request with
+                        Items = ctx.Request.Items.Add(PlaceHolder.Message, Value.String msg) } }
 
         update mapper source
 
     // Set the log format to use.
     let withLogFormat (format: string) (source: HttpHandler<'TSource>) : HttpHandler<'TSource> =
         source
-        |> update (fun ctx -> { ctx with Request = { ctx.Request with LogFormat = format } })
+        |> update (fun ctx ->
+            { ctx with
+                Request = { ctx.Request with LogFormat = format } })
 
     /// Logger handler with message. Should be composed in pipeline after both the `fetch` handler, and the `withError`
     /// in order to log both requests, responses and errors.
@@ -92,7 +101,7 @@ module Logging =
                 member _.OnErrorAsync(ctx, error) =
                     task {
                         match error with
-                        | HttpException (ctx, error) ->
+                        | HttpException(ctx, error) ->
                             match ctx.Request.LogLevel with
                             | LogLevel.None -> ()
                             | _ -> log' LogLevel.Error ctx (Some error)

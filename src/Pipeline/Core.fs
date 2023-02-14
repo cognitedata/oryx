@@ -115,7 +115,7 @@ module Core =
                     let results, contents = results |> List.unzip
                     let bs = merge results
                     return! next.OnSuccessAsync(bs, contents)
-                | Error (_, err) -> raise err
+                | Error(_, err) -> raise err
             }
 
     /// Run list pipelines sequentially.
@@ -143,7 +143,7 @@ module Core =
                     let results, contents = results |> List.unzip
                     let bs = merge results
                     return! next.OnSuccessAsync(bs, contents)
-                | Error (_, err) -> raise err
+                | Error(_, err) -> raise err
             }
 
     /// Chunks a sequence of Middlewares into a combination of sequential and concurrent batches.
@@ -177,7 +177,7 @@ module Core =
         fun next ->
             task {
                 match cache with
-                | Some (ctx, content) -> return! next.OnSuccessAsync(ctx, content)
+                | Some(ctx, content) -> return! next.OnSuccessAsync(ctx, content)
                 | _ ->
                     return!
                         { new IAsyncNext<'TContext, 'TSource> with
