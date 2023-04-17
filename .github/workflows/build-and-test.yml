@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Check formatting
-        run: dotnet fantomas . -r --check
+        run: dotnet fantomas -r --check .
       - name: Build
         run: dotnet build --configuration Release --no-restore
       - name: Test
