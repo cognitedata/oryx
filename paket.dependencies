@@ -7,7 +7,7 @@ group Main
     nuget FSharp.Core >= 6 lowest_matching: true
     nuget Microsoft.Extensions.Logging >= 6 lowest_matching: true
     nuget Microsoft.Extensions.DependencyInjection >= 6 lowest_matching: true
-    nuget FsToolkit.ErrorHandling ~> 3
+    nuget FsToolkit.ErrorHandling ~> 4
 
 group Json
     source https://www.nuget.org/api/v2

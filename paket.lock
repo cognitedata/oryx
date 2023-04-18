@@ -3,7 +3,7 @@ RESTRICTION: == netstandard2.0
 NUGET
   remote: https://www.nuget.org/api/v2
     FSharp.Core (6.0)
-    FsToolkit.ErrorHandling (3.3.1)
+    FsToolkit.ErrorHandling (4.5)
       FSharp.Core (>= 4.7.2)
     Microsoft.Bcl.AsyncInterfaces (7.0)
       System.Threading.Tasks.Extensions (>= 4.5.4)
@@ -144,13 +144,13 @@ NUGET
       System.Runtime.Serialization.Formatters (>= 4.3) - restriction: && (< net20) (>= netstandard1.3) (< netstandard2.0)
       System.Runtime.Serialization.Primitives (>= 4.3) - restriction: || (&& (< net20) (>= netstandard1.0) (< netstandard1.3)) (&& (< net20) (>= netstandard1.3) (< netstandard2.0))
       System.Xml.XmlDocument (>= 4.3) - restriction: && (< net20) (>= netstandard1.3) (< netstandard2.0)
-    Oryx (5.2)
+    Oryx (5.2.1)
       FSharp.Core (>= 6.0) - restriction: >= netstandard2.0
       FsToolkit.ErrorHandling (>= 3.3.1 < 4.0) - restriction: >= netstandard2.0
       Microsoft.Extensions.Logging (>= 6.0) - restriction: >= netstandard2.0
-    Oryx.ThothJsonNet (5.2)
+    Oryx.ThothJsonNet (5.2.1)
       FSharp.Core (>= 6.0) - restriction: >= netstandard2.0
-      Oryx (>= 4.1.1) - restriction: >= netstandard2.0
+      Oryx (>= 5.2) - restriction: >= netstandard2.0
       Thoth.Json.Net (>= 11.0) - restriction: >= netstandard2.0
     runtime.debian.8-x64.runtime.native.System.Security.Cryptography.OpenSsl (4.3.3) - restriction: || (&& (< monotouch) (< net20) (>= netstandard1.6) (< netstandard2.0) (< win8) (< wpa81) (< xamarintvos) (< xamarinwatchos)) (&& (< net20) (>= net46) (< netstandard1.3) (>= netstandard1.6)) (&& (< net20) (>= net46) (< netstandard1.4) (>= netstandard1.6)) (&& (< net20) (< netstandard1.2) (>= netstandard1.6) (< win8)) (&& (< net20) (< netstandard1.3) (>= netstandard1.6) (< win8) (< wpa81)) (&& (< net20) (< netstandard1.4) (>= netstandard1.6) (< win8) (< wpa81)) (&& (< net20) (< netstandard1.5) (>= netstandard1.6) (< win8) (< wpa81)) (&& (< netstandard1.3) (>= netstandard1.6) (>= uap10.0)) (&& (< netstandard1.5) (>= netstandard1.6) (>= uap10.0))
     runtime.debian.9-x64.runtime.native.System.Security.Cryptography.OpenSsl (4.3.3) - restriction: || (&& (< monotouch) (< net20) (>= netstandard1.6) (< netstandard2.0) (< win8) (< wpa81) (< xamarintvos) (< xamarinwatchos)) (&& (< net20) (>= net46) (< netstandard1.3) (>= netstandard1.6)) (&& (< net20) (>= net46) (< netstandard1.4) (>= netstandard1.6)) (&& (< net20) (< netstandard1.2) (>= netstandard1.6) (< win8)) (&& (< net20) (< netstandard1.3) (>= netstandard1.6) (< win8) (< wpa81)) (&& (< net20) (< netstandard1.4) (>= netstandard1.6) (< win8) (< wpa81)) (&& (< net20) (< netstandard1.5) (>= netstandard1.6) (< win8) (< wpa81)) (&& (< netstandard1.3) (>= netstandard1.6) (>= uap10.0)) (&& (< netstandard1.5) (>= netstandard1.6) (>= uap10.0))
@@ -721,7 +721,7 @@ NUGET
       System.Memory (>= 4.5.5)
       System.Runtime.CompilerServices.Unsafe (>= 6.0)
     Microsoft.NETCore.Platforms (6.0)
-    Oryx (5.2)
+    Oryx (5.2.1)
       FSharp.Core (>= 6.0)
       FsToolkit.ErrorHandling (>= 3.3.1 < 4.0)
       Microsoft.Extensions.Logging (>= 6.0)
@@ -773,7 +773,7 @@ NUGET
     Microsoft.Extensions.Primitives (7.0)
       System.Memory (>= 4.5.5)
       System.Runtime.CompilerServices.Unsafe (>= 6.0)
-    Oryx (5.2)
+    Oryx (5.2.1)
       FSharp.Core (>= 6.0)
       FsToolkit.ErrorHandling (>= 3.3.1 < 4.0)
       Microsoft.Extensions.Logging (>= 6.0)
@@ -839,7 +839,7 @@ NUGET
       System.Runtime.CompilerServices.Unsafe (>= 6.0)
     Microsoft.NETCore.Platforms (6.0)
     Newtonsoft.Json (13.0.3)
-    Oryx (5.2)
+    Oryx (5.2.1)
       FSharp.Core (>= 6.0)
       FsToolkit.ErrorHandling (>= 3.3.1 < 4.0)
       Microsoft.Extensions.Logging (>= 6.0)
@@ -1461,7 +1461,7 @@ NUGET
       System.Memory (>= 4.5.5)
       System.Runtime.CompilerServices.Unsafe (>= 6.0)
     Newtonsoft.Json (13.0.3)
-    Oryx (5.2)
+    Oryx (5.2.1)
       FSharp.Core (>= 6.0)
       FsToolkit.ErrorHandling (>= 3.3.1 < 4.0)
       Microsoft.Extensions.Logging (>= 6.0)
