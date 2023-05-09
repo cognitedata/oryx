@@ -20,23 +20,37 @@ jobs:
 
       - name: Setup tools
         run: dotnet tool restore
+      
+      # Download the code signing certificate from github actions
+      - name: Download code signing certificate
+        run: echo -n "${{ secrets.CODE_SIGNING_CERTIFICATE }}" | base64 -w 0 --decode > ./cognite_code_signing.pfx
+      # Pull out the public key. sn only supports extracting the public key, not the private key as well...
+      - name: Extract public key
+        run: echo -n "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -p cognite_code_signing.pfx pub_key.snk
+      # Build with public key. This leaves "space" for a private key signature later.
+      - name: Build for test publish
+        run: dotnet build --configuration Release --no-restore -p:SignAssembly=True -p:AssemblyOriginatorKeyFile="$(realpath pub_key.snk)" -p:DelaySign=True -p:PackageVersion=${GITHUB_REF##*/v} -p:FileVersion=${GITHUB_REF##*/v} -p:InformationalVersion=${GITHUB_REF##*/v}
+      # Sign each library with the private key.
+      - name: Sign Oryx
+        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R src/bin/Release/netstandard2.0/Oryx.dll ./cognite_code_signing.pfx
+      - name: Sign Oryx.Protobuf
+        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R extensions/Oryx.Protobuf/bin/Release/netstandard2.0/Oryx.Protobuf.dll ./cognite_code_signing.pfx
+      - name: Sign Oryx.SystemTextJson
+        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R extensions/Oryx.SystemTextJson/bin/Release/netstandard2.0/Oryx.SystemTextJson.dll ./cognite_code_signing.pfx
+      - name: Sign Oryx.NewtonsoftJson
+        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R extensions/Oryx.NewtonsoftJson/bin/Release/netstandard2.0/Oryx.NewtonsoftJson.dll ./cognite_code_signing.pfx
+      - name: Sign Oryx.ThothJsonNet
+        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R extensions/Oryx.ThothJsonNet/bin/Release/netstandard2.0/Oryx.ThothJsonNet.dll ./cognite_code_signing.pfx
+      # Package without rebuilding the binaries. TargetsForTfmSpecificContentInPackage is a workaround for a bug related to --no-build with fsharp projects.
+      # See https://github.com/dotnet/fsharp/issues/12320
       - name: Dotnet Pack
-        run: dotnet pack -c release -p:PackageVersion=${GITHUB_REF##*/v} -p:FileVersion=${GITHUB_REF##*/v} -p:InformationalVersion=${GITHUB_REF##*/v}
+        run: dotnet pack -c release -p:PackageVersion=${GITHUB_REF##*/v} -p:FileVersion=${GITHUB_REF##*/v} -p:InformationalVersion=${GITHUB_REF##*/v} --no-build --output nuget-packages -p:TargetsForTfmSpecificContentInPackage=
+      # Sign the nuget package itself
+      - name: Sign nuget packages
+        run: dotnet nuget sign nuget-packages/*.nupkg --certificate-path ./cognite_code_signing.pfx --certificate-password ${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }} --timestamper http://timestamp.digicert.com      
 
-      - name: Push Oryx Nuget
-        run: dotnet nuget push src/bin/Release/*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }}
-        continue-on-error: false
-      - name: Push Oryx.NewtonsoftJson Nuget
-        run: dotnet nuget push extensions/Oryx.NewtonsoftJson/bin/Release/*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }}
-        continue-on-error: false
-      - name: Push Oryx.Protobuf Nuget
-        run: dotnet nuget push extensions/Oryx.Protobuf/bin/Release/*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }}
-        continue-on-error: false
-      - name: Push Oryx.SystemTextJson Nuget
-        run: dotnet nuget push extensions/Oryx.SystemTextJson/bin/Release/*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }}
-        continue-on-error: false
-      - name: Push Oryx.ThothJsonNet Nuget
-        run: dotnet nuget push extensions/Oryx.ThothJsonNet/bin/Release/*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }}
+      - name: Push Oryx
+        run: dotnet nuget nuget-packages/*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }}
         continue-on-error: false
 
       - name: Create Release

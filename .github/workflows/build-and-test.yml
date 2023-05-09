@@ -22,34 +22,6 @@ jobs:
         run: dotnet restore
       - name: Check formatting
         run: dotnet fantomas -r --check .
-
-      - name: Download code signing certificate
-        run: echo -n "${{ secrets.CODE_SIGNING_CERTIFICATE }}" | base64 -w 0 --decode > ./cognite_code_signing.pfx
-      - name: Extract public key
-        run: echo -n "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -p cognite_code_signing.pfx pub_key.snk
-      - name: Build for test publish
-        run: dotnet build --configuration Release --no-restore -p:SignAssembly=True -p:AssemblyOriginatorKeyFile="$(realpath pub_key.snk)" -p:DelaySign=True -p:PackageVersion=1.0.0 -p:FileVersion=1.0.0 -p:InformationalVersion=1.0.0
-      - name: Sign Oryx
-        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R src/bin/Release/netstandard2.0/Oryx.dll ./cognite_code_signing.pfx
-      - name: Sign Oryx.Protobuf
-        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R extensions/Oryx.Protobuf/bin/Release/netstandard2.0/Oryx.Protobuf.dll ./cognite_code_signing.pfx
-      - name: Sign Oryx.SystemTextJson
-        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R extensions/Oryx.SystemTextJson/bin/Release/netstandard2.0/Oryx.SystemTextJson.dll ./cognite_code_signing.pfx
-      - name: Sign Oryx.NewtonsoftJson
-        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R extensions/Oryx.NewtonsoftJson/bin/Release/netstandard2.0/Oryx.NewtonsoftJson.dll ./cognite_code_signing.pfx
-      - name: Sign Oryx.ThothJsonNet
-        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R extensions/Oryx.ThothJsonNet/bin/Release/netstandard2.0/Oryx.ThothJsonNet.dll ./cognite_code_signing.pfx
-      - name: Dotnet Pack
-        run: dotnet pack -c release -p:PackageVersion=1.0.0 -p:FileVersion=1.0.0 -p:InformationalVersion=1.0.0 --no-build --output nuget-packages -p:TargetsForTfmSpecificContentInPackage=
-      - name: Sign nuget packages
-        run: dotnet nuget sign nuget-packages/*.nupkg --certificate-path ./cognite_code_signing.pfx --certificate-password ${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }} --timestamper http://timestamp.digicert.com
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: package-test
-          path: nuget-packages/
-          retention-days: 1
-        
       - name: Build
         run: dotnet build --configuration Release --no-restore
       - name: Test
