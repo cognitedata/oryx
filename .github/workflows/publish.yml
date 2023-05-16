@@ -20,7 +20,9 @@ jobs:
 
       - name: Setup tools
         run: dotnet tool restore
-      
+
+      - name: Dotnet restore
+        run: dotnet restore
       # Download the code signing certificate from github actions
       - name: Download code signing certificate
         run: echo -n "${{ secrets.CODE_SIGNING_CERTIFICATE }}" | base64 -w 0 --decode > ./cognite_code_signing.pfx
@@ -47,7 +49,7 @@ jobs:
         run: dotnet pack -c release -p:PackageVersion=${GITHUB_REF##*/v} -p:FileVersion=${GITHUB_REF##*/v} -p:InformationalVersion=${GITHUB_REF##*/v} --no-build --output nuget-packages -p:TargetsForTfmSpecificContentInPackage=
       # Sign the nuget package itself
       - name: Sign nuget packages
-        run: dotnet nuget sign nuget-packages/*.nupkg --certificate-path ./cognite_code_signing.pfx --certificate-password ${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }} --timestamper http://timestamp.digicert.com      
+        run: dotnet nuget sign nuget-packages/*.nupkg --certificate-path ./cognite_code_signing.pfx --certificate-password ${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }} --timestamper http://timestamp.digicert.com
 
       - name: Push Oryx
         run: dotnet nuget nuget-packages/*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }}
