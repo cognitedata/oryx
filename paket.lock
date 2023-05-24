@@ -2,7 +2,7 @@ STORAGE: NONE
 RESTRICTION: == netstandard2.0
 NUGET
   remote: https://www.nuget.org/api/v2
-    FSharp.Core (7.0.300)
+    FSharp.Core (7.0)
     FsToolkit.ErrorHandling (4.6)
       FSharp.Core (>= 4.7.2)
     Microsoft.Bcl.AsyncInterfaces (7.0)
@@ -688,7 +688,7 @@ STORAGE: NONE
 RESTRICTION: == netstandard2.0
 NUGET
   remote: https://www.nuget.org/api/v2
-    FSharp.Core (7.0.300)
+    FSharp.Core (7.0)
     FsToolkit.ErrorHandling (4.6)
       FSharp.Core (>= 4.7.2)
     Google.Protobuf (3.23.1)
@@ -744,7 +744,7 @@ STORAGE: NONE
 RESTRICTION: == netstandard2.0
 NUGET
   remote: https://www.nuget.org/api/v2
-    FSharp.Core (7.0.300)
+    FSharp.Core (7.0)
     FsToolkit.ErrorHandling (4.6)
       FSharp.Core (>= 4.7.2)
     Microsoft.Bcl.AsyncInterfaces (7.0)
@@ -808,7 +808,7 @@ STORAGE: NONE
 RESTRICTION: == netstandard2.0
 NUGET
   remote: https://www.nuget.org/api/v2
-    FSharp.Core (7.0.300)
+    FSharp.Core (7.0)
     FsToolkit.ErrorHandling (4.6)
       FSharp.Core (>= 4.7.2)
     Microsoft.Bcl.AsyncInterfaces (7.0)
@@ -869,7 +869,7 @@ NUGET
     FsCheck.Xunit (2.16.5)
       FsCheck (2.16.5)
       xunit.extensibility.execution (>= 2.2 < 3.0)
-    FSharp.Core (7.0.300) - restriction: >= netstandard1.0
+    FSharp.Core (7.0.300)
     Microsoft.CodeCoverage (17.6) - restriction: || (>= net462) (>= netcoreapp3.1)
     Microsoft.NET.Test.Sdk (17.6)
       Microsoft.CodeCoverage (>= 17.6) - restriction: || (>= net462) (>= netcoreapp3.1)
@@ -1431,7 +1431,7 @@ RESTRICTION: == netstandard2.0
 NUGET
   remote: https://www.nuget.org/api/v2
     Fable.Core (4.0)
-    FSharp.Core (7.0.300)
+    FSharp.Core (7.0)
     FsToolkit.ErrorHandling (4.6)
       FSharp.Core (>= 4.7.2)
     Microsoft.Bcl.AsyncInterfaces (7.0)
