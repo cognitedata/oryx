@@ -4,7 +4,7 @@ group Main
 
     framework: netstandard2.0
 
-    nuget FSharp.Core >= 6 lowest_matching: true
+    nuget FSharp.Core >= 7 lowest_matching: true
     nuget Microsoft.Extensions.Logging >= 6 lowest_matching: true
     nuget Microsoft.Extensions.DependencyInjection >= 6 lowest_matching: true
     nuget FsToolkit.ErrorHandling ~> 4
@@ -15,7 +15,7 @@ group Json
 
     framework: netstandard2.0
 
-    nuget FSharp.Core >= 6 lowest_matching: true
+    nuget FSharp.Core >= 7 lowest_matching: true
     nuget System.Text.Json >= 6 lowest_matching: true
     nuget Oryx
 
@@ -25,7 +25,7 @@ group Newtonsoft
 
     framework: netstandard2.0
 
-    nuget FSharp.Core >= 6 lowest_matching: true
+    nuget FSharp.Core >= 7 lowest_matching: true
     nuget Newtonsoft.Json
     nuget Microsoft.NETCore.Platforms >= 6 lowest_matching: true
     nuget Oryx
@@ -36,7 +36,7 @@ group Thoth
 
     framework: netstandard2.0
 
-    nuget FSharp.Core >= 6 lowest_matching: true
+    nuget FSharp.Core >= 7 lowest_matching: true
     nuget Thoth.Json.Net
     nuget Oryx
 
@@ -46,7 +46,7 @@ group Google
 
     framework: netstandard2.0
 
-    nuget FSharp.Core >= 6 lowest_matching: true
+    nuget FSharp.Core >= 7 lowest_matching: true
     nuget Google.Protobuf ~> 3
     nuget Microsoft.NETCore.Platforms >= 6 lowest_matching: true
     nuget Oryx
@@ -55,7 +55,7 @@ group Test
     source https://www.nuget.org/api/v2
     storage: none
 
-    nuget FSharp.Core >= 6 lowest_matching: true
+    nuget FSharp.Core
     nuget coverlet.msbuild ~> 3
     nuget Unquote ~> 5
     nuget xunit ~> 2
