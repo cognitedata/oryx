@@ -15,11 +15,12 @@ module Logging =
     let private reqex =
         Regex(@"\{(.+?)(\[(.+?)\])?\}", RegexOptions.Multiline ||| RegexOptions.Compiled)
 
-    let private getHeaderValue (headers: Map<string,seq<string>>) (key : string): string =
+    let private getHeaderValue (headers: Map<string, seq<string>>) (key: string) : string =
         match headers.TryGetValue(key) with
-            | (true, v) -> 
-                match Seq.tryHead v with | first -> if first.IsSome then first.Value else String.Empty
-            | (false, _) -> String.Empty
+        | (true, v) ->
+            match Seq.tryHead v with
+            | first -> if first.IsSome then first.Value else String.Empty
+        | (false, _) -> String.Empty
 
     let private log' logLevel ctx content =
         match ctx.Request.Logger with
@@ -43,7 +44,7 @@ module Logging =
                         |> Option.toObj
                         :> _
                     | PlaceHolder.ResponseContent -> content :> _
-                    | PlaceHolder.ResponseHeader -> 
+                    | PlaceHolder.ResponseHeader ->
                         // GroupCollection returns empty string values for indexes beyond what was captured, therefore
                         // we don't cause an exception here if the optional second group was not captured
                         getHeaderValue (ctx.Response.Headers) (match'.Groups.[3].Value) :> _
