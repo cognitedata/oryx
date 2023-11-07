@@ -116,6 +116,9 @@ let ``Get with logging is OK`` () =
                 (task {
                     let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
                     responseMessage.Content <- new PushStreamContent("42")
+                    responseMessage.Headers.Add("test", value="test-value")
+                    responseMessage.Headers.Add("test2", value="not-included-in-log")
+                    responseMessage.Headers.Add("X-Request-ID", value="test-request-id")
                     return responseMessage
                 }))
 
@@ -129,6 +132,7 @@ let ``Get with logging is OK`` () =
             |> withMetrics metrics
             |> withLogger logger
             |> withLogLevel LogLevel.Debug
+            |> withLogFormat (HttpContext.defaultLogFormat + "\n← {ResponseHeader[test]}\n← {ResponseHeader[X-Request-ID]}\n← {ResponseHeader}")
             |> cache
 
         // Act
@@ -143,6 +147,9 @@ let ``Get with logging is OK`` () =
         // Assert
         test <@ logger.Output.Contains "42" @>
         test <@ logger.Output.Contains "http://test.org" @>
+        test <@ logger.Output.Contains "test-value" @>
+        test <@ logger.Output.Contains "test-request-id" @>
+        test <@ logger.Output.Contains "not-included-in-log" = false @>
         test <@ Result.isOk result @>
         test <@ metrics.Retries = 0L @>
         test <@ metrics.Fetches = 1L @>
@@ -164,6 +171,9 @@ let ``Post with logging is OK`` () =
                     retries <- retries + 1
                     let responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
                     responseMessage.Content <- new PushStreamContent("""{ "pong": 42 }""")
+                    responseMessage.Headers.Add("test", value="test-value")
+                    responseMessage.Headers.Add("test2", value="not-included-in-log")
+                    responseMessage.Headers.Add("X-Request-ID", value="test-request-id")
                     return responseMessage
                 }))
 
@@ -179,6 +189,7 @@ let ``Post with logging is OK`` () =
             |> withHeader ("api-key", "test-key")
             |> withLogger (logger)
             |> withLogLevel LogLevel.Debug
+            |> withLogFormat (HttpContext.defaultLogFormat + "\n← {ResponseHeader[test]}\n← {ResponseHeader[X-Request-ID]}\n← {ResponseHeader}")
             |> cache
 
         // Act
@@ -190,6 +201,9 @@ let ``Post with logging is OK`` () =
         test <@ logger.Output.Contains json @>
         test <@ logger.Output.Contains msg @>
         test <@ logger.Output.Contains "http://testing.org" @>
+        test <@ logger.Output.Contains "test-value" @>
+        test <@ logger.Output.Contains "test-request-id" @>
+        test <@ logger.Output.Contains "not-included-in-log" = false @>
         test <@ Result.isOk result @>
         test <@ retries' = 1 @>
     }

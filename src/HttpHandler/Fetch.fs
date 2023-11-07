@@ -59,7 +59,7 @@ module Fetch =
 
         request
 
-    /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{RequestContent}` and `{Elapsed}`
+    /// Fetch content using the given context. Exposes `{Url}`, `{ResponseContent}`, `{ResponseHeader[key]}`, `{RequestContent}` and `{Elapsed}`
     /// to the log format.
     let fetch<'TSource> (source: HttpHandler<'TSource>) : HttpHandler<HttpContent> =
         fun next ->

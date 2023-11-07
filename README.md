@@ -428,6 +428,7 @@ you may use are:
 - `Message` - A user-supplied message using `logWithMessage`.
 - `ResponseContent` - The response content received. Must implement `ToString` to give meaningful output.
 - `RequestContent` - The request content being sent. Must implement `ToString` to give meaningful output.
+- `ResponseHeader[key]` - The response header received, replace `key` with the name of the header field.
 - `Url` - The URL used for fetching.
 
 **Note:** Oryx will not call `.ToString ()` but will hand it over to the `ILogger` for the actual string interpolation,

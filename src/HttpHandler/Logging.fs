@@ -13,7 +13,13 @@ open FSharp.Control.TaskBuilder
 module Logging =
     // Pre-compiled
     let private reqex =
-        Regex(@"\{(.+?)\}", RegexOptions.Multiline ||| RegexOptions.Compiled)
+        Regex(@"\{(.+?)(\[(.+?)\])?\}", RegexOptions.Multiline ||| RegexOptions.Compiled)
+
+    let private getHeaderValue (headers: Map<string,seq<string>>) (key : string): string =
+        match headers.TryGetValue(key) with
+            | (true, v) -> 
+                match Seq.tryHead v with | first -> if first.IsSome then first.Value else String.Empty
+            | (false, _) -> String.Empty
 
     let private log' logLevel ctx content =
         match ctx.Request.Logger with
@@ -37,6 +43,10 @@ module Logging =
                         |> Option.toObj
                         :> _
                     | PlaceHolder.ResponseContent -> content :> _
+                    | PlaceHolder.ResponseHeader -> 
+                        // GroupCollection returns empty string values for indexes beyond what was captured, therefore
+                        // we don't cause an exception here if the optional second group was not captured
+                        getHeaderValue (ctx.Response.Headers) (match'.Groups.[3].Value) :> _
                     | key ->
                         // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
                         // placeholders to the format string.
