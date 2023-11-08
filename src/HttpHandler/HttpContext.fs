@@ -48,6 +48,9 @@ module PlaceHolder =
     let ResponseContent = "ResponseContent"
 
     [<Literal>]
+    let ResponseHeader = "ResponseHeader"
+
+    [<Literal>]
     let Message = "Message"
 
     [<Literal>]
