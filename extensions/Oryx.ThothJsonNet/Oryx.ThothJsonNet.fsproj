@@ -8,6 +8,7 @@
     <Company>Cognite AS</Company>
     <Copyright>Cognite AS</Copyright>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <AssemblyOriginatorKeyFile>$(SolutionDir)/strong_name.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>

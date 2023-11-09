@@ -1,14 +1,19 @@
 on:
+  pull_request:
+    branches: [ master ]
   push:
-    tags:
-      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+    branches: [ master ]
 
 name: Publish Release
 jobs:
   build:
-    name: Create Release
+    name: Build Release Package
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      should-release: ${{ steps.confirm-release.outputs.test }}
+      branch: ${{ steps.get-branch.outputs.branch }}
+      version: ${{ steps.get-version.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,41 +23,75 @@ jobs:
         with:
           dotnet-version: 6.0.200
 
+      - name: Get version
+        id: get-version
+        run: echo "version=$(cat version)" >> $GITHUB_OUTPUT
+        
+      - name: Get branch
+        id: get-branch
+        run: echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
+        
+      - name: Confirm release
+        id: confirm-release
+        run: echo "test=$(git tag --list 'v${{ steps.get-version.outputs.version }}' | wc -l | sed s/\ //g)" >> $GITHUB_OUTPUT
+
       - name: Setup tools
         run: dotnet tool restore
 
       - name: Dotnet restore
         run: dotnet restore
-      # Download the code signing certificate from github actions
-      - name: Download code signing certificate
-        run: echo -n "${{ secrets.CODE_SIGNING_CERTIFICATE }}" | base64 -w 0 --decode > ./cognite_code_signing.pfx
-      # Pull out the public key. sn only supports extracting the public key, not the private key as well...
-      - name: Extract public key
-        run: echo -n "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -p cognite_code_signing.pfx pub_key.snk
-      # Build with public key. This leaves "space" for a private key signature later.
-      - name: Build for test publish
-        run: dotnet build --configuration Release --no-restore -p:SignAssembly=True -p:AssemblyOriginatorKeyFile="$(realpath pub_key.snk)" -p:DelaySign=True -p:PackageVersion=${GITHUB_REF##*/v} -p:FileVersion=${GITHUB_REF##*/v} -p:InformationalVersion=${GITHUB_REF##*/v}
-      # Sign each library with the private key.
-      - name: Sign Oryx
-        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R src/bin/Release/netstandard2.0/Oryx.dll ./cognite_code_signing.pfx
-      - name: Sign Oryx.Protobuf
-        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R extensions/Oryx.Protobuf/bin/Release/netstandard2.0/Oryx.Protobuf.dll ./cognite_code_signing.pfx
-      - name: Sign Oryx.SystemTextJson
-        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R extensions/Oryx.SystemTextJson/bin/Release/netstandard2.0/Oryx.SystemTextJson.dll ./cognite_code_signing.pfx
-      - name: Sign Oryx.NewtonsoftJson
-        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R extensions/Oryx.NewtonsoftJson/bin/Release/netstandard2.0/Oryx.NewtonsoftJson.dll ./cognite_code_signing.pfx
-      - name: Sign Oryx.ThothJsonNet
-        run: echo "${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }}" | sn -R extensions/Oryx.ThothJsonNet/bin/Release/netstandard2.0/Oryx.ThothJsonNet.dll ./cognite_code_signing.pfx
+
+      - name: Build for publish
+        run: dotnet build --configuration Release --no-restore -p:PackageVersion=${{ steps.get-version.outputs.version }} -p:FileVersion=${{ steps.get-version.outputs.version }} -p:InformationalVersion=${{ steps.get-version.outputs.version }}
+
       # Package without rebuilding the binaries. TargetsForTfmSpecificContentInPackage is a workaround for a bug related to --no-build with fsharp projects.
       # See https://github.com/dotnet/fsharp/issues/12320
       - name: Dotnet Pack
-        run: dotnet pack -c release -p:PackageVersion=${GITHUB_REF##*/v} -p:FileVersion=${GITHUB_REF##*/v} -p:InformationalVersion=${GITHUB_REF##*/v} --no-build --output nuget-packages -p:TargetsForTfmSpecificContentInPackage=
-      # Sign the nuget package itself
-      - name: Sign nuget packages
-        run: dotnet nuget sign nuget-packages/*.nupkg --certificate-path ./cognite_code_signing.pfx --certificate-password ${{ secrets.CODE_SIGNING_CERTIFICATE_PASSWORD }} --timestamper http://timestamp.digicert.com
+        run: dotnet pack -c release -p:PackageVersion=${{ steps.get-version.outputs.version }} -p:FileVersion=${{ steps.get-version.outputs.version }} -p:InformationalVersion=${{ steps.get-version.outputs.version }} --no-build --output nuget-packages -p:TargetsForTfmSpecificContentInPackage=
 
-      - name: Push Oryx
-        run: dotnet nuget push nuget-packages/*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }}
+      - name: Package will be released
+        if: ${{ steps.confirm-release.outputs.test == 0 }}
+        run: echo "Will release nuget package"
+
+      - name: Upload nuget packages
+        uses: actions/upload-artifact@v3
+        if: ${{ steps.get-branch.outputs.branch == 'master' && steps.confirm-release.outputs.test == 0 }}
+        with:
+          name: nuget-packages
+          path: nuget-packages/
+          retention-days: 1
+  
+  publish:
+    name: Create Release
+    runs-on: windows-latest
+    environment: CD
+    if: ${{ needs.build.outputs.branch == 'master' && needs.build.outputs.should-release == 0 }}
+    needs:
+      - build
+    steps:
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 6.0.200
+      - name: Download nuget packages
+        uses: actions/download-artifact@v3
+        with:
+          name: nuget-packages
+          path: nuget-packages/
+
+      - name: Sign nuget packages
+        env:
+          CERTIFICATE_HOST: ${{ secrets.CODE_SIGNING_CERT_HOST }}
+          CERTIFICATE_HOST_API_KEY: ${{ secrets.CODE_SIGNING_CERT_HOST_API_KEY }}
+          CERTIFICATE_SHA1_HASH: ${{ secrets.CODE_SIGNING_CERT_SHA1_HASH }}
+          CLIENT_CERTIFICATE: ${{ secrets.CODE_SIGNING_CLIENT_CERT }}
+          CLIENT_CERTIFICATE_PASSWORD: ${{ secrets.CODE_SIGNING_CLIENT_CERT_PASSWORD }}
+        uses: cognitedata/code-sign-action/@v2
+        with:
+          path-to-binary: 'nuget-packages/'
+
+      - name: Push nuget packages
+        run: dotnet nuget push .\nuget-packages\*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }}
         continue-on-error: false
 
       - name: Create Release
@@ -60,6 +99,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: v${{ needs.build.outputs.version }}
+          release_name: Release v${{ needs.build.outputs.version }}
           draft: false
+          prerelease: false
