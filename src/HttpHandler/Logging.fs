@@ -24,7 +24,7 @@ module Logging =
         index <- index + 1
         index
 
-    let replacer (matched: Match) : string =
+    let replacer (_: Match) : string =
         $"{{{PlaceHolder.ResponseHeader}__{incrementAndReturn (&placeholderCounter)}}}"
 
     let private getHeaderValue (headers: Map<string, seq<string>>) (key: string) : string =
