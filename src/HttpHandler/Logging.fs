@@ -18,13 +18,13 @@ module Logging =
     let private loggerFormatRegex =
         Regex($@"{{{PlaceHolder.ResponseHeader}\[(.+?)\]}}", RegexOptions.Multiline ||| RegexOptions.Compiled)
 
-    let mutable placeholderCounter = 0
+    let mutable private placeholderCounter = 0
 
     let private incrementAndReturn (index: byref<int>) : int =
         index <- index + 1
         index
 
-    let replacer (_: Match) : string =
+    let private replacer (_: Match) : string =
         $"{{{PlaceHolder.ResponseHeader}__{incrementAndReturn (&placeholderCounter)}}}"
 
     let private getHeaderValue (headers: Map<string, seq<string>>) (key: string) : string =
