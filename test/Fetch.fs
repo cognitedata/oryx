@@ -110,6 +110,7 @@ let ``Get with logging is OK`` () =
         // Arrange
         let metrics = TestMetrics()
         let logger = new TestLogger<string>()
+        let msg = "custom message"
 
         let stub =
             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>(fun request token ->
@@ -124,18 +125,30 @@ let ``Get with logging is OK`` () =
 
         let client = new HttpClient(new HttpMessageHandlerStub(stub))
 
+        let logPlaceholders =
+            String.Join(
+                "\n← ",
+                [| "ResponseHeader[test]"
+                   "Message"
+                   "ResponseHeader[missing-key]"
+                   "ResponseHeader[X-Request-ID]"
+                   "ResponseHeader"
+                   "ResponseHeader["
+                   "ResponseHeader]"
+                   "ResponseHeader[[]]" |]
+                |> Array.map (fun x -> $"{{{x}}}")
+            )
+
         let ctx =
             httpRequest
             |> withHttpClient client
             |> withUrlBuilder (fun _ -> "http://test.org/")
             |> withHeader ("api-key", "test-key")
+            |> withLogMessage (msg)
             |> withMetrics metrics
             |> withLogger logger
             |> withLogLevel LogLevel.Debug
-            |> withLogFormat (
-                HttpContext.defaultLogFormat
-                + "\n← {ResponseHeader[test]}\n← {ResponseHeader[X-Request-ID]}\n← {ResponseHeader}"
-            )
+            |> withLogFormat (HttpContext.defaultLogFormat + $"\n← {logPlaceholders}\n← end")
             |> cache
 
         // Act
@@ -150,8 +163,7 @@ let ``Get with logging is OK`` () =
         // Assert
         test <@ logger.Output.Contains "42" @>
         test <@ logger.Output.Contains "http://test.org" @>
-        test <@ logger.Output.Contains "test-value" @>
-        test <@ logger.Output.Contains "test-request-id" @>
+        test <@ logger.Output.Contains $"test-value\n← {msg}\n← \n← test-request-id\n← \n← \n← \n← \n← end" @>
         test <@ logger.Output.Contains "not-included-in-log" = false @>
         test <@ Result.isOk result @>
         test <@ metrics.Retries = 0L @>
@@ -185,6 +197,20 @@ let ``Post with logging is OK`` () =
         let content () =
             new StringableContent(json) :> HttpContent
 
+        let logPlaceholders =
+            String.Join(
+                "\n← ",
+                [| "ResponseHeader[test]"
+                   "Message"
+                   "ResponseHeader[missing-key]"
+                   "ResponseHeader[X-Request-ID]"
+                   "ResponseHeader"
+                   "ResponseHeader["
+                   "ResponseHeader]"
+                   "ResponseHeader[[]]" |]
+                |> Array.map (fun x -> $"{{{x}}}")
+            )
+
         let ctx =
             httpRequest
             |> withHttpClientFactory (fun () -> client)
@@ -192,10 +218,7 @@ let ``Post with logging is OK`` () =
             |> withHeader ("api-key", "test-key")
             |> withLogger (logger)
             |> withLogLevel LogLevel.Debug
-            |> withLogFormat (
-                HttpContext.defaultLogFormat
-                + "\n← {ResponseHeader[test]}\n← {ResponseHeader[X-Request-ID]}\n← {ResponseHeader}"
-            )
+            |> withLogFormat (HttpContext.defaultLogFormat + $"\n← {logPlaceholders}\n← end")
             |> cache
 
         // Act
@@ -207,8 +230,7 @@ let ``Post with logging is OK`` () =
         test <@ logger.Output.Contains json @>
         test <@ logger.Output.Contains msg @>
         test <@ logger.Output.Contains "http://testing.org" @>
-        test <@ logger.Output.Contains "test-value" @>
-        test <@ logger.Output.Contains "test-request-id" @>
+        test <@ logger.Output.Contains $"test-value\n← {msg}\n← \n← test-request-id\n← \n← \n← \n← \n← end" @>
         test <@ logger.Output.Contains "not-included-in-log" = false @>
         test <@ Result.isOk result @>
         test <@ retries' = 1 @>

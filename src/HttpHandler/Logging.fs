@@ -15,6 +15,15 @@ module Logging =
     let private reqex =
         Regex(@"\{(.+?)(\[(.+?)\])?\}", RegexOptions.Multiline ||| RegexOptions.Compiled)
 
+    let mutable placeholderCounter = 0
+
+    let private incrementAndReturn (index: byref<int>) : int =
+        index <- index + 1
+        index
+
+    let replacer (matched: Match) : string =
+        $"{{{PlaceHolder.ResponseHeader}__{incrementAndReturn (&placeholderCounter)}}}"
+
     let private getHeaderValue (headers: Map<string, seq<string>>) (key: string) : string =
         match headers.TryGetValue(key) with
         | (true, v) ->
@@ -57,7 +66,16 @@ module Logging =
                 |> Array.ofSeq
 
             let level, values = logLevel, getValues content
-            logger.Log(level, format, values)
+
+            let formatCompatibilityString =
+                Regex.Replace(
+                    format,
+                    $@"{{{PlaceHolder.ResponseHeader}\[(.+?)\]}}",
+                    replacer,
+                    RegexOptions.Multiline ||| RegexOptions.Compiled
+                )
+
+            logger.Log(level, formatCompatibilityString, values)
         | _ -> ()
 
     /// Set the logger (ILogger) to use. Usually you would use `HttpContext.withLogger` instead to set the logger for
