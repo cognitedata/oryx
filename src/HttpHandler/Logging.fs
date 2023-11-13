@@ -15,6 +15,9 @@ module Logging =
     let private reqex =
         Regex(@"\{(.+?)(\[(.+?)\])?\}", RegexOptions.Multiline ||| RegexOptions.Compiled)
 
+    let private loggerFormatRegex =
+        Regex($@"{{{PlaceHolder.ResponseHeader}\[(.+?)\]}}", RegexOptions.Multiline ||| RegexOptions.Compiled)
+
     let mutable placeholderCounter = 0
 
     let private incrementAndReturn (index: byref<int>) : int =
@@ -67,13 +70,7 @@ module Logging =
 
             let level, values = logLevel, getValues content
 
-            let formatCompatibilityString =
-                Regex.Replace(
-                    format,
-                    $@"{{{PlaceHolder.ResponseHeader}\[(.+?)\]}}",
-                    replacer,
-                    RegexOptions.Multiline ||| RegexOptions.Compiled
-                )
+            let formatCompatibilityString = loggerFormatRegex.Replace(format, replacer)
 
             logger.Log(level, formatCompatibilityString, values)
         | _ -> ()
