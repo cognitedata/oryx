@@ -5,6 +5,7 @@ namespace Oryx
 
 open System
 open System.Text.RegularExpressions
+open System.Threading
 
 open Microsoft.Extensions.Logging
 open FSharp.Control.TaskBuilder
@@ -14,6 +15,14 @@ module Logging =
     // Pre-compiled
     let private reqex =
         Regex(@"\{(.+?)(\[(.+?)\])?\}", RegexOptions.Multiline ||| RegexOptions.Compiled)
+
+    let private loggerFormatRegex =
+        Regex($@"{{{PlaceHolder.ResponseHeader}\[(.+?)\]}}", RegexOptions.Multiline ||| RegexOptions.Compiled)
+
+    let mutable private placeholderCounter = 0
+
+    let private replacer (_: Match) : string =
+        $"{{{PlaceHolder.ResponseHeader}__{Interlocked.Increment(&placeholderCounter)}}}"
 
     let private getHeaderValue (headers: Map<string, seq<string>>) (key: string) : string =
         match headers.TryGetValue(key) with
@@ -57,7 +66,10 @@ module Logging =
                 |> Array.ofSeq
 
             let level, values = logLevel, getValues content
-            logger.Log(level, format, values)
+
+            let formatCompatibilityString = loggerFormatRegex.Replace(format, replacer)
+
+            logger.Log(level, formatCompatibilityString, values)
         | _ -> ()
 
     /// Set the logger (ILogger) to use. Usually you would use `HttpContext.withLogger` instead to set the logger for
