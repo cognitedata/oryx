@@ -5,6 +5,7 @@ namespace Oryx
 
 open System
 open System.Text.RegularExpressions
+open System.Threading
 
 open Microsoft.Extensions.Logging
 open FSharp.Control.TaskBuilder
@@ -20,12 +21,8 @@ module Logging =
 
     let mutable private placeholderCounter = 0
 
-    let private incrementAndReturn (index: byref<int>) : int =
-        index <- index + 1
-        index
-
     let private replacer (_: Match) : string =
-        $"{{{PlaceHolder.ResponseHeader}__{incrementAndReturn (&placeholderCounter)}}}"
+        $"{{{PlaceHolder.ResponseHeader}__{Interlocked.Increment(&placeholderCounter)}}}"
 
     let private getHeaderValue (headers: Map<string, seq<string>>) (key: string) : string =
         match headers.TryGetValue(key) with
