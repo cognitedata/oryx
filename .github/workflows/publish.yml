@@ -54,7 +54,7 @@ jobs:
         run: echo "Will release nuget package"
 
       - name: Upload nuget packages
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: ${{ steps.get-branch.outputs.branch == 'master' && steps.confirm-release.outputs.test == 0 }}
         with:
           name: nuget-packages
