@@ -12,12 +12,6 @@ open FsToolkit.ErrorHandling
 
 open Oryx
 
-exception HttpException of (HttpContext * exn) with
-    override this.ToString() =
-        match this :> exn with
-        | HttpException(_, err) -> err.ToString()
-        | _ -> failwith "This should not never happen."
-
 [<AutoOpen>]
 module HttpHandler =
     /// Swap first with last arg so we can pipe onSuccess

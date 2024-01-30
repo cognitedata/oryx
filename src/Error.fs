@@ -1,6 +1,5 @@
 // Copyright 2020 Cognite AS
 // SPDX-License-Identifier: Apache-2.0
-
 namespace Oryx
 
 open System
@@ -122,7 +121,7 @@ module Error =
 
                                 member _.OnCancelAsync(ctx) = next.OnCancelAsync(ctx) }
 
-                        /// Process handlers until `NoError` or `Panic`.
+                        // Process handlers until `NoError` or `Panic`.
                         for handler in handlers do
                             if state = ChooseState.Error then
                                 state <- ChooseState.NoError
