@@ -11,7 +11,6 @@ open System.Net.Http.Headers
 open System.Web
 
 open FSharp.Control.TaskBuilder
-open Oryx.Pipeline
 
 [<AutoOpen>]
 module Fetch =

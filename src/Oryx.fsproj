@@ -13,16 +13,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Pipeline/Exception.fs" />
-    <Compile Include="Pipeline/Core.fs" />
-    <Compile Include="Pipeline/Error.fs" />
-
-    <Compile Include="HttpHandler/Metrics.fs" />
-    <Compile Include="HttpHandler/HttpContext.fs" />
-    <Compile Include="HttpHandler/HttpHandler.fs" />
-    <Compile Include="HttpHandler/Logging.fs" />
-    <Compile Include="HttpHandler/Fetch.fs" />
-    <Compile Include="HttpHandler/Builder.fs" />
+    <Compile Include="Exception.fs" />
+    <Compile Include="Metrics.fs" />
+    <Compile Include="HttpContext.fs" />
+    <Compile Include="Core.fs" />
+    <Compile Include="Error.fs" />
+    <Compile Include="HttpHandler.fs" />
+    <Compile Include="Logging.fs" />
+    <Compile Include="Fetch.fs" />
+    <Compile Include="Builder.fs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\LICENSE" Pack="true" Visible="false" PackagePath="\" />
