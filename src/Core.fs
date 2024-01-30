@@ -17,4 +17,3 @@ exception HttpException of (HttpContext * exn) with
         match this :> exn with
         | HttpException(_, err) -> err.ToString()
         | _ -> failwith "This should not never happen."
-
