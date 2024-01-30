@@ -11,14 +11,14 @@ type RequestBuilder() =
     member _.Return(content: 'TResult) : HttpHandler<'TResult> = singleton content
     member _.ReturnFrom(req: HttpHandler<'TResult>) : HttpHandler<'TResult> = req
     member _.Delay(fn) = fn ()
-    member _.Combine(source, other) = source |> Core.bind (fun _ -> other)
+    member _.Combine(source, other) = source |> bind (fun _ -> other)
 
     member _.For(source: 'TSource seq, func: 'TSource -> HttpHandler<'TResult>) : HttpHandler<'TResult list> =
         source |> Seq.map func |> sequential
 
     /// Binds value of 'TValue for let! All handlers runs in same context within the builder.
     member _.Bind(source: HttpHandler<'TSource>, fn: 'TSource -> HttpHandler<'TResult>) : HttpHandler<'TResult> =
-        source |> Core.bind fn
+        source |> bind fn
 
 [<AutoOpen>]
 module Builder =
