@@ -100,7 +100,6 @@ module Fetch =
                                     response.Content
                                 )
 
-
                             response.Dispose()
                             return result
                         with ex when not (ex :? HttpException) ->

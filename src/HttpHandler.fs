@@ -19,7 +19,6 @@ module HttpHandler =
 
     /// A next continuation for observing the final result.
     let finish<'TResult> (tcs: TaskCompletionSource<'TResult>) : IHttpNext<'TResult> =
-
         { new IHttpNext<'TResult> with
             member x.OnSuccessAsync(_, response) = task { tcs.SetResult response }
             member x.OnErrorAsync(ctx, error) = task { tcs.SetException error }
@@ -50,7 +49,6 @@ module HttpHandler =
 
     /// Map the content of the HTTP handler.
     let map<'TSource, 'TResult> (mapper: 'TSource -> 'TResult) (source: HttpHandler<'TSource>) : HttpHandler<'TResult> =
-
         fun next ->
             //fun ctx content -> success ctx (mapper content)
             { new IHttpNext<'TSource> with
@@ -88,12 +86,10 @@ module HttpHandler =
                 let res: Result<HttpContext * 'TResult, HttpContext * exn> array =
                     Array.zeroCreate (Seq.length handlers)
 
-                let obv n ctx content = task { res.[n] <- Ok(ctx, content) }
-
                 let obv n =
                     { new IHttpNext<'TResult> with
-                        member _.OnSuccessAsync(ctx, content) = task { res.[n] <- Ok(ctx, content) }
-                        member _.OnErrorAsync(ctx, err) = task { res.[n] <- Error(ctx, err) }
+                        member _.OnSuccessAsync(ctx, content) = task { res[n] <- Ok(ctx, content) }
+                        member _.OnErrorAsync(ctx, err) = task { res[n] <- Error(ctx, err) }
                         member _.OnCancelAsync(ctx) = next.OnCancelAsync(ctx) }
 
                 let tasks = handlers |> Seq.mapi (fun n handler -> handler (obv n))

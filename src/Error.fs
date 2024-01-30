@@ -65,7 +65,6 @@ module Error =
                         match err with
                         | PanicException error -> return! next.OnErrorAsync(ctx, error)
                         | _ -> do! (errorHandler ctx err) next
-
                     }
 
                 member _.OnCancelAsync(ctx) = next.OnCancelAsync(ctx) }
@@ -105,10 +104,10 @@ module Error =
                                 member _.OnErrorAsync(_, error) =
                                     task {
                                         match error, state with
-                                        | PanicException(_), st when st <> ChooseState.Panic ->
+                                        | PanicException _, st when st <> ChooseState.Panic ->
                                             state <- ChooseState.Panic
                                             return! next.OnErrorAsync(ctx, error)
-                                        | SkipException(_), st when st = ChooseState.NoError ->
+                                        | SkipException _, st when st = ChooseState.NoError ->
                                             // Flag error, but do not record skips.
                                             state <- ChooseState.Error
                                         | _, ChooseState.Panic ->
@@ -133,7 +132,7 @@ module Error =
                             ()
                         | ChooseState.Error, exns when exns.Count > 1 ->
                             return! next.OnErrorAsync(ctx, AggregateException(exns))
-                        | ChooseState.Error, exns when exns.Count = 1 -> return! next.OnErrorAsync(ctx, exns.[0])
+                        | ChooseState.Error, exns when exns.Count = 1 -> return! next.OnErrorAsync(ctx, exns[0])
                         | ChooseState.Error, _ ->
                             return! next.OnErrorAsync(ctx, SkipException "Choose: No handler matched")
                         | ChooseState.NoError, _ -> ()
