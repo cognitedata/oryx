@@ -26,10 +26,10 @@ module Logging =
 
     let private getHeaderValue (headers: Map<string, seq<string>>) (key: string) : string =
         match headers.TryGetValue(key) with
-        | (true, v) ->
+        | true, v ->
             match Seq.tryHead v with
             | first -> if first.IsSome then first.Value else String.Empty
-        | (false, _) -> String.Empty
+        | false, _ -> String.Empty
 
     let private log' logLevel ctx content =
         match ctx.Request.Logger with
@@ -45,7 +45,7 @@ module Logging =
                 matches
                 |> Seq.cast
                 |> Seq.map (fun (match': Match) ->
-                    match match'.Groups.[1].Value with
+                    match match'.Groups[1].Value with
                     | PlaceHolder.HttpMethod -> box request.Method
                     | PlaceHolder.RequestContent ->
                         ctx.Request.ContentBuilder
@@ -56,7 +56,7 @@ module Logging =
                     | PlaceHolder.ResponseHeader ->
                         // GroupCollection returns empty string values for indexes beyond what was captured, therefore
                         // we don't cause an exception here if the optional second group was not captured
-                        getHeaderValue (ctx.Response.Headers) (match'.Groups.[3].Value) :> _
+                        getHeaderValue ctx.Response.Headers match'.Groups[3].Value :> _
                     | key ->
                         // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
                         // placeholders to the format string.
