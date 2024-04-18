@@ -53,10 +53,8 @@ type HttpMessageHandlerStub(OnNextAsync: Func<HttpRequestMessage, CancellationTo
     inherit HttpMessageHandler()
 
     override self.SendAsync
-        (
-            request: HttpRequestMessage,
-            cancellationToken: CancellationToken
-        ) : Task<HttpResponseMessage> =
+        (request: HttpRequestMessage, cancellationToken: CancellationToken)
+        : Task<HttpResponseMessage> =
         task { return! OnNextAsync.Invoke(request, cancellationToken) }
 
 let add (a: int) (b: int) = singleton (a + b)
@@ -127,13 +125,8 @@ type TestLogger<'a>() =
 
     interface ILogger<'a> with
         member this.Log<'TState>
-            (
-                logLevel: LogLevel,
-                _: EventId,
-                state: 'TState,
-                exception': exn,
-                formatter: Func<'TState, exn, string>
-            ) : unit =
+            (logLevel: LogLevel, _: EventId, state: 'TState, exception': exn, formatter: Func<'TState, exn, string>)
+            : unit =
             this.Output <- this.Output + formatter.Invoke(state, exception')
             this.LoggerLevel <- logLevel
 
