@@ -7,7 +7,6 @@
     <Author>Cognite AS</Author>
     <Company>Cognite AS</Company>
     <Copyright>Cognite AS</Copyright>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/cognitedata/oryx</RepositoryUrl>
     <AssemblyOriginatorKeyFile>$(SolutionDir)/strong_name.snk</AssemblyOriginatorKeyFile>
