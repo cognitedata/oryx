@@ -24,52 +24,15 @@ module Logging =
     let private replacer (_: Match) : string =
         $"{{{PlaceHolder.ResponseHeader}__{Interlocked.Increment(&placeholderCounter)}}}"
 
-    let mutable private responseHeaders: Option<Map<string, seq<string>>> =
-        Option<Map<string, seq<string>>>.None
-
-    let private insertCaseInsensitive
-        (headers: Map<string, seq<string>>)
-        (key: string)
-        (value: seq<string>)
-        : Map<string, seq<string>> =
-        let keyLower = key.ToLowerInvariant()
-
-        let updated =
-            match headers.TryGetValue(keyLower) with
-            | true, v -> Seq.append v value
-            | false, _ -> value
-
-        headers.Add(keyLower, updated)
-
-    let private processHeadersMergeCase (headers: Map<string, seq<string>>) : Map<string, seq<string>> =
-        match responseHeaders with
-        | Some(x) -> x
-        | None ->
-            let mutable hdr: Map<string, seq<string>> = Map.empty
-
-            for key, value in headers |> Map.toList do
-                hdr <- insertCaseInsensitive hdr key value
-
-            responseHeaders <- Some(hdr)
-            responseHeaders.Value
+    let private lowerCaseHeaders (headers: Map<string, seq<string>>) : Map<string, seq<string>> =
+        headers |> Seq.map (fun kv -> kv.Key.ToLowerInvariant(), kv.Value) |> Map.ofSeq
 
     let private getHeaderValue (headers: Map<string, seq<string>>) (key: string) : string =
-        let readHeader (b: bool, v: seq<string>) : Option<string> =
-            match b with
-            | true ->
-                match Seq.tryHead v with
-                | first -> if first.IsSome then Some(first.Value) else None
-            | false -> None
-
-        match headers.TryGetValue(key) |> readHeader with
-        | Some(x) -> x
-        | None ->
-            match
-                processHeadersMergeCase(headers).TryGetValue(key.ToLowerInvariant())
-                |> readHeader
-            with
-            | Some(x) -> x
-            | None -> String.Empty
+        headers
+        |> Map.tryFind key
+        |> Option.defaultValue Seq.empty
+        |> Seq.tryHead
+        |> Option.defaultValue String.Empty
 
     let private log' logLevel ctx content =
         match ctx.Request.Logger with
@@ -77,6 +40,7 @@ module Logging =
             let format = ctx.Request.LogFormat
             let request = ctx.Request
             let matches = reqex.Matches format
+            let lowerCaseHeaders = lazy (lowerCaseHeaders ctx.Response.Headers)
 
             // Create an array with values in the same order as in the format string. Important to be lazy and not
             // stringify any values here. Only pass references to the objects themselves so the logger can stringify
@@ -96,7 +60,7 @@ module Logging =
                     | PlaceHolder.ResponseHeader ->
                         // GroupCollection returns empty string values for indexes beyond what was captured, therefore
                         // we don't cause an exception here if the optional second group was not captured
-                        getHeaderValue ctx.Response.Headers match'.Groups[3].Value :> _
+                        getHeaderValue lowerCaseHeaders.Value (match'.Groups[3].Value.ToLowerInvariant()) :> _
                     | key ->
                         // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
                         // placeholders to the format string.
