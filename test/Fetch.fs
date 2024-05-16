@@ -132,6 +132,7 @@ let ``Get with logging is OK`` () =
                    "Message"
                    "ResponseHeader[missing-key]"
                    "ResponseHeader[X-Request-ID]"
+                   "ResponseHeader[x-request-id]"
                    "ResponseHeader"
                    "ResponseHeader["
                    "ResponseHeader]"
@@ -163,7 +164,13 @@ let ``Get with logging is OK`` () =
         // Assert
         test <@ logger.Output.Contains "42" @>
         test <@ logger.Output.Contains "http://test.org" @>
-        test <@ logger.Output.Contains $"test-value\n← {msg}\n← \n← test-request-id\n← \n← \n← \n← \n← end" @>
+
+        test
+            <@
+                logger.Output.Contains
+                    $"test-value\n← {msg}\n← \n← test-request-id\n← test-request-id\n← \n← \n← \n← \n← end"
+            @>
+
         test <@ logger.Output.Contains "not-included-in-log" = false @>
         test <@ Result.isOk result @>
         test <@ metrics.Retries = 0L @>
@@ -204,6 +211,7 @@ let ``Post with logging is OK`` () =
                    "Message"
                    "ResponseHeader[missing-key]"
                    "ResponseHeader[X-Request-ID]"
+                   "ResponseHeader[x-request-id]"
                    "ResponseHeader"
                    "ResponseHeader["
                    "ResponseHeader]"
@@ -230,7 +238,13 @@ let ``Post with logging is OK`` () =
         test <@ logger.Output.Contains json @>
         test <@ logger.Output.Contains msg @>
         test <@ logger.Output.Contains "http://testing.org" @>
-        test <@ logger.Output.Contains $"test-value\n← {msg}\n← \n← test-request-id\n← \n← \n← \n← \n← end" @>
+
+        test
+            <@
+                logger.Output.Contains
+                    $"test-value\n← {msg}\n← \n← test-request-id\n← test-request-id\n← \n← \n← \n← \n← end"
+            @>
+
         test <@ logger.Output.Contains "not-included-in-log" = false @>
         test <@ Result.isOk result @>
         test <@ retries' = 1 @>

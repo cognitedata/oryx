@@ -24,12 +24,15 @@ module Logging =
     let private replacer (_: Match) : string =
         $"{{{PlaceHolder.ResponseHeader}__{Interlocked.Increment(&placeholderCounter)}}}"
 
+    let private lowerCaseHeaders (headers: Map<string, seq<string>>) : Map<string, seq<string>> =
+        headers |> Seq.map (fun kv -> kv.Key.ToLowerInvariant(), kv.Value) |> Map.ofSeq
+
     let private getHeaderValue (headers: Map<string, seq<string>>) (key: string) : string =
-        match headers.TryGetValue(key) with
-        | true, v ->
-            match Seq.tryHead v with
-            | first -> if first.IsSome then first.Value else String.Empty
-        | false, _ -> String.Empty
+        headers
+        |> Map.tryFind key
+        |> Option.defaultValue Seq.empty
+        |> Seq.tryHead
+        |> Option.defaultValue String.Empty
 
     let private log' logLevel ctx content =
         match ctx.Request.Logger with
@@ -37,6 +40,7 @@ module Logging =
             let format = ctx.Request.LogFormat
             let request = ctx.Request
             let matches = reqex.Matches format
+            let lowerCaseHeaders = lazy (lowerCaseHeaders ctx.Response.Headers)
 
             // Create an array with values in the same order as in the format string. Important to be lazy and not
             // stringify any values here. Only pass references to the objects themselves so the logger can stringify
@@ -56,7 +60,7 @@ module Logging =
                     | PlaceHolder.ResponseHeader ->
                         // GroupCollection returns empty string values for indexes beyond what was captured, therefore
                         // we don't cause an exception here if the optional second group was not captured
-                        getHeaderValue ctx.Response.Headers match'.Groups[3].Value :> _
+                        getHeaderValue lowerCaseHeaders.Value (match'.Groups[3].Value.ToLowerInvariant()) :> _
                     | key ->
                         // Look for the key in the extra info. This also enables custom HTTP handlers to add custom
                         // placeholders to the format string.
