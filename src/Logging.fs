@@ -24,12 +24,43 @@ module Logging =
     let private replacer (_: Match) : string =
         $"{{{PlaceHolder.ResponseHeader}__{Interlocked.Increment(&placeholderCounter)}}}"
 
+    let mutable private responseHeaders: Option<Map<string, seq<string>>> = Option<Map<string, seq<string>>>.None
+
+    let private insertCaseInsensitive (headers: Map<string, seq<string>>) (key: string) (value: seq<string>) :Map<string, seq<string>> =
+        let keyLower = key.ToLowerInvariant()
+
+        let updated = 
+            match headers.TryGetValue(keyLower) with
+            | true, v -> Seq.append v value
+            | false, _ -> value
+
+        headers.Add(keyLower, updated)
+
+    let private processHeadersMergeCase(headers: Map<string, seq<string>>) :Map<string, seq<string>> =
+        match responseHeaders with
+        | Some(x) -> x
+        | None ->
+            let mutable hdr: Map<string, seq<string>> = Map.empty
+            for key, value in headers |> Map.toList do
+                hdr <- insertCaseInsensitive hdr key value
+
+            responseHeaders <- Some(hdr)
+            responseHeaders.Value
+
     let private getHeaderValue (headers: Map<string, seq<string>>) (key: string) : string =
-        match headers.TryGetValue(key) with
-        | true, v ->
-            match Seq.tryHead v with
-            | first -> if first.IsSome then first.Value else String.Empty
-        | false, _ -> String.Empty
+        let readHeader (b: bool, v: seq<string>) :Option<string> =
+            match b with
+            | true ->
+                match Seq.tryHead v with
+                | first -> if first.IsSome then Some(first.Value) else None
+            | false ->  None
+            
+        match headers.TryGetValue(key) |> readHeader with
+        | Some(x) -> x
+        | None ->
+            match processHeadersMergeCase(headers).TryGetValue(key.ToLowerInvariant()) |> readHeader with
+            | Some(x) -> x
+            | None -> String.Empty
 
     let private log' logLevel ctx content =
         match ctx.Request.Logger with
