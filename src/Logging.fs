@@ -56,9 +56,7 @@ module Logging =
     let private getHeaderValue (headers: Map<string, seq<string>>) (key: string) : string =
         let readHeader (b: bool, v: seq<string>) : Option<string> =
             match b with
-            | true ->
-                match Seq.tryHead v with
-                | first -> if first.IsSome then Some(first.Value) else None
+            | true -> Seq.tryHead v
             | false -> None
 
         match headers.TryGetValue(key) |> readHeader with
