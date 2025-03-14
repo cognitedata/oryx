@@ -21,16 +21,16 @@ jobs:
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 6.0.200
+          dotnet-version: 8.0.407
 
       - name: Get version
         id: get-version
         run: echo "version=$(cat version)" >> $GITHUB_OUTPUT
-        
+
       - name: Get branch
         id: get-branch
         run: echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
-        
+
       - name: Confirm release
         id: confirm-release
         run: echo "test=$(git tag --list 'v${{ steps.get-version.outputs.version }}' | wc -l | sed s/\ //g)" >> $GITHUB_OUTPUT
@@ -60,7 +60,7 @@ jobs:
           name: nuget-packages
           path: nuget-packages/
           retention-days: 1
-  
+
   publish:
     name: Create Release
     runs-on: windows-latest
