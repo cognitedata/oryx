@@ -16,7 +16,7 @@ group Json
     framework: netstandard2.0
 
     nuget FSharp.Core >= 7 lowest_matching: true
-    nuget System.Text.Json >= 6 lowest_matching: true
+    nuget System.Text.Json >= 8.0.5 lowest_matching: true
     nuget Oryx
 
 group Newtonsoft
