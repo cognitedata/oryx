@@ -72,7 +72,7 @@ jobs:
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 6.0.200
+          dotnet-version: 8.0.407
       - name: Download nuget packages
         uses: actions/download-artifact@v4
         with:
@@ -92,7 +92,7 @@ jobs:
           path-to-binary: 'nuget-packages/'
 
       - name: Push nuget packages
-        run: dotnet nuget push .\nuget-packages\*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }}
+        run: dotnet nuget push .\nuget-packages\*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_TOKEN }}
         continue-on-error: false
 
       - name: Create Release
