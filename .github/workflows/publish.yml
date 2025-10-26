@@ -54,7 +54,7 @@ jobs:
         run: echo "Will release nuget package"
 
       - name: Upload nuget packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: ${{ steps.get-branch.outputs.branch == 'master' && steps.confirm-release.outputs.test == 0 }}
         with:
           name: nuget-packages
@@ -74,7 +74,7 @@ jobs:
         with:
           dotnet-version: 8.0.407
       - name: Download nuget packages
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: nuget-packages
           path: nuget-packages/
