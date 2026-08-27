@@ -16,10 +16,10 @@ jobs:
       version: ${{ steps.get-version.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: 8.0.407
 
@@ -54,7 +54,7 @@ jobs:
         run: echo "Will release nuget package"
 
       - name: Upload nuget packages
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: ${{ steps.get-branch.outputs.branch == 'master' && steps.confirm-release.outputs.test == 0 }}
         with:
           name: nuget-packages
@@ -70,11 +70,11 @@ jobs:
       - build
     steps:
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: 8.0.407
       - name: Download nuget packages
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: nuget-packages
           path: nuget-packages/
@@ -87,7 +87,7 @@ jobs:
           CLIENT_CERTIFICATE: ${{ secrets.CODE_SIGNING_CLIENT_CERT }}
           CLIENT_CERTIFICATE_PASSWORD: ${{ secrets.CODE_SIGNING_CLIENT_CERT_PASSWORD }}
           KEYPAIR_ALIAS: ${{ secrets.CODE_SIGNING_KEYPAIR_ALIAS }}
-        uses: cognitedata/code-sign-action/@v5
+        uses: cognitedata/code-sign-action/@a29458b69495966f90920f07aeed5acfe03e1f45 # v5
         with:
           path-to-binary: 'nuget-packages/'
 
@@ -96,7 +96,7 @@ jobs:
         continue-on-error: false
 
       - name: Create Release
-        uses: actions/create-release@master
+        uses: actions/create-release@89e8dc236279a907f495cdc4ebff2056b7036b3d # master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
