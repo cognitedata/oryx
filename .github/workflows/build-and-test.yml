@@ -15,7 +15,7 @@ jobs:
       - name: Setup .NET Core
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: 8.0.407
+          dotnet-version: 8.0.425
       - name: Setup dotnet tools
         run: dotnet tool restore
       - name: Install dependencies
