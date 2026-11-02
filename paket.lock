@@ -689,7 +689,7 @@ NUGET
     FSharp.Core (7.0)
     FsToolkit.ErrorHandling (4.18)
       FSharp.Core (>= 4.7.2)
-    Google.Protobuf (3.30.1)
+    Google.Protobuf (3.36.2)
       System.Memory (>= 4.5.3)
       System.Runtime.CompilerServices.Unsafe (>= 4.5.2)
     Microsoft.Bcl.AsyncInterfaces (9.0.3)
