@@ -863,10 +863,10 @@ NUGET
   remote: https://www.nuget.org/api/v2
     coverlet.msbuild (3.2)
     Fable.Core (4.5) - restriction: && (< net46) (>= netstandard2.0)
-    FsCheck (3.1) - restriction: || (>= net462) (>= netstandard2.0)
+    FsCheck (3.6) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 5.0.2) - restriction: >= netstandard2.0
-    FsCheck.Xunit (3.1)
-      FsCheck (3.1) - restriction: || (>= net462) (>= netstandard2.0)
+    FsCheck.Xunit (3.6)
+      FsCheck (3.6) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 5.0.2) - restriction: || (>= net462) (>= netstandard2.0)
       xunit.extensibility.execution (>= 2.4.1 < 3.0) - restriction: || (>= net462) (>= netstandard2.0)
     FSharp.Core (9.0.201)
