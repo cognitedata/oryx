@@ -56,7 +56,7 @@ group Test
     storage: none
 
     nuget FSharp.Core
-    nuget coverlet.msbuild ~> 3
+    nuget coverlet.msbuild ~> 10
     nuget Unquote ~> 7
     nuget xunit ~> 2
     nuget xunit.runner.visualstudio ~> 2
