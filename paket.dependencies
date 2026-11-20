@@ -59,7 +59,7 @@ group Test
     nuget coverlet.msbuild ~> 10
     nuget Unquote ~> 7
     nuget xunit ~> 2
-    nuget xunit.runner.visualstudio ~> 2
+    nuget xunit.runner.visualstudio ~> 4
     nuget Serilog.Sinks.XUnit
     nuget Microsoft.NET.Test.Sdk ~> 17
     nuget FsCheck.Xunit
