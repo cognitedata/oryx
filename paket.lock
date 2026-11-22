@@ -862,7 +862,7 @@ GROUP Test
 STORAGE: NONE
 NUGET
   remote: https://www.nuget.org/api/v2
-    coverlet.msbuild (10.1)
+    coverlet.msbuild (10.1.1)
     Fable.Core (4.5) - restriction: && (< net46) (>= netstandard2.0)
     FsCheck (3.6) - restriction: || (>= net462) (>= netstandard2.0)
       FSharp.Core (>= 5.0.2) - restriction: >= netstandard2.0
